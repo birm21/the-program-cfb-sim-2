@@ -1156,8 +1156,34 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
         // Blue Bloods get bonus interest gain
         const tierBonus = rs.schoolTier === 'Blue Blood' ? 1.2 : rs.schoolTier === 'Power 4' ? 1.0 : 0.8;
 
+        // Apply trait-based modifiers for AI recruiting
+        let aiTraitModifier = 1.0;
+
+        // Championship Focused: Responds better to Blue Bloods
+        if (recruit.traits?.includes('Championship Focused')) {
+          if (rs.schoolTier === 'Blue Blood') {
+            aiTraitModifier *= 1.15; // +15% for Blue Bloods
+          } else if (rs.schoolTier === 'Group of 5') {
+            aiTraitModifier *= 0.85; // -15% for Group of 5
+          }
+        }
+
+        // Close to Home: Geography affects AI recruiting too
+        if (recruit.traits?.includes('Close to Home')) {
+          const aiSchool = allSchools.find(s => s.id === rs.schoolId);
+          if (aiSchool && recruit.state === aiSchool.state) {
+            aiTraitModifier *= 1.2; // +20% for same state
+          } else if (aiSchool && recruit.state !== aiSchool.state) {
+            // Simplified: assume 20% penalty for out of state (could add neighboring logic)
+            aiTraitModifier *= 0.8;
+          }
+        }
+
+        // Playing Time Focused: Would need AI roster depth check (skip for now, assume neutral)
+        // Development Focused: No special modifier for regular recruiting
+
         // Calculate final interest gain with all modifiers
-        const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus);
+        const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus * aiTraitModifier);
 
         return {
           ...rs,
@@ -1222,28 +1248,64 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
 
         // Only commit if school has available spots
         if (availableSpots > 0) {
-          // Create a clean school object to avoid reference issues
-          const cleanSchoolData = {
-            id: aiSchool.id,
-            name: aiSchool.name,
-            nickname: aiSchool.nickname,
-            state: aiSchool.state,
-            conference: aiSchool.conference,
-            budget: aiSchool.budget,
-            tier: aiSchool.tier,
-            colors: aiSchool.colors
-          };
+          // Trait-based commit threshold checks
+          let shouldCommit = true;
 
-          return {
-            ...recruit,
-            verbalCommit: true,
-            committedSchool: cleanSchoolData,
-            nilDeal: recruit.marketValue, // AI pays market value
-            commitmentInterest: 100,
-            recruitingSchools,
-            leadingSchool,
-            commitmentLeader
-          };
+          // Championship Focused: Might wait for Blue Blood if leading school isn't one
+          if (recruit.traits?.includes('Championship Focused') && aiSchool.tier !== 'Blue Blood') {
+            // 30% chance to wait for a Blue Blood offer instead of committing to Power 4/G5
+            if (Math.random() < 0.3) {
+              shouldCommit = false;
+              console.log(`${recruit.name} (Championship Focused) waiting for Blue Blood offers instead of ${aiSchool.name}`);
+            }
+          }
+
+          // Playing Time Focused: Check if position has depth (simplified - would need full roster check)
+          // For now, assume random 20% chance they don't commit due to depth concerns
+          if (recruit.traits?.includes('Playing Time Focused') && Math.random() < 0.2) {
+            shouldCommit = false;
+            console.log(`${recruit.name} (Playing Time Focused) concerned about depth chart at ${aiSchool.name}`);
+          }
+
+          if (shouldCommit) {
+            // Calculate NIL deal based on traits
+            let nilMultiplier = 1.0;
+
+            // NIL-Driven: Get higher NIL deals (30-50% more)
+            if (recruit.traits?.includes('NIL-Driven')) {
+              nilMultiplier = 1.3 + Math.random() * 0.2; // 130-150% of market value
+            }
+
+            // Development Focused: Accept lower NIL (70-80% of market value)
+            if (recruit.traits?.includes('Development Focused')) {
+              nilMultiplier = 0.7 + Math.random() * 0.1; // 70-80% of market value
+            }
+
+            const nilDeal = Math.round(recruit.marketValue * nilMultiplier);
+
+            // Create a clean school object to avoid reference issues
+            const cleanSchoolData = {
+              id: aiSchool.id,
+              name: aiSchool.name,
+              nickname: aiSchool.nickname,
+              state: aiSchool.state,
+              conference: aiSchool.conference,
+              budget: aiSchool.budget,
+              tier: aiSchool.tier,
+              colors: aiSchool.colors
+            };
+
+            return {
+              ...recruit,
+              verbalCommit: true,
+              committedSchool: cleanSchoolData,
+              nilDeal: nilDeal,
+              commitmentInterest: 100,
+              recruitingSchools,
+              leadingSchool,
+              commitmentLeader
+            };
+          }
         }
       }
     } else if (recruit.verbalCommit && recruit.committedSchool?.id !== playerSchoolId) {
@@ -1709,13 +1771,27 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
   }
   
   const marketValue = Math.round(baseMarketValue);
-  const askingPrice = Math.round(marketValue * (0.95 + Math.random() * 0.15)); // 95-110% of market value
-  
-  // Generate dream schools based on star level
-  const dreamSchools = generateDreamSchools(stars, allSchools, state);
 
   // Generate recruit traits (2 per recruit)
   const traits = generateTraits(stars);
+
+  // Calculate asking price based on traits
+  let askingPriceMultiplier = 0.95 + Math.random() * 0.15; // Base: 95-110% of market value
+
+  // NIL-Driven trait: Ask for 30-50% MORE
+  if (traits.includes('NIL-Driven')) {
+    askingPriceMultiplier = 1.3 + Math.random() * 0.2; // 130-150% of market value
+  }
+
+  // Development Focused trait: Ask for 20-30% LESS
+  if (traits.includes('Development Focused')) {
+    askingPriceMultiplier = 0.7 + Math.random() * 0.1; // 70-80% of market value
+  }
+
+  const askingPrice = Math.round(marketValue * askingPriceMultiplier);
+
+  // Generate dream schools based on star level
+  const dreamSchools = generateDreamSchools(stars, allSchools, state);
 
   return {
     id: `recruit_${id}`,
@@ -5040,10 +5116,51 @@ const App = () => {
       tierBonus = 2; // (halved from 3%)
     }
 
-    const totalInterest = baseInterest + positionBonus + geoBonus + dreamBonus + tierBonus;
-    console.log(`Initial interest for ${recruit.name}: Base=${baseInterest}, Position=${positionBonus}, Geo=${geoBonus}, Dream=${dreamBonus}, Tier=${tierBonus}, Total=${totalInterest}%`);
+    // Trait-based modifiers
+    let traitBonus = 0;
 
-    return Math.min(25, totalInterest); // Cap at 25% initial interest (halved from 50%)
+    // Playing Time Focused: HEAVILY weights position need
+    if (recruit.traits?.includes('Playing Time Focused')) {
+      traitBonus += Math.round(positionNeed * 10); // Up to +10% if high need
+      // Penalty if low need (depth at position)
+      if (positionNeed < 0.3) {
+        traitBonus -= 10; // -10% if position is stacked
+      }
+    }
+
+    // Close to Home: HEAVILY weights geography
+    if (recruit.traits?.includes('Close to Home')) {
+      if (recruit.state === selectedSchool?.state) {
+        traitBonus += 10; // Extra +10% for same state
+      } else if (geoBonus > 0) {
+        traitBonus += 5; // Extra +5% for neighboring state
+      } else {
+        traitBonus -= 5; // -5% if far from home
+      }
+    }
+
+    // Championship Focused: HEAVILY weights school tier
+    if (recruit.traits?.includes('Championship Focused')) {
+      if (selectedSchool?.tier === 'Blue Blood') {
+        traitBonus += 8; // Extra +8% for Blue Bloods
+      } else if (selectedSchool?.tier === 'Power 4') {
+        traitBonus += 3; // Small +3% for Power 4
+      } else {
+        traitBonus -= 8; // -8% for Group of 5
+      }
+    }
+
+    // Development Focused: Modest tier bonus, more loyal later
+    if (recruit.traits?.includes('Development Focused')) {
+      if (selectedSchool?.tier === 'Blue Blood' || selectedSchool?.tier === 'Power 4') {
+        traitBonus += 5; // +5% for good development programs
+      }
+    }
+
+    const totalInterest = baseInterest + positionBonus + geoBonus + dreamBonus + tierBonus + traitBonus;
+    console.log(`Initial interest for ${recruit.name}: Base=${baseInterest}, Position=${positionBonus}, Geo=${geoBonus}, Dream=${dreamBonus}, Tier=${tierBonus}, Trait=${traitBonus}, Total=${totalInterest}%`);
+
+    return Math.max(0, Math.min(25, totalInterest)); // Cap at 25%, floor at 0%
   };
 
   // Calculate position need (0.0 = no need, 1.0 = high need)
@@ -5208,10 +5325,51 @@ const App = () => {
       } else {
         flipDifficulty = 1.0; // No reduction - same difficulty from Group of 5
       }
+
+      // Development Focused recruits are MORE LOYAL - harder to flip
+      if (recruit.traits?.includes('Development Focused')) {
+        flipDifficulty *= 0.7; // Additional 30% penalty when flipping Development Focused
+      }
+    }
+
+    // Apply trait-based recruiting effectiveness modifiers
+    let traitModifier = 1.0;
+
+    // Championship Focused: Responds better to Blue Bloods
+    if (recruit.traits?.includes('Championship Focused')) {
+      if (selectedSchool?.tier === 'Blue Blood') {
+        traitModifier *= 1.15; // +15% bonus for Blue Bloods
+      } else if (selectedSchool?.tier === 'Group of 5') {
+        traitModifier *= 0.85; // -15% penalty for Group of 5
+      }
+    }
+
+    // Close to Home: Geography affects recruiting effectiveness
+    if (recruit.traits?.includes('Close to Home')) {
+      if (recruit.state === selectedSchool?.state) {
+        traitModifier *= 1.2; // +20% bonus for same state
+      } else {
+        const neighboringStates = getNeighboringStates(selectedSchool?.state);
+        if (neighboringStates.includes(recruit.state)) {
+          traitModifier *= 1.1; // +10% for neighboring state
+        } else {
+          traitModifier *= 0.8; // -20% for far from home
+        }
+      }
+    }
+
+    // Playing Time Focused: Position need affects recruiting
+    if (recruit.traits?.includes('Playing Time Focused')) {
+      const positionNeed = calculatePositionNeed(recruit.position);
+      if (positionNeed > 0.7) {
+        traitModifier *= 1.25; // +25% if high need
+      } else if (positionNeed < 0.3) {
+        traitModifier *= 0.75; // -25% if position is stacked
+      }
     }
 
     // Calculate final interest gain with ALL modifiers
-    const adjustedInterestGain = Math.round(interestGain * starDifficulty * diminishingReturns * tierBonus * flipDifficulty);
+    const adjustedInterestGain = Math.round(interestGain * starDifficulty * diminishingReturns * tierBonus * flipDifficulty * traitModifier);
     const newInterest = Math.min(100, recruit.interest + adjustedInterestGain);
     
     setRecruits(recruits.map(r =>
