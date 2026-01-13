@@ -1809,6 +1809,7 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
     isTargeted: false, // User has offered scholarship to this recruit
     isScouted: false, // User has scouted this recruit (reveals traits)
     traits, // 2 traits per recruit - revealed after scouting
+    scholarshipOfferedWeek: null, // Track week when scholarship was offered (prevents same-week recruiting spam)
     actionsUsedThisWeek: [], // Track which actions have been used this week: 'socialMedia', 'call', 'schoolVisit', 'campusVisit', 'officialVisit'
     monthlyActionsUsed: {}, // Track monthly limited actions: 'schoolVisit', 'campusVisit' - {actionId: {month, year}}
     officialVisitUsed: false, // PERMANENT - Can only use official visit ONCE per recruit
@@ -3546,8 +3547,25 @@ const App = () => {
                     {/* Step 2: Show regular recruiting actions if scholarship offered */}
                     {/* Allow recruiting if: not signed, interest < 100%, in recruiting period, AND scholarship offered */}
                     {/* Lock recruiting at 100% interest - no value in continuing. If interest drops below 100%, recruiting reopens */}
-                    {canRecruit && !recruit.signedCommit && recruit.interest < 100 && recruit.isTargeted && (
+                    {canRecruit && !recruit.signedCommit && recruit.interest < 100 && recruit.isTargeted && (() => {
+                      // Check if scholarship was offered THIS week - block recruiting actions if so
+                      const currentWeek = offSeasonWeek || currentWeekNum;
+                      const scholarshipOfferedThisWeek = recruit.scholarshipOfferedWeek === currentWeek;
+
+                      return (
                       <>
+                        {/* Scholarship Offered This Week Warning */}
+                        {scholarshipOfferedThisWeek && (
+                          <div className={`mb-2 border-2 px-2 py-1 text-xs ${
+                            index % 2 === 0 ? 'bg-yellow-100 border-yellow-500 text-yellow-900' : 'bg-yellow-900 border-yellow-600 text-yellow-200'
+                          }`}>
+                            <div className="font-bold">📋 SCHOLARSHIP OFFERED</div>
+                            <div className="text-xs opacity-90">
+                              Recruiting actions available next week
+                            </div>
+                          </div>
+                        )}
+
                         {/* Flip Attempt Warning - Only show if committed to ANOTHER school */}
                         {recruit.verbalCommit && recruit.committedSchool?.id !== selectedSchool?.id && (
                           <div className={`mb-2 border-2 px-2 py-1 text-xs ${
@@ -3601,8 +3619,8 @@ const App = () => {
                           const canAfford = recruitingPoints >= adjustedCost;
                           const meetsRequirement = recruit.interest >= action.minInterest;
 
-                          // Button is disabled if: used this week, other visit used this week, permanently used (official visit only), monthly limit used, can't afford, or doesn't meet requirement
-                          const isDisabled = usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed || !canAfford || !meetsRequirement;
+                          // Button is disabled if: scholarship offered this week, used this week, other visit used this week, permanently used (official visit only), monthly limit used, can't afford, or doesn't meet requirement
+                          const isDisabled = scholarshipOfferedThisWeek || usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed || !canAfford || !meetsRequirement;
 
                           // Calculate adjusted interest gain to show on button (same formula as handleRecruitingAction)
                           let starDifficulty = 1.0;
@@ -3690,7 +3708,8 @@ const App = () => {
                         </div>
                       )}
                       </>
-                    )}
+                      );
+                    })()}
 
                     {/* Show locked message at 100% interest */}
                     {canRecruit && !recruit.signedCommit && recruit.interest === 100 && (
@@ -5208,16 +5227,18 @@ const App = () => {
     // Deduct recruiting points
     setRecruitingPoints(recruitingPoints - cost);
 
-    // Update recruit
+    // Update recruit - Track the week scholarship was offered to prevent same-week recruiting spam
+    const currentWeek = offSeasonWeek || currentWeekNum; // Track off-season or regular season week
     setRecruits(recruits.map(r =>
       r.id === recruit.id ? {
         ...r,
         isTargeted: true,
-        interest: initialInterest
+        interest: initialInterest,
+        scholarshipOfferedWeek: currentWeek // Block recruiting actions until next week
       } : r
     ));
 
-    console.log(`Offered scholarship to ${recruit.name} - Initial interest: ${initialInterest}%`);
+    console.log(`Offered scholarship to ${recruit.name} - Initial interest: ${initialInterest}%. Recruiting actions available next week.`);
   };
 
   // Handle SCOUT action
@@ -5388,31 +5409,34 @@ const App = () => {
       } : r
     ));
     setRecruitingPoints(recruitingPoints - adjustedCost);
-    
-    // Check for hometown auto-commit (75%+)
+
+    // Check for hometown auto-commit (75%+) and random commits
+    // Use functional update to avoid stale state closure issues
     setTimeout(() => {
-      const updatedRecruit = recruits.find(r => r.id === recruit.id);
-      if (updatedRecruit && checkHomeTownAutoCommit({...updatedRecruit, interest: newInterest})) {
-        // Auto-commit with slightly reduced NIL (95% of asking price)
-        const autoCommitDeal = Math.round(updatedRecruit.askingPrice * 0.95);
-        setRecruits(recruits.map(r => 
-          r.id === updatedRecruit.id ? {
-            ...r,
-            verbalCommit: true,
-            nilDeal: autoCommitDeal,
-            committedSchool: selectedSchool,
-            commitmentInterest: newInterest, // Track interest level at commitment
-            flipMultiplier: 0.5, // Hometown loyalty = half normal flip chance
-            isTargeted: true // Keep in My Recruits
-          } : r
-        ));
-        alert(`🏠 HOMETOWN HERO! ${updatedRecruit.name} couldn't pass up playing for ${getSchoolDisplayName(selectedSchool)}! Auto-committed for ${formatCurrency(autoCommitDeal)}.`);
-        return;
-      }
-      
-      // Random commitment chance at 70%+ interest based on star rating
-      if (newInterest >= 70 && !updatedRecruit?.verbalCommit && !updatedRecruit?.nilOfferAccepted) {
-        if (updatedRecruit) {
+      setRecruits(prev => {
+        const updatedRecruit = prev.find(r => r.id === recruit.id);
+
+        // Check hometown auto-commit first
+        if (updatedRecruit && checkHomeTownAutoCommit(updatedRecruit)) {
+          // Auto-commit with slightly reduced NIL (95% of asking price)
+          const autoCommitDeal = Math.round(updatedRecruit.askingPrice * 0.95);
+          alert(`🏠 HOMETOWN HERO! ${updatedRecruit.name} couldn't pass up playing for ${getSchoolDisplayName(selectedSchool)}! Auto-committed for ${formatCurrency(autoCommitDeal)}.`);
+
+          return prev.map(r =>
+            r.id === updatedRecruit.id ? {
+              ...r,
+              verbalCommit: true,
+              nilDeal: autoCommitDeal,
+              committedSchool: selectedSchool,
+              commitmentInterest: r.interest, // Use current interest from state
+              flipMultiplier: 0.5, // Hometown loyalty = half normal flip chance
+              isTargeted: true // Keep in My Recruits
+            } : r
+          );
+        }
+
+        // Random commitment chance at 70%+ interest based on star rating
+        if (updatedRecruit && updatedRecruit.interest >= 70 && !updatedRecruit.verbalCommit && !updatedRecruit.nilOfferAccepted) {
           // Determine commitment probability based on star rating
           let commitChance = 0;
           if (updatedRecruit.stars === 5) {
@@ -5425,18 +5449,25 @@ const App = () => {
 
           // Roll for random commitment
           if (Math.random() < commitChance) {
-            // Trigger NIL negotiation modal
-            setNegotiatingRecruit({
-              ...updatedRecruit,
-              interest: newInterest,
-              commitmentInterest: newInterest,
-              flipMultiplier: getFlipMultiplier(newInterest)
-            });
-            setCounterOffer(Math.round(updatedRecruit.marketValue * 0.5));
-            setShowNegotiationModal(true);
+            // Trigger NIL negotiation modal (outside the setState)
+            setTimeout(() => {
+              const recruitForModal = prev.find(r => r.id === recruit.id);
+              if (recruitForModal) {
+                setNegotiatingRecruit({
+                  ...recruitForModal,
+                  commitmentInterest: recruitForModal.interest,
+                  flipMultiplier: getFlipMultiplier(recruitForModal.interest)
+                });
+                setCounterOffer(Math.round(recruitForModal.marketValue * 0.5));
+                setShowNegotiationModal(true);
+              }
+            }, 0);
           }
         }
-      }
+
+        // Return unchanged state if no commits triggered
+        return prev;
+      });
 
       // Note: At 95%+, user can manually click "Make NIL Offer" button to initiate negotiations
     }, 500); // Small delay for UI feedback
@@ -5697,29 +5728,34 @@ const App = () => {
       // Show signing day results to user
       if (signingDayResults.length > 0) {
         const wins = signingDayResults.filter(d => d.isUserSchool);
-        const losses = signingDayResults.filter(d => !d.isUserSchool);
+        // Only show losses for recruits the user was actively recruiting (offered scholarship or built interest)
+        const losses = signingDayResults.filter(d => !d.isUserSchool && (d.recruit.isTargeted || d.recruit.interest > 0));
 
-        setTimeout(() => {
-          let message = `📅 SIGNING DAY RESULTS\n\n`;
-          message += `${signingDayResults.length} recruit${signingDayResults.length !== 1 ? 's' : ''} made their decision${signingDayResults.length !== 1 ? 's' : ''}!\n\n`;
+        // Only show alert if there are wins or losses relevant to the user
+        if (wins.length > 0 || losses.length > 0) {
+          setTimeout(() => {
+            let message = `📅 SIGNING DAY RESULTS\n\n`;
+            const totalRelevant = wins.length + losses.length;
+            message += `${totalRelevant} recruit${totalRelevant !== 1 ? 's' : ''} you were recruiting made their decision${totalRelevant !== 1 ? 's' : ''}!\n\n`;
 
-          if (wins.length > 0) {
-            message += `✅ YOU WON (${wins.length}):\n`;
-            wins.forEach(w => {
-              message += `• ${w.recruit.name} (${w.recruit.stars}⭐ ${w.recruit.position})\n`;
-            });
-            message += `\n`;
-          }
+            if (wins.length > 0) {
+              message += `✅ YOU WON (${wins.length}):\n`;
+              wins.forEach(w => {
+                message += `• ${w.recruit.name} (${w.recruit.stars}⭐ ${w.recruit.position})\n`;
+              });
+              message += `\n`;
+            }
 
-          if (losses.length > 0) {
-            message += `❌ YOU LOST (${losses.length}):\n`;
-            losses.forEach(l => {
-              message += `• ${l.recruit.name} → ${l.winner.schoolName}\n`;
-            });
-          }
+            if (losses.length > 0) {
+              message += `❌ YOU LOST (${losses.length}):\n`;
+              losses.forEach(l => {
+                message += `• ${l.recruit.name} → ${l.winner.schoolName}\n`;
+              });
+            }
 
-          alert(message);
-        }, 500);
+            alert(message);
+          }, 500);
+        }
       }
 
       // Then check for flip attempts
