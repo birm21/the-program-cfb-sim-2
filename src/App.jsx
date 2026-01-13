@@ -3549,7 +3549,7 @@ const App = () => {
                     {/* Lock recruiting at 100% interest - no value in continuing. If interest drops below 100%, recruiting reopens */}
                     {canRecruit && !recruit.signedCommit && recruit.interest < 100 && recruit.isTargeted && (() => {
                       // Check if scholarship was offered THIS week - block recruiting actions if so
-                      const currentWeek = offSeasonWeek || currentWeekNum;
+                      const currentWeek = offSeasonWeek || currentGameWeek;
                       const scholarshipOfferedThisWeek = recruit.scholarshipOfferedWeek === currentWeek;
 
                       return (
@@ -3661,6 +3661,7 @@ const App = () => {
                               }}
                               disabled={isDisabled}
                               className={`border-2 p-1 text-xs transition-all ${
+                                scholarshipOfferedThisWeek ? 'bg-yellow-800 border-yellow-600 opacity-60 cursor-not-allowed' :
                                 usedThisWeek || otherVisitUsedThisWeek ? 'bg-gray-600 border-gray-500 opacity-60 cursor-not-allowed' :
                                 officialVisitPermanentlyUsed ? 'bg-gray-700 border-gray-600 opacity-50 cursor-not-allowed' :
                                 monthlyLimitUsed ? 'bg-gray-600 border-gray-500 opacity-60 cursor-not-allowed' :
@@ -3668,11 +3669,12 @@ const App = () => {
                                 !meetsRequirement ? 'bg-orange-900 border-orange-700 opacity-50 cursor-not-allowed' :
                                 'bg-blue-700 border-blue-500 hover:bg-blue-600'
                               }`}
-                              style={{ boxShadow: (usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed) ? 'none' : '2px 2px 0px rgba(0,0,0,0.5)' }}
+                              style={{ boxShadow: (scholarshipOfferedThisWeek || usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed) ? 'none' : '2px 2px 0px rgba(0,0,0,0.5)' }}
                             >
                               <div className="font-bold" style={{ fontSize: '10px' }}>{action.name}</div>
                               <div className="opacity-75" style={{ fontSize: '8px' }}>
-                                {usedThisWeek || otherVisitUsedThisWeek ? '✓ THIS WK' :
+                                {scholarshipOfferedThisWeek ? 'NEXT WK' :
+                                 usedThisWeek || otherVisitUsedThisWeek ? '✓ THIS WK' :
                                  officialVisitPermanentlyUsed ? '✓ USED' :
                                  monthlyLimitUsed ? 'Used this month' :
                                  !canAfford ? `${adjustedCost}` :
@@ -5228,7 +5230,7 @@ const App = () => {
     setRecruitingPoints(recruitingPoints - cost);
 
     // Update recruit - Track the week scholarship was offered to prevent same-week recruiting spam
-    const currentWeek = offSeasonWeek || currentWeekNum; // Track off-season or regular season week
+    const currentWeek = offSeasonWeek || currentGameWeek; // Track off-season or regular season week
     setRecruits(recruits.map(r =>
       r.id === recruit.id ? {
         ...r,
