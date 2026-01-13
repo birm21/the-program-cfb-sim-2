@@ -8279,8 +8279,10 @@ const App = () => {
           
           return (
             <div className="max-w-7xl mx-auto">
-              {/* Recruiting Header */}
-              <div className="mb-4 bg-gray-800 border-4 border-gray-600 p-2" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+              {/* Sticky Header Container */}
+              <div className="sticky top-0 z-10 bg-gray-900">
+                {/* Recruiting Header */}
+                <div className="mb-4 bg-gray-800 border-4 border-gray-600 p-2" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
                 <div className="flex justify-between items-center">
                   {/* Left Section */}
                   <div className="flex items-center gap-6">
@@ -8400,6 +8402,8 @@ const App = () => {
                   </div>
                 </div>
               )}
+              </div>
+              {/* End Sticky Header Container */}
 
               {/* High School Recruiting Section */}
               <div className="mb-4">
