@@ -1577,6 +1577,70 @@ const generateRecruitingClass = (currentRoster, allSchools) => {
 };
 
 // Generate individual recruit
+// Generate recruit traits based on star rating
+const generateTraits = (stars) => {
+  const traitOptions = [
+    'NIL-Driven',
+    'Playing Time Focused',
+    'Close to Home',
+    'Championship Focused',
+    'Development Focused'
+  ];
+
+  // Trait distribution percentages by star rating
+  let traitWeights;
+  if (stars === 5) {
+    traitWeights = {
+      'NIL-Driven': 0.40,
+      'Championship Focused': 0.30,
+      'Playing Time Focused': 0.20,
+      'Development Focused': 0.10
+    };
+  } else if (stars === 4) {
+    traitWeights = {
+      'NIL-Driven': 0.35,
+      'Championship Focused': 0.25,
+      'Playing Time Focused': 0.25,
+      'Development Focused': 0.15
+    };
+  } else if (stars === 3) {
+    traitWeights = {
+      'Playing Time Focused': 0.30,
+      'Close to Home': 0.30,
+      'Development Focused': 0.20,
+      'NIL-Driven': 0.20
+    };
+  } else { // 2-stars
+    traitWeights = {
+      'Playing Time Focused': 0.35,
+      'Close to Home': 0.30,
+      'Development Focused': 0.25,
+      'NIL-Driven': 0.10
+    };
+  }
+
+  // Select 2 unique traits
+  const traits = [];
+  const availableTraits = Object.keys(traitWeights);
+
+  // First trait - weighted random selection
+  const rand1 = Math.random();
+  let cumulative = 0;
+  for (const trait of availableTraits) {
+    cumulative += traitWeights[trait];
+    if (rand1 <= cumulative) {
+      traits.push(trait);
+      break;
+    }
+  }
+
+  // Second trait - different from first
+  const remainingTraits = traitOptions.filter(t => !traits.includes(t));
+  traits.push(remainingTraits[Math.floor(Math.random() * remainingTraits.length)]);
+
+  return traits;
+};
+
 const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, lastNames) => {
   const position = POSITIONS[Math.floor(Math.random() * POSITIONS.length)];
   
@@ -1649,7 +1713,10 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
   
   // Generate dream schools based on star level
   const dreamSchools = generateDreamSchools(stars, allSchools, state);
-  
+
+  // Generate recruit traits (2 per recruit)
+  const traits = generateTraits(stars);
+
   return {
     id: `recruit_${id}`,
     name: `${firstName} ${lastName}`,
@@ -1663,7 +1730,9 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
     topThree: [], // Set at 75%
     isGenerational, // Hidden until 50%
     isDiamond, // Hidden until 50%
-    isTargeted: false, // User has selected this recruit to track
+    isTargeted: false, // User has offered scholarship to this recruit
+    isScouted: false, // User has scouted this recruit (reveals traits)
+    traits, // 2 traits per recruit - revealed after scouting
     actionsUsedThisWeek: [], // Track which actions have been used this week: 'socialMedia', 'call', 'schoolVisit', 'campusVisit', 'officialVisit'
     monthlyActionsUsed: {}, // Track monthly limited actions: 'schoolVisit', 'campusVisit' - {actionId: {month, year}}
     officialVisitUsed: false, // PERMANENT - Can only use official visit ONCE per recruit
@@ -3345,10 +3414,63 @@ const App = () => {
                       </div>
                     )}
 
+                    {/* Scout Results - Show if scouted */}
+                    {recruit.isScouted && recruit.traits && (
+                      <div className={`mb-2 border-2 px-2 py-2 ${index % 2 === 0 ? 'bg-purple-100 border-purple-500' : 'bg-purple-900 border-purple-600'}`}>
+                        <div className={`font-bold text-xs mb-1 ${index % 2 === 0 ? 'text-purple-900' : 'text-purple-300'}`}>
+                          🔍 SCOUT REPORT
+                        </div>
+                        <div className="space-y-1">
+                          {recruit.traits.map((trait, i) => (
+                            <div key={i} className={`text-xs ${index % 2 === 0 ? 'text-purple-800' : 'text-purple-200'}`}>
+                              • {trait}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Recruiting Actions - More compact */}
-                    {/* Allow recruiting if: not signed, interest < 100%, and in recruiting period */}
+                    {/* Step 1: Show OFFER SCHOLARSHIP and SCOUT if not yet targeted */}
+                    {canRecruit && !recruit.signedCommit && !recruit.isTargeted && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <button
+                          onClick={() => handleOfferScholarship(recruit)}
+                          disabled={recruitingPoints < 10}
+                          className={`border-2 p-2 text-xs transition-all ${
+                            recruitingPoints >= 10
+                              ? 'bg-blue-600 border-blue-400 hover:bg-blue-500'
+                              : 'bg-gray-600 border-gray-500 opacity-50 cursor-not-allowed'
+                          }`}
+                          style={{ boxShadow: recruitingPoints >= 10 ? '2px 2px 0px rgba(0,0,0,0.5)' : 'none' }}
+                        >
+                          <div className="font-bold text-white">OFFER SCHOLARSHIP</div>
+                          <div className="text-white opacity-90 text-xs mt-1">10 pts</div>
+                        </button>
+                        <button
+                          onClick={() => handleScout(recruit)}
+                          disabled={recruitingPoints < 25 || recruit.isScouted}
+                          className={`border-2 p-2 text-xs transition-all ${
+                            recruit.isScouted
+                              ? 'bg-gray-700 border-gray-600 opacity-50 cursor-not-allowed'
+                              : recruitingPoints >= 25
+                                ? 'bg-purple-600 border-purple-400 hover:bg-purple-500'
+                                : 'bg-gray-600 border-gray-500 opacity-50 cursor-not-allowed'
+                          }`}
+                          style={{ boxShadow: recruitingPoints >= 25 && !recruit.isScouted ? '2px 2px 0px rgba(0,0,0,0.5)' : 'none' }}
+                        >
+                          <div className="font-bold text-white">
+                            {recruit.isScouted ? '✓ SCOUTED' : 'SCOUT'}
+                          </div>
+                          <div className="text-white opacity-90 text-xs mt-1">25 pts</div>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Step 2: Show regular recruiting actions if scholarship offered */}
+                    {/* Allow recruiting if: not signed, interest < 100%, in recruiting period, AND scholarship offered */}
                     {/* Lock recruiting at 100% interest - no value in continuing. If interest drops below 100%, recruiting reopens */}
-                    {canRecruit && !recruit.signedCommit && recruit.interest < 100 && (
+                    {canRecruit && !recruit.signedCommit && recruit.interest < 100 && recruit.isTargeted && (
                       <>
                         {/* Flip Attempt Warning - Only show if committed to ANOTHER school */}
                         {recruit.verbalCommit && recruit.committedSchool?.id !== selectedSchool?.id && (
@@ -4883,6 +5005,130 @@ const App = () => {
   };
   
   // Handle recruiting action with early commitment and auto-commit checks
+  // Calculate initial interest when scholarship is offered
+  const calculateInitialInterest = (recruit) => {
+    let baseInterest = 5 + Math.floor(Math.random() * 6); // 5-10%
+
+    // Position Need Modifier (+5-10%)
+    const positionNeed = calculatePositionNeed(recruit.position);
+    const positionBonus = Math.round(positionNeed * 10); // 0-10% based on need
+
+    // Geography Modifier (+5-10%)
+    let geoBonus = 0;
+    if (recruit.state === selectedSchool?.state) {
+      geoBonus = 10; // Same state
+    } else {
+      // Check if neighboring state (simplified - could expand this)
+      const neighboringStates = getNeighboringStates(selectedSchool?.state);
+      if (neighboringStates.includes(recruit.state)) {
+        geoBonus = 5; // Neighboring state
+      }
+    }
+
+    // Dream School Modifier (+10-15%)
+    let dreamBonus = 0;
+    const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === selectedSchool?.id);
+    if (isDreamSchool) {
+      dreamBonus = 10 + Math.floor(Math.random() * 6); // 10-15%
+    }
+
+    // School Tier Modifier (+3-5%)
+    let tierBonus = 0;
+    if (selectedSchool?.tier === 'Blue Blood') {
+      tierBonus = 5;
+    } else if (selectedSchool?.tier === 'Power 4') {
+      tierBonus = 3;
+    }
+
+    const totalInterest = baseInterest + positionBonus + geoBonus + dreamBonus + tierBonus;
+    console.log(`Initial interest for ${recruit.name}: Base=${baseInterest}, Position=${positionBonus}, Geo=${geoBonus}, Dream=${dreamBonus}, Tier=${tierBonus}, Total=${totalInterest}%`);
+
+    return Math.min(50, totalInterest); // Cap at 50% initial interest
+  };
+
+  // Calculate position need (0.0 = no need, 1.0 = high need)
+  const calculatePositionNeed = (position) => {
+    const positionPlayers = roster.filter(p => p.position === position);
+    const avgRating = positionPlayers.length > 0
+      ? positionPlayers.reduce((sum, p) => sum + p.rating, 0) / positionPlayers.length
+      : 65;
+
+    // High need if: few players OR low average rating
+    const countNeed = positionPlayers.length < 3 ? 0.5 : 0;
+    const ratingNeed = avgRating < 75 ? 0.5 : avgRating < 80 ? 0.3 : 0;
+
+    return Math.min(1.0, countNeed + ratingNeed);
+  };
+
+  // Get neighboring states (simplified version)
+  const getNeighboringStates = (state) => {
+    const neighbors = {
+      'Ohio': ['Pennsylvania', 'Michigan', 'Indiana', 'Kentucky', 'West Virginia'],
+      'Texas': ['Oklahoma', 'Arkansas', 'Louisiana', 'New Mexico'],
+      'California': ['Oregon', 'Nevada', 'Arizona'],
+      'Florida': ['Georgia', 'Alabama'],
+      'Georgia': ['Florida', 'Alabama', 'Tennessee', 'South Carolina', 'North Carolina'],
+      // Add more as needed
+    };
+    return neighbors[state] || [];
+  };
+
+  // Handle OFFER SCHOLARSHIP action
+  const handleOfferScholarship = (recruit) => {
+    const cost = 10;
+
+    if (recruitingPoints < cost) {
+      return; // Not enough points
+    }
+
+    if (recruit.isTargeted) {
+      return; // Already offered
+    }
+
+    // Calculate initial interest
+    const initialInterest = calculateInitialInterest(recruit);
+
+    // Deduct recruiting points
+    setRecruitingPoints(recruitingPoints - cost);
+
+    // Update recruit
+    setRecruits(recruits.map(r =>
+      r.id === recruit.id ? {
+        ...r,
+        isTargeted: true,
+        interest: initialInterest
+      } : r
+    ));
+
+    console.log(`Offered scholarship to ${recruit.name} - Initial interest: ${initialInterest}%`);
+  };
+
+  // Handle SCOUT action
+  const handleScout = (recruit) => {
+    const cost = 25;
+
+    if (recruitingPoints < cost) {
+      return; // Not enough points
+    }
+
+    if (recruit.isScouted) {
+      return; // Already scouted
+    }
+
+    // Deduct recruiting points
+    setRecruitingPoints(recruitingPoints - cost);
+
+    // Update recruit
+    setRecruits(recruits.map(r =>
+      r.id === recruit.id ? {
+        ...r,
+        isScouted: true
+      } : r
+    ));
+
+    console.log(`Scouted ${recruit.name} - Traits: ${recruit.traits.join(', ')}`);
+  };
+
   const handleRecruitingAction = (recruit, actionType, cost, interestGain) => {
     // Apply star-based cost multiplier
     let costMultiplier = 1.0; // Default for 3-stars
@@ -4979,8 +5225,8 @@ const App = () => {
         monthlyActionsUsed: monthlyActions.includes(actionType) ? {
           ...(r.monthlyActionsUsed || {}),
           [actionType]: { recruitingMonth: recruitingMonth, year: currentDate.year }
-        } : r.monthlyActionsUsed,
-        isTargeted: true // Automatically add to "My Recruits" when points spent
+        } : r.monthlyActionsUsed
+        // isTargeted is now ONLY set when offering scholarship, not with regular actions
       } : r
     ));
     setRecruitingPoints(recruitingPoints - adjustedCost);
