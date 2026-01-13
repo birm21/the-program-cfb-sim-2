@@ -5007,43 +5007,43 @@ const App = () => {
   // Handle recruiting action with early commitment and auto-commit checks
   // Calculate initial interest when scholarship is offered
   const calculateInitialInterest = (recruit) => {
-    let baseInterest = 5 + Math.floor(Math.random() * 6); // 5-10%
+    let baseInterest = 3 + Math.floor(Math.random() * 3); // 3-5% (halved from 5-10%)
 
-    // Position Need Modifier (+5-10%)
+    // Position Need Modifier (+3-5%)
     const positionNeed = calculatePositionNeed(recruit.position);
-    const positionBonus = Math.round(positionNeed * 10); // 0-10% based on need
+    const positionBonus = Math.round(positionNeed * 5); // 0-5% based on need (halved from 0-10%)
 
-    // Geography Modifier (+5-10%)
+    // Geography Modifier (+3-5%)
     let geoBonus = 0;
     if (recruit.state === selectedSchool?.state) {
-      geoBonus = 10; // Same state
+      geoBonus = 5; // Same state (halved from 10%)
     } else {
       // Check if neighboring state (simplified - could expand this)
       const neighboringStates = getNeighboringStates(selectedSchool?.state);
       if (neighboringStates.includes(recruit.state)) {
-        geoBonus = 5; // Neighboring state
+        geoBonus = 3; // Neighboring state (halved from 5%)
       }
     }
 
-    // Dream School Modifier (+10-15%)
+    // Dream School Modifier (+5-8%)
     let dreamBonus = 0;
     const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === selectedSchool?.id);
     if (isDreamSchool) {
-      dreamBonus = 10 + Math.floor(Math.random() * 6); // 10-15%
+      dreamBonus = 5 + Math.floor(Math.random() * 4); // 5-8% (halved from 10-15%)
     }
 
-    // School Tier Modifier (+3-5%)
+    // School Tier Modifier (+2-3%)
     let tierBonus = 0;
     if (selectedSchool?.tier === 'Blue Blood') {
-      tierBonus = 5;
+      tierBonus = 3; // (halved from 5%)
     } else if (selectedSchool?.tier === 'Power 4') {
-      tierBonus = 3;
+      tierBonus = 2; // (halved from 3%)
     }
 
     const totalInterest = baseInterest + positionBonus + geoBonus + dreamBonus + tierBonus;
     console.log(`Initial interest for ${recruit.name}: Base=${baseInterest}, Position=${positionBonus}, Geo=${geoBonus}, Dream=${dreamBonus}, Tier=${tierBonus}, Total=${totalInterest}%`);
 
-    return Math.min(50, totalInterest); // Cap at 50% initial interest
+    return Math.min(25, totalInterest); // Cap at 25% initial interest (halved from 50%)
   };
 
   // Calculate position need (0.0 = no need, 1.0 = high need)
