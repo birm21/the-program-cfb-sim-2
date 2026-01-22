@@ -496,6 +496,178 @@ const OFFENSIVE_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OT', 'OG', 'C'];
 const DEFENSIVE_POSITIONS = ['EDGE', 'DT', 'LB', 'CB', 'S'];
 const SPECIAL_TEAMS_POSITIONS = ['K', 'P'];
 
+// ============================================
+// GAME SIMULATION CONSTANTS
+// ============================================
+
+// Offensive Game Plans
+const OFFENSIVE_GAME_PLANS = {
+  balanced: { name: 'Balanced Attack', passBonus: 0, rushBonus: 0, riskFactor: 1.0, description: 'Standard offense - no major adjustments' },
+  airItOut: { name: 'Air It Out', passBonus: 8, rushBonus: -5, riskFactor: 1.1, requirement: 'passing', description: 'Heavy passing attack - best vs weak secondary' },
+  groundAndPound: { name: 'Ground & Pound', passBonus: -5, rushBonus: 8, riskFactor: 0.9, requirement: 'rushing', description: 'Run-heavy offense - best vs weak run defense' },
+  playAction: { name: 'Play Action', passBonus: 5, rushBonus: 3, riskFactor: 1.0, requirement: 'balanced', description: 'Balanced with deception - works against aggressive defenses' },
+  hurryUp: { name: 'Hurry Up', passBonus: 6, rushBonus: -3, riskFactor: 1.3, description: 'High tempo - more big plays but more turnovers' },
+  conservative: { name: 'Conservative', passBonus: -3, rushBonus: 2, riskFactor: 0.7, description: 'Ball control - fewer turnovers, lower ceiling' }
+};
+
+// Defensive Game Plans
+const DEFENSIVE_GAME_PLANS = {
+  balanced: { name: 'Balanced Defense', passDefBonus: 0, runDefBonus: 0, riskFactor: 1.0, description: 'Standard defense - no major adjustments' },
+  pinEarsBack: { name: 'Pin Ears Back', passDefBonus: 8, runDefBonus: -5, riskFactor: 1.2, requirement: 'passDefense', description: 'Aggressive pass rush - best vs passing teams' },
+  stuffTheRun: { name: 'Stuff the Run', passDefBonus: -5, runDefBonus: 8, riskFactor: 0.9, requirement: 'runDefense', description: 'Stack the box - best vs run-heavy teams' },
+  bendDontBreak: { name: "Bend Don't Break", passDefBonus: -2, runDefBonus: -2, redZoneBonus: 10, riskFactor: 0.8, description: 'Soft coverage - tighten in red zone' },
+  blitzHeavy: { name: 'Blitz Heavy', passDefBonus: 10, runDefBonus: -8, riskFactor: 1.4, description: 'High risk/reward pressure - big plays either way' },
+  prevent: { name: 'Prevent Defense', passDefBonus: -8, runDefBonus: 5, riskFactor: 0.6, description: 'Ultra conservative - for protecting leads' }
+};
+
+// Weather Conditions
+const WEATHER_CONDITIONS = {
+  clear: { name: 'Clear Skies', icon: '☀️', passModifier: 0, kickModifier: 0, fumbleChance: 1.0, chance: 70 },
+  rain: { name: 'Heavy Rain', icon: '🌧️', passModifier: -8, kickModifier: -10, fumbleChance: 1.5, chance: 15 },
+  snow: { name: 'Snow Game', icon: '❄️', passModifier: -12, kickModifier: -15, fumbleChance: 1.8, chance: 5 },
+  wind: { name: 'High Winds', icon: '🌪️', passModifier: -5, kickModifier: -20, fumbleChance: 1.0, chance: 8 },
+  perfect: { name: 'Perfect Conditions', icon: '✨', passModifier: 3, kickModifier: 5, fumbleChance: 0.8, chance: 2 }
+};
+
+// Random Game Events (Chaos)
+const CHAOS_EVENTS = {
+  pickSix: { name: 'Pick Six!', icon: '🏃', chance: 8, pointSwing: 7, type: 'defense', description: 'Interception returned for touchdown!' },
+  fumbleTD: { name: 'Scoop & Score!', icon: '🏈', chance: 5, pointSwing: 7, type: 'defense', description: 'Fumble recovery returned for touchdown!' },
+  blockedKick: { name: 'Blocked Kick!', icon: '🚫', chance: 4, pointSwing: 3, type: 'special', description: 'Field goal attempt blocked!' },
+  kickReturnTD: { name: 'Kick Return TD!', icon: '⚡', chance: 3, pointSwing: 7, type: 'special', description: 'Kickoff returned for touchdown!' },
+  puntReturnTD: { name: 'Punt Return TD!', icon: '💨', chance: 2, pointSwing: 7, type: 'special', description: 'Punt returned for touchdown!' },
+  badCall: { name: 'Controversial Call!', icon: '🚩', chance: 2, pointSwing: 4, type: 'random', description: 'Refs make a questionable call!' },
+  careerGame: { name: 'Career Game!', icon: '🌟', chance: 5, pointBonus: 10, type: 'player', description: 'A player has the game of their life!' },
+  miraclePlay: { name: 'MIRACLE PLAY!', icon: '🎆', chance: 1, pointSwing: 7, type: 'special', description: 'Last-second Hail Mary!', recruitingBoost: 30 },
+  collapse: { name: 'Complete Collapse!', icon: '💀', chance: 2, type: 'momentum', description: 'Team lost a huge lead!', recruitingPenalty: 15 }
+};
+
+// Coaching Chaos Events
+const COACHING_CHAOS_EVENTS = {
+  violation: { name: 'Recruiting Violation', icon: '🚨', chance: 2, penaltyWeeks: 3, recruitingPenalty: 20, description: 'NCAA investigating potential recruiting violations' },
+  impermissibleBenefits: { name: 'Impermissible Benefits', icon: '💰', chance: 1, description: 'Recruit received impermissible benefits - removed from board' },
+  inappropriateRelationship: { name: 'Inappropriate Relationship', icon: '⚠️', chance: 0.05, description: 'Immediate termination' },
+  nflOffer: { name: 'NFL Job Offer', icon: '🏈', minCoachSuccess: 90, recruitingConcern: 15, description: 'NFL team interested in hiring you' }
+};
+
+// Upset Probability Table (spread → base upset chance)
+const UPSET_PROBABILITY = [
+  { spread: 20, baseUpset: 2 },
+  { spread: 15, baseUpset: 10 },
+  { spread: 10, baseUpset: 20 },
+  { spread: 7, baseUpset: 30 },
+  { spread: 5, baseUpset: 35 },
+  { spread: 3, baseUpset: 40 },
+  { spread: 0, baseUpset: 50 }
+];
+
+// Score Distribution
+const SCORE_DISTRIBUTION = {
+  blowout: { chance: 18, marginMin: 21, marginMax: 35 },
+  moderate: { chance: 37, marginMin: 8, marginMax: 20 },
+  close: { chance: 45, marginMin: 0, marginMax: 7 }
+};
+
+// Recruiting Impact - Win Bonuses
+const RECRUITING_WIN_BONUSES = {
+  anyWin: 1,
+  conferenceWin: 1,
+  rankedWin: 2,
+  rivalryWin: 4,
+  top10Win: 6,
+  upsetWin: 10
+};
+
+// Recruiting Impact - Loss Penalties
+const RECRUITING_LOSS_PENALTIES = {
+  anyLoss: -3,
+  badLoss: -8,
+  blowoutLoss: -12,
+  rivalryLoss: -15,
+  consecutiveLoss: -5
+};
+
+// Season-End Recruiting Modifiers
+const SEASON_END_MODIFIERS = {
+  elite: { minWins: 11, boost: 20 },
+  strong: { minWins: 9, boost: 10 },
+  good: { minWins: 7, boost: 5 },
+  average: { minWins: 5, boost: 0 },
+  poor: { minWins: 3, boost: -10 },
+  disaster: { minWins: 0, boost: -25 }
+};
+
+// Position-Specific Recruiting Boosts (thresholds to achieve)
+const POSITION_RECRUITING_BOOSTS = {
+  qbExcellence: {
+    name: 'QB Excellence',
+    icon: '🎯',
+    requirements: { passTDs: 35, passYards: 3000, maxInts: 10 },
+    boosts: { QB: 15, WR: 10 },
+    description: 'Elite QB season attracts skill players'
+  },
+  rbDominance: {
+    name: 'RB Dominance',
+    icon: '🏃',
+    requirements: { rushYards: 1500, rushTDs: 15 },
+    boosts: { RB: 15 },
+    description: 'Dominant rushing attack'
+  },
+  wrFactory: {
+    name: 'WR Factory',
+    icon: '🎯',
+    requirements: { wrsWith800Yards: 2 },
+    boosts: { WR: 15 },
+    description: 'Multiple elite receivers'
+  },
+  olDominance: {
+    name: 'OL Dominance',
+    icon: '🏋️',
+    requirements: { rushYardsPerGame: 200 },
+    boosts: { OT: 10, OG: 10, C: 10 },
+    description: 'Dominant offensive line'
+  },
+  sackCity: {
+    name: 'Sack City',
+    icon: '💥',
+    requirements: { sacks: 40 },
+    boosts: { EDGE: 15, DT: 15 },
+    description: 'Elite pass rush'
+  },
+  turnoverMachine: {
+    name: 'Turnover Machine',
+    icon: '🔄',
+    requirements: { takeaways: 25 },
+    boosts: { EDGE: 10, DT: 10, LB: 10, CB: 10, S: 10 },
+    description: 'Ball-hawking defense'
+  },
+  shutdownSecondary: {
+    name: 'Shutdown Secondary',
+    icon: '🔒',
+    requirements: { passYardsAllowedPerGame: 180 },
+    boosts: { CB: 15, S: 15 },
+    description: 'Elite pass defense'
+  },
+  defensivePowerhouse: {
+    name: 'Defensive Powerhouse',
+    icon: '🛡️',
+    requirements: { pointsAllowedPerGame: 17 },
+    boosts: { EDGE: 15, DT: 15, LB: 15, CB: 15, S: 15 },
+    description: 'Top 10 total defense'
+  },
+  specialTeamsU: {
+    name: 'Special Teams U',
+    icon: '⚡',
+    requirements: { returnTDs: 2 },
+    boosts: { K: 10, P: 10 },
+    description: 'Explosive special teams'
+  }
+};
+
+// ============================================
+// END GAME SIMULATION CONSTANTS
+// ============================================
+
 // Generate rating based on star rating
 const generateRating = (stars) => {
   const ranges = {
@@ -2542,6 +2714,30 @@ const App = () => {
   const [currentGameSimulation, setCurrentGameSimulation] = useState(null); // Current game being simulated
   const [gameSimPhase, setGameSimPhase] = useState('quarters'); // 'quarters', 'boxscore', 'recruiting'
 
+  // Extended Game Simulation State
+  const [quarterScores, setQuarterScores] = useState({ user: [0, 0, 0, 0], opponent: [0, 0, 0, 0] });
+  const [gameEvents, setGameEvents] = useState([]); // Notable plays during game
+  const [gameWeather, setGameWeather] = useState(null); // Weather condition for game
+  const [boxScoreStats, setBoxScoreStats] = useState(null); // Individual player statistics
+  const [recruitingImpact, setRecruitingImpact] = useState(null); // Post-game recruiting effects
+  const [teamMorale, setTeamMorale] = useState(50); // 0-100, affects performance
+
+  // Season Stats Tracking (for position-specific boosts)
+  const [seasonStats, setSeasonStats] = useState({
+    passYards: 0, passTDs: 0, ints: 0,
+    rushYards: 0, rushTDs: 0,
+    sacks: 0, takeaways: 0,
+    pointsAllowed: 0, passYardsAllowed: 0,
+    returnTDs: 0, gamesPlayed: 0,
+    wrStats: {} // Track individual WR yards
+  });
+  const [positionBoosts, setPositionBoosts] = useState([]); // ['qbExcellence', 'defensivePowerhouse', etc.]
+
+  // Coaching Chaos State
+  const [recruitingPenaltyWeeks, setRecruitingPenaltyWeeks] = useState(0); // Violation penalty countdown
+  const [showCoachingEventModal, setShowCoachingEventModal] = useState(null); // 'violation', 'nflOffer', 'termination', 'impermissibleBenefits'
+  const [coachingEventData, setCoachingEventData] = useState(null); // Data for the coaching event
+
   // Load saved game on mount
   useEffect(() => {
     const savedGame = localStorage.getItem('cfb-dynasty-save');
@@ -2628,6 +2824,18 @@ const App = () => {
           setSeasonRecord(gameData.seasonRecord || { wins: 0, losses: 0, confWins: 0, confLosses: 0 });
           setGameResults(gameData.gameResults || []);
           setConferenceStandings(gameData.conferenceStandings || {});
+          // Load extended game simulation state
+          setTeamMorale(gameData.teamMorale ?? 50);
+          setSeasonStats(gameData.seasonStats || {
+            passYards: 0, passTDs: 0, ints: 0,
+            rushYards: 0, rushTDs: 0,
+            sacks: 0, takeaways: 0,
+            pointsAllowed: 0, passYardsAllowed: 0,
+            returnTDs: 0, gamesPlayed: 0,
+            wrStats: {}
+          });
+          setPositionBoosts(gameData.positionBoosts || []);
+          setRecruitingPenaltyWeeks(gameData.recruitingPenaltyWeeks || 0);
           if (gameData.customNicknames) {
             setCustomNicknames(gameData.customNicknames);
           }
@@ -3260,6 +3468,11 @@ const App = () => {
         seasonRecord,
         gameResults,
         conferenceStandings,
+        // Game simulation state
+        teamMorale,
+        seasonStats,
+        positionBoosts,
+        recruitingPenaltyWeeks,
         // Don't save aiRosters - they're not essential and huge
         // aiRosters can be regenerated if needed
       };
@@ -3274,7 +3487,7 @@ const App = () => {
         }
       }
     }
-  }, [selectedSchool, roster, recruits, recruitingPoints, budget, budgetAllocated, incomingFreshmanBudget, transferAdditionsBudget, currentDate, currentGameWeek, dismissedAlerts, offSeasonWeek, offSeasonWeeksCompleted, aiRosters, coachName, coachRecord, coachRivalRecord, coachChampionships, coachSuccess, aiCoaches, customSchoolNames, customNicknames, customConferenceNames, seasonSchedule, seasonRecord, gameResults, conferenceStandings]);
+  }, [selectedSchool, roster, recruits, recruitingPoints, budget, budgetAllocated, incomingFreshmanBudget, transferAdditionsBudget, currentDate, currentGameWeek, dismissedAlerts, offSeasonWeek, offSeasonWeeksCompleted, aiRosters, coachName, coachRecord, coachRivalRecord, coachChampionships, coachSuccess, aiCoaches, customSchoolNames, customNicknames, customConferenceNames, seasonSchedule, seasonRecord, gameResults, conferenceStandings, teamMorale, seasonStats, positionBoosts, recruitingPenaltyWeeks]);
 
   // Reusable Position Group Component for Recruiting
   const PositionGroup = ({ position, title, recruits, expandedPositions, setExpandedPositions, canRecruit, recruitingPoints, executeRecruitingAction, showSubPosition = false }) => {
@@ -4886,6 +5099,741 @@ const App = () => {
     };
   };
 
+  // ============================================
+  // GAME SIMULATION FUNCTIONS
+  // ============================================
+
+  // Calculate win/loss streaks
+  const calculateWinStreak = () => {
+    let streak = 0;
+    for (let i = gameResults.length - 1; i >= 0; i--) {
+      if (gameResults[i].isWin) streak++;
+      else break;
+    }
+    return streak;
+  };
+
+  const calculateLoseStreak = () => {
+    let streak = 0;
+    for (let i = gameResults.length - 1; i >= 0; i--) {
+      if (!gameResults[i].isWin) streak++;
+      else break;
+    }
+    return streak;
+  };
+
+  // Determine weather for the game
+  const determineWeather = () => {
+    const rand = Math.random() * 100;
+    let cumulative = 0;
+
+    for (const [key, weather] of Object.entries(WEATHER_CONDITIONS)) {
+      cumulative += weather.chance;
+      if (rand < cumulative) {
+        return { ...weather, key };
+      }
+    }
+    return { ...WEATHER_CONDITIONS.clear, key: 'clear' };
+  };
+
+  // Calculate contextual modifiers for the game
+  const calculateContextualModifiers = (game, opponentRoster) => {
+    let modifiers = 0;
+    const breakdown = [];
+
+    // Home Field Advantage (+3 home, -3 away)
+    if (game.isHome) {
+      modifiers += 3;
+      breakdown.push({ name: 'Home Field', value: 3, icon: '🏟️' });
+    } else if (!game.isNeutralSite) {
+      modifiers -= 3;
+      breakdown.push({ name: 'Road Game', value: -3, icon: '🚌' });
+    }
+
+    // Rivalry Underdog Boost (+5 if underdog in rivalry)
+    if (game.isRivalry) {
+      const userRating = calculateTeamRating(roster);
+      const oppRating = calculateTeamRating(opponentRoster);
+      if (userRating < oppRating) {
+        modifiers += 5;
+        breakdown.push({ name: 'Rivalry Underdog', value: 5, icon: '🔥' });
+      }
+    }
+
+    // Coach Success Modifier (±2)
+    if (coachSuccess >= 70) {
+      modifiers += 2;
+      breakdown.push({ name: 'Coach Success', value: 2, icon: '📈' });
+    } else if (coachSuccess < 40) {
+      modifiers -= 2;
+      breakdown.push({ name: 'Coach Struggling', value: -2, icon: '📉' });
+    }
+
+    // Momentum from Win Streak (+1 per win, max +3)
+    const winStreak = calculateWinStreak();
+    if (winStreak > 0) {
+      const momentumBonus = Math.min(winStreak, 3);
+      modifiers += momentumBonus;
+      breakdown.push({ name: `${winStreak}-Game Win Streak`, value: momentumBonus, icon: '🔥' });
+    }
+
+    // Losing Streak Penalty (-1 per loss, max -3)
+    const loseStreak = calculateLoseStreak();
+    if (loseStreak > 0) {
+      const momentumPenalty = Math.min(loseStreak, 3);
+      modifiers -= momentumPenalty;
+      breakdown.push({ name: `${loseStreak}-Game Losing Streak`, value: -momentumPenalty, icon: '😰' });
+    }
+
+    // Morale Modifier (±2)
+    if (teamMorale >= 70) {
+      modifiers += 2;
+      breakdown.push({ name: 'High Morale', value: 2, icon: '💪' });
+    } else if (teamMorale < 30) {
+      modifiers -= 2;
+      breakdown.push({ name: 'Low Morale', value: -2, icon: '😞' });
+    }
+
+    return { total: modifiers, breakdown };
+  };
+
+  // Generate chaos events for the game
+  const generateChaosEvents = (weather) => {
+    const events = { user: [], opponent: [] };
+
+    // Roll for each chaos event type
+    Object.entries(CHAOS_EVENTS).forEach(([key, event]) => {
+      // Adjust chances based on weather
+      let adjustedChance = event.chance;
+      if (weather.key === 'rain' || weather.key === 'snow') {
+        if (key === 'fumbleTD' || key === 'pickSix') {
+          adjustedChance *= 1.5; // More turnovers in bad weather
+        }
+      }
+
+      // Roll for user team
+      if (Math.random() * 100 < adjustedChance) {
+        const quarter = Math.ceil(Math.random() * 4);
+        events.user.push({ ...event, key, quarter, forUser: true });
+      }
+
+      // Roll for opponent team
+      if (Math.random() * 100 < adjustedChance) {
+        const quarter = Math.ceil(Math.random() * 4);
+        events.opponent.push({ ...event, key, quarter, forUser: false });
+      }
+    });
+
+    // Check for in-game injuries (3% per team per quarter)
+    for (let q = 1; q <= 4; q++) {
+      if (Math.random() < 0.03) {
+        const starters = roster.filter(p => p.isStarter);
+        if (starters.length > 0) {
+          const injuredPlayer = starters[Math.floor(Math.random() * starters.length)];
+          events.user.push({
+            type: 'injury',
+            quarter: q,
+            player: injuredPlayer,
+            icon: '🏥',
+            name: 'Player Injury',
+            description: `${injuredPlayer.name} (${injuredPlayer.position}) injured!`
+          });
+        }
+      }
+    }
+
+    return events;
+  };
+
+  // Calculate upset probability
+  const calculateUpsetProbability = (userRating, oppRating, game) => {
+    const spread = Math.abs(userRating - oppRating);
+    const userIsFavorite = userRating > oppRating;
+
+    // Find base upset chance from table
+    let baseUpset = 50;
+    for (const entry of UPSET_PROBABILITY) {
+      if (spread >= entry.spread) {
+        baseUpset = entry.baseUpset;
+        break;
+      }
+    }
+
+    let modifiedUpset = baseUpset;
+
+    // Rivalry +15% upset chance
+    if (game.isRivalry) {
+      modifiedUpset += 15;
+    }
+
+    // Home underdog +8%
+    if (game.isHome && !userIsFavorite) {
+      modifiedUpset += 8;
+    }
+
+    // Road underdog -5%
+    if (!game.isHome && !game.isNeutralSite && !userIsFavorite) {
+      modifiedUpset -= 5;
+    }
+
+    // Clamp between 2-95%
+    return {
+      chance: Math.min(95, Math.max(2, modifiedUpset)),
+      userIsFavorite,
+      spread
+    };
+  };
+
+  // Generate score margin based on distribution
+  const generateMargin = (scoreType) => {
+    const dist = SCORE_DISTRIBUTION[scoreType];
+    return Math.floor(Math.random() * (dist.marginMax - dist.marginMin + 1)) + dist.marginMin;
+  };
+
+  // Generate base score from rating
+  const generateBaseScore = (offenseRating, defenseRating, weather) => {
+    // Base: Offense rating vs Defense rating determines scoring
+    const differential = offenseRating - defenseRating;
+
+    // Base points: 21-35 for average matchup
+    let basePoints = 28 + (differential * 0.3);
+
+    // Weather impact
+    basePoints += weather.passModifier * 0.3;
+
+    // Add some randomness (±7)
+    basePoints += (Math.random() * 14) - 7;
+
+    // Clamp to reasonable range (7-56)
+    return Math.max(7, Math.min(56, Math.round(basePoints)));
+  };
+
+  // Distribute score across quarters
+  const distributeScoreByQuarters = (totalScore) => {
+    const quarters = [0, 0, 0, 0];
+    let remaining = totalScore;
+
+    // Q1: 15-25%
+    quarters[0] = Math.floor(remaining * (0.15 + Math.random() * 0.10));
+    remaining -= quarters[0];
+
+    // Q2: 25-35% (often highest)
+    quarters[1] = Math.floor(remaining * (0.30 + Math.random() * 0.15));
+    remaining -= quarters[1];
+
+    // Q3: 20-30%
+    quarters[2] = Math.floor(remaining * (0.30 + Math.random() * 0.15));
+    remaining -= quarters[2];
+
+    // Q4: Remainder
+    quarters[3] = remaining;
+
+    // Round to realistic scores (multiples of 3 or 7 preferred)
+    return quarters.map(q => {
+      if (q <= 0) return 0;
+      // Snap to nearest touchdown (7) or field goal (3)
+      const nearestTD = Math.round(q / 7) * 7;
+      const nearestFG = Math.round(q / 3) * 3;
+      return Math.abs(q - nearestTD) < Math.abs(q - nearestFG) ? nearestTD : nearestFG;
+    });
+  };
+
+  // ============================================
+  // MAIN GAME SIMULATION ENGINE
+  // ============================================
+
+  // Generate box score statistics
+  const generateBoxScore = (userScore, oppScore, userUnits, oppUnits, gamePlans, chaosEvents) => {
+    const starters = roster.filter(p => p.isStarter);
+
+    // QB Stats
+    const qb = starters.find(p => p.position === 'QB');
+    const passAttempts = 25 + Math.floor(Math.random() * 20);
+    const completionRate = 0.55 + (userUnits.passing / 500);
+    const completions = Math.floor(passAttempts * completionRate);
+    const passYards = Math.floor(completions * (8 + Math.random() * 7));
+    const passTDs = Math.max(0, Math.floor(userScore / 7 * 0.6 + Math.random() * 2 - 1));
+    const interceptions = Math.floor(Math.random() * 3);
+
+    // RB Stats
+    const rbs = starters.filter(p => p.position === 'RB');
+    const rushAttempts = 20 + Math.floor(Math.random() * 15);
+    const avgYPC = 3.5 + (userUnits.rushing / 200);
+    const rushYards = Math.floor(rushAttempts * avgYPC);
+    const rushTDs = Math.max(0, Math.floor(userScore / 7 * 0.4));
+
+    // WR Stats
+    const wrs = starters.filter(p => p.position === 'WR');
+    const wrStats = wrs.map((wr, i) => {
+      const baseRec = Math.floor(completions / Math.max(1, wrs.length));
+      const recs = baseRec + (i === 0 ? Math.floor(Math.random() * 4) : 0);
+      const yards = Math.floor(passYards / Math.max(1, wrs.length)) + (i === 0 ? Math.floor(Math.random() * 30) : 0);
+      return { name: wr.name, position: wr.position, receptions: recs, yards, rating: wr.rating };
+    });
+
+    // TE Stats
+    const tes = starters.filter(p => p.position === 'TE');
+    const teStats = tes.map(te => ({
+      name: te.name,
+      position: te.position,
+      receptions: Math.floor(Math.random() * 4) + 1,
+      yards: Math.floor(Math.random() * 50) + 10,
+      rating: te.rating
+    }));
+
+    // Defensive Stats
+    const defenders = starters.filter(p => DEFENSIVE_POSITIONS.includes(p.position));
+    const sacks = Math.floor(Math.random() * 5);
+    const userTakeaways = Math.floor(Math.random() * 3);
+
+    // Kicking Stats
+    const kicker = starters.find(p => p.position === 'K');
+    const fgAttempts = Math.floor(Math.random() * 4);
+    const fgMade = Math.floor(fgAttempts * (0.7 + (kicker?.rating || 70) / 500));
+    const xpMade = Math.floor(userScore / 7);
+
+    // Calculate opponent stats
+    const oppPassYards = 150 + Math.floor(Math.random() * 150);
+    const oppRushYards = 80 + Math.floor(Math.random() * 100);
+    const oppTurnovers = Math.floor(Math.random() * 4);
+
+    return {
+      user: {
+        passing: {
+          player: qb?.name || 'QB',
+          completions,
+          attempts: passAttempts,
+          yards: passYards,
+          tds: passTDs,
+          ints: interceptions,
+          rating: qb?.rating || 75
+        },
+        rushing: {
+          players: rbs.map((rb, i) => ({
+            name: rb.name,
+            carries: Math.floor(rushAttempts / Math.max(1, rbs.length)) + (i === 0 ? 5 : 0),
+            yards: Math.floor(rushYards / Math.max(1, rbs.length)) + (i === 0 ? 20 : 0),
+            tds: i === 0 ? rushTDs : 0,
+            rating: rb.rating
+          })),
+          totalYards: rushYards,
+          totalTDs: rushTDs
+        },
+        receiving: {
+          players: [...wrStats, ...teStats],
+          totalYards: passYards
+        },
+        defense: {
+          sacks,
+          tackles: 40 + Math.floor(Math.random() * 30),
+          interceptions: userTakeaways > 1 ? 1 : userTakeaways,
+          fumbleRec: userTakeaways > 1 ? userTakeaways - 1 : 0,
+          totalTakeaways: userTakeaways
+        },
+        kicking: {
+          player: kicker?.name || 'K',
+          fgAttempts,
+          fgMade,
+          xpAttempts: Math.floor(userScore / 7),
+          xpMade,
+          rating: kicker?.rating || 70
+        },
+        totalYards: passYards + rushYards,
+        totalScore: userScore
+      },
+      opponent: {
+        totalYards: oppPassYards + oppRushYards,
+        passYards: oppPassYards,
+        rushYards: oppRushYards,
+        turnovers: oppTurnovers,
+        totalScore: oppScore
+      }
+    };
+  };
+
+  // Main game simulation function
+  const simulateGame = (game, gamePlans) => {
+    // Get opponent roster
+    const opponentRoster = aiRosters[game.opponent.id] || [];
+
+    // 1. Calculate base team ratings
+    const userRating = calculateTeamRating(roster);
+    const userUnits = calculateUnitRatings(roster);
+    const oppRating = calculateTeamRating(opponentRoster);
+    const oppUnits = calculateUnitRatings(opponentRoster);
+
+    // 2. Determine weather
+    const weather = determineWeather();
+
+    // 3. Get game plans and apply bonuses
+    const offensePlan = OFFENSIVE_GAME_PLANS[gamePlans.offense] || OFFENSIVE_GAME_PLANS.balanced;
+    const defensePlan = DEFENSIVE_GAME_PLANS[gamePlans.defense] || DEFENSIVE_GAME_PLANS.balanced;
+
+    // 4. Calculate contextual modifiers
+    const modifiers = calculateContextualModifiers(game, opponentRoster);
+
+    // 5. Calculate effective ratings
+    // Base: 70% team rating
+    let userEffective = userRating * 0.70;
+    let oppEffective = oppRating * 0.70;
+
+    // Add contextual modifiers (20% weight)
+    userEffective += modifiers.total * 2; // Scale modifiers
+
+    // Opponent home field if we're away
+    if (!game.isHome && !game.isNeutralSite) {
+      oppEffective += 6; // +3 home field scaled
+    }
+
+    // Apply game plan bonuses
+    userEffective += (offensePlan.passBonus + offensePlan.rushBonus) * 0.3;
+    userEffective += (defensePlan.passDefBonus + defensePlan.runDefBonus) * 0.3;
+
+    // Apply weather effects
+    userEffective += weather.passModifier * 0.2;
+    oppEffective += weather.passModifier * 0.2;
+
+    // Add chaos factor (10% - random variance)
+    userEffective += (Math.random() * 10) - 5;
+    oppEffective += (Math.random() * 10) - 5;
+
+    // 6. Generate chaos events
+    const chaosEvents = generateChaosEvents(weather);
+
+    // Apply chaos event point swings
+    let userChaosPoints = 0;
+    let oppChaosPoints = 0;
+
+    chaosEvents.user.forEach(event => {
+      if (event.pointSwing) {
+        if (event.type === 'defense') {
+          userChaosPoints += event.pointSwing; // Defense scores for us
+        } else if (event.type === 'player' || event.type === 'special') {
+          userChaosPoints += Math.floor(event.pointSwing * 0.7);
+        }
+      }
+      if (event.pointBonus) {
+        userEffective += event.pointBonus * 0.3;
+      }
+    });
+
+    chaosEvents.opponent.forEach(event => {
+      if (event.pointSwing) {
+        if (event.type === 'defense') {
+          oppChaosPoints += event.pointSwing;
+        } else if (event.type === 'player' || event.type === 'special') {
+          oppChaosPoints += Math.floor(event.pointSwing * 0.7);
+        }
+      }
+      if (event.pointBonus) {
+        oppEffective += event.pointBonus * 0.3;
+      }
+    });
+
+    // 7. Calculate upset probability and determine winner
+    const upset = calculateUpsetProbability(userEffective, oppEffective, game);
+
+    let userWins;
+    if (upset.userIsFavorite) {
+      // User is favorite - they lose upset.chance % of the time
+      userWins = Math.random() * 100 > upset.chance;
+    } else {
+      // User is underdog - they win upset.chance % of the time
+      userWins = Math.random() * 100 < upset.chance;
+    }
+
+    // 8. Determine score distribution type
+    const distRand = Math.random() * 100;
+    let scoreType;
+    if (distRand < SCORE_DISTRIBUTION.blowout.chance) {
+      scoreType = 'blowout';
+    } else if (distRand < SCORE_DISTRIBUTION.blowout.chance + SCORE_DISTRIBUTION.moderate.chance) {
+      scoreType = 'moderate';
+    } else {
+      scoreType = 'close';
+    }
+
+    // 9. Generate scores
+    const margin = generateMargin(scoreType);
+    const winnerBaseScore = generateBaseScore(
+      userWins ? userUnits.passing : oppUnits.passing,
+      userWins ? oppUnits.passDefense : userUnits.passDefense,
+      weather
+    );
+
+    let winnerScore = winnerBaseScore + (userWins ? userChaosPoints : oppChaosPoints);
+    let loserScore = Math.max(0, winnerScore - margin + (userWins ? oppChaosPoints : userChaosPoints));
+
+    // Ensure winner actually wins
+    if (loserScore >= winnerScore) {
+      loserScore = winnerScore - 3;
+    }
+
+    const userScore = userWins ? winnerScore : loserScore;
+    const oppScore = userWins ? loserScore : winnerScore;
+
+    // 10. Generate quarter-by-quarter breakdown
+    const userQuarters = distributeScoreByQuarters(userScore);
+    const oppQuarters = distributeScoreByQuarters(oppScore);
+
+    // 11. Generate box score
+    const boxScore = generateBoxScore(userScore, oppScore, userUnits, oppUnits, gamePlans, chaosEvents);
+
+    // 12. Determine headline
+    let headline = '';
+    let subheadline = '';
+    const marginFinal = Math.abs(userScore - oppScore);
+
+    if (userWins) {
+      if (!upset.userIsFavorite && upset.spread >= 10) {
+        headline = '🚨 UPSET ALERT!';
+        subheadline = `${selectedSchool?.name} stuns ${game.opponent.name}!`;
+      } else if (marginFinal >= 21) {
+        headline = '💪 DOMINANT VICTORY';
+        subheadline = `${selectedSchool?.name} crushes ${game.opponent.name}`;
+      } else if (marginFinal <= 3) {
+        headline = '😅 NAIL-BITER';
+        subheadline = `${selectedSchool?.name} survives ${game.opponent.name}`;
+      } else if (game.isRivalry) {
+        headline = '🏆 RIVALRY WIN!';
+        subheadline = `${selectedSchool?.name} defeats ${game.opponent.name}`;
+      } else {
+        headline = '✅ VICTORY';
+        subheadline = `${selectedSchool?.name} defeats ${game.opponent.name}`;
+      }
+    } else {
+      if (upset.userIsFavorite && upset.spread >= 10) {
+        headline = '💀 STUNNING UPSET';
+        subheadline = `${selectedSchool?.name} falls to ${game.opponent.name}`;
+      } else if (marginFinal >= 21) {
+        headline = '😰 BLOWOUT LOSS';
+        subheadline = `${selectedSchool?.name} crushed by ${game.opponent.name}`;
+      } else if (marginFinal <= 3) {
+        headline = '💔 HEARTBREAKER';
+        subheadline = `${selectedSchool?.name} falls short to ${game.opponent.name}`;
+      } else if (game.isRivalry) {
+        headline = '😤 RIVALRY LOSS';
+        subheadline = `${selectedSchool?.name} loses to ${game.opponent.name}`;
+      } else {
+        headline = '❌ DEFEAT';
+        subheadline = `${selectedSchool?.name} falls to ${game.opponent.name}`;
+      }
+    }
+
+    return {
+      userScore,
+      oppScore,
+      userWins,
+      userQuarters,
+      oppQuarters,
+      weather,
+      chaosEvents,
+      boxScore,
+      modifiers,
+      upset,
+      scoreType,
+      headline,
+      subheadline,
+      game,
+      gamePlans
+    };
+  };
+
+  // Apply recruiting impact after game
+  const applyRecruitingImpact = (gameResult, game) => {
+    let totalImpact = 0;
+    const breakdown = [];
+
+    if (gameResult.userWins) {
+      // Win bonuses
+      totalImpact += RECRUITING_WIN_BONUSES.anyWin;
+      breakdown.push({ name: 'Win Bonus', value: RECRUITING_WIN_BONUSES.anyWin, icon: '✅' });
+
+      if (game.isConference) {
+        totalImpact += RECRUITING_WIN_BONUSES.conferenceWin;
+        breakdown.push({ name: 'Conference Win', value: RECRUITING_WIN_BONUSES.conferenceWin, icon: '🏆' });
+      }
+
+      if (game.isRivalry) {
+        totalImpact += RECRUITING_WIN_BONUSES.rivalryWin;
+        breakdown.push({ name: 'Rivalry Win!', value: RECRUITING_WIN_BONUSES.rivalryWin, icon: '🔥' });
+      }
+
+      // Upset bonus (if underdog by 10+)
+      if (!gameResult.upset.userIsFavorite && gameResult.upset.spread >= 10) {
+        totalImpact += RECRUITING_WIN_BONUSES.upsetWin;
+        breakdown.push({ name: 'UPSET WIN!', value: RECRUITING_WIN_BONUSES.upsetWin, icon: '🚨' });
+      }
+
+      // Check for miracle play
+      const miraclePlay = gameResult.chaosEvents.user.find(e => e.key === 'miraclePlay');
+      if (miraclePlay) {
+        totalImpact += miraclePlay.recruitingBoost;
+        breakdown.push({ name: 'Miracle Play!', value: miraclePlay.recruitingBoost, icon: '🎆' });
+      }
+    } else {
+      // Loss penalties
+      totalImpact += RECRUITING_LOSS_PENALTIES.anyLoss;
+      breakdown.push({ name: 'Loss Penalty', value: RECRUITING_LOSS_PENALTIES.anyLoss, icon: '❌' });
+
+      if (game.isRivalry) {
+        totalImpact += RECRUITING_LOSS_PENALTIES.rivalryLoss;
+        breakdown.push({ name: 'Rivalry Loss', value: RECRUITING_LOSS_PENALTIES.rivalryLoss, icon: '😤' });
+      }
+
+      if (gameResult.scoreType === 'blowout') {
+        totalImpact += RECRUITING_LOSS_PENALTIES.blowoutLoss;
+        breakdown.push({ name: 'Blowout Loss', value: RECRUITING_LOSS_PENALTIES.blowoutLoss, icon: '😰' });
+      }
+
+      // Bad loss (we were big favorites)
+      if (gameResult.upset.userIsFavorite && gameResult.upset.spread >= 10) {
+        totalImpact += RECRUITING_LOSS_PENALTIES.badLoss;
+        breakdown.push({ name: 'Bad Loss', value: RECRUITING_LOSS_PENALTIES.badLoss, icon: '💀' });
+      }
+
+      // Consecutive losses compound
+      const currentLoseStreak = calculateLoseStreak() + 1; // +1 because this loss isn't in results yet
+      if (currentLoseStreak > 1) {
+        const compoundPenalty = RECRUITING_LOSS_PENALTIES.consecutiveLoss * (currentLoseStreak - 1);
+        totalImpact += compoundPenalty;
+        breakdown.push({ name: `${currentLoseStreak} Straight Losses`, value: compoundPenalty, icon: '📉' });
+      }
+
+      // Check for collapse
+      const collapse = gameResult.chaosEvents.user.find(e => e.key === 'collapse');
+      if (collapse) {
+        totalImpact -= collapse.recruitingPenalty;
+        breakdown.push({ name: 'Team Collapse', value: -collapse.recruitingPenalty, icon: '💀' });
+      }
+    }
+
+    // Apply penalty if under recruiting violation
+    if (recruitingPenaltyWeeks > 0) {
+      const violationPenalty = -20;
+      totalImpact += violationPenalty;
+      breakdown.push({ name: 'Recruiting Violation', value: violationPenalty, icon: '🚨' });
+    }
+
+    // Track which recruits changed
+    const affectedRecruits = [];
+
+    // Apply to all targeted recruits
+    const updatedRecruits = recruits.map(recruit => {
+      if (recruit.isTargeted || recruit.interest > 0) {
+        const oldInterest = recruit.interest;
+        const newInterest = Math.max(0, Math.min(100, recruit.interest + totalImpact));
+
+        if (oldInterest !== newInterest) {
+          affectedRecruits.push({
+            name: recruit.name,
+            position: recruit.position,
+            stars: recruit.stars,
+            oldInterest,
+            newInterest,
+            change: newInterest - oldInterest
+          });
+        }
+
+        return {
+          ...recruit,
+          interest: newInterest
+        };
+      }
+      return recruit;
+    });
+
+    // Sort affected recruits by change magnitude
+    affectedRecruits.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
+    return {
+      total: totalImpact,
+      breakdown,
+      affectedRecruits: affectedRecruits.slice(0, 10), // Top 10 most affected
+      updatedRecruits
+    };
+  };
+
+  // Update season stats after game
+  const updateSeasonStats = (boxScore) => {
+    setSeasonStats(prev => ({
+      passYards: prev.passYards + boxScore.user.passing.yards,
+      passTDs: prev.passTDs + boxScore.user.passing.tds,
+      ints: prev.ints + boxScore.user.passing.ints,
+      rushYards: prev.rushYards + boxScore.user.rushing.totalYards,
+      rushTDs: prev.rushTDs + boxScore.user.rushing.totalTDs,
+      sacks: prev.sacks + boxScore.user.defense.sacks,
+      takeaways: prev.takeaways + boxScore.user.defense.totalTakeaways,
+      pointsAllowed: prev.pointsAllowed + boxScore.opponent.totalScore,
+      passYardsAllowed: prev.passYardsAllowed + boxScore.opponent.passYards,
+      returnTDs: prev.returnTDs, // Would need to track this separately
+      gamesPlayed: prev.gamesPlayed + 1,
+      wrStats: {
+        ...prev.wrStats,
+        ...boxScore.user.receiving.players
+          .filter(p => p.position === 'WR')
+          .reduce((acc, wr) => {
+            acc[wr.name] = (prev.wrStats[wr.name] || 0) + wr.yards;
+            return acc;
+          }, {})
+      }
+    }));
+  };
+
+  // Check for coaching chaos events (called after each game)
+  const checkCoachingChaosEvents = () => {
+    // Recruiting Violation (2% chance)
+    if (Math.random() * 100 < COACHING_CHAOS_EVENTS.violation.chance) {
+      setShowCoachingEventModal('violation');
+      setCoachingEventData({
+        ...COACHING_CHAOS_EVENTS.violation,
+        message: 'The NCAA is investigating potential recruiting violations at your program.'
+      });
+      return true;
+    }
+
+    // Impermissible Benefits (1% chance)
+    if (Math.random() * 100 < COACHING_CHAOS_EVENTS.impermissibleBenefits.chance) {
+      const targetedRecruits = recruits.filter(r => r.isTargeted && !r.signedCommit);
+      if (targetedRecruits.length > 0) {
+        const removedRecruit = targetedRecruits[Math.floor(Math.random() * targetedRecruits.length)];
+        setShowCoachingEventModal('impermissibleBenefits');
+        setCoachingEventData({
+          ...COACHING_CHAOS_EVENTS.impermissibleBenefits,
+          recruit: removedRecruit,
+          message: `${removedRecruit.name} received impermissible benefits and has been removed from your recruiting board.`
+        });
+        return true;
+      }
+    }
+
+    // Inappropriate Relationship (0.05% chance)
+    if (Math.random() * 100 < COACHING_CHAOS_EVENTS.inappropriateRelationship.chance) {
+      setShowCoachingEventModal('termination');
+      setCoachingEventData({
+        ...COACHING_CHAOS_EVENTS.inappropriateRelationship,
+        message: 'You have been terminated for inappropriate conduct. Your career at this school is over.'
+      });
+      return true;
+    }
+
+    // NFL Job Offer (if coach success > 90%)
+    if (coachSuccess >= COACHING_CHAOS_EVENTS.nflOffer.minCoachSuccess && Math.random() * 100 < 10) {
+      setShowCoachingEventModal('nflOffer');
+      setCoachingEventData({
+        ...COACHING_CHAOS_EVENTS.nflOffer,
+        message: 'An NFL team has reached out about their head coaching vacancy. Are you interested?'
+      });
+      return true;
+    }
+
+    return false;
+  };
+
+  // ============================================
+  // END GAME SIMULATION ENGINE
+  // ============================================
+
   const advanceWeek = () => {
     // Check if we're entering Early Signing Period
     const currentEvent = getCurrentEvent();
@@ -5587,7 +6535,20 @@ const App = () => {
   const simulateToNextEvent = () => {
     const nextEvent = getUpcomingEvents()[0];
     if (!nextEvent) return;
-    
+
+    // BLOCK if there's an unplayed game for the current week during Regular Season
+    if (currentGameWeek > 0) {
+      const currentGame = seasonSchedule.find(g => g.week === currentGameWeek);
+      const gameAlreadyPlayed = gameResults.find(r => r.week === currentGameWeek);
+
+      if (currentGame && !gameAlreadyPlayed) {
+        alert(`🏈 GAME DAY!\n\nYou must play your Week ${currentGameWeek} game before advancing.\n\n` +
+              `${currentGame.isHome ? 'vs' : '@'} ${currentGame.opponent?.name || 'Opponent'}\n` +
+              `${currentGame.isRivalry ? '🔥 RIVALRY GAME' : currentGame.isConference ? 'Conference Game' : 'Non-Conference'}`);
+        return;
+      }
+    }
+
     // Check if simulating to next event would cross into a new year (January)
     const willCrossYear = currentDate.month > 0 && nextEvent.title === 'Transfer Portal Open';
     
@@ -6553,6 +7514,44 @@ const App = () => {
       <div className="max-w-7xl mx-auto p-6">
         {activeTab === 'dashboard' && (
           <div>
+            {/* Game Day Banner - Shows during Regular Season when there's a game to play */}
+            {currentGameWeek > 0 && seasonSchedule.length > 0 && (() => {
+              const currentGame = seasonSchedule.find(g => g.week === currentGameWeek);
+              const gameAlreadyPlayed = gameResults.find(r => r.week === currentGameWeek);
+
+              if (currentGame && !gameAlreadyPlayed) {
+                return (
+                  <div className="mb-6 bg-green-900 border-4 border-green-500 p-4"
+                       style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-xs text-green-400 font-bold mb-1">🏈 GAME DAY - WEEK {currentGameWeek}</div>
+                        <div className="text-lg font-bold">
+                          {currentGame.isHome ? 'vs' : '@'} {currentGame.opponent?.name || 'Opponent'}
+                          {currentGame.isRivalry && <span className="ml-2 text-yellow-400">🔥 RIVALRY</span>}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {currentGame.isConference ? 'Conference Game' : 'Non-Conference'} • {currentGame.isHome ? 'Home' : currentGame.isNeutralSite ? 'Neutral Site' : 'Away'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setCurrentOpponent(currentGame);
+                          setSelectedGamePlans({ offense: 'balanced', defense: 'balanced' });
+                          setShowGamePlanModal(true);
+                        }}
+                        className="bg-green-700 border-4 border-green-500 px-6 py-3 text-lg font-bold hover:bg-green-600"
+                        style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        🏈 PLAY GAME
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {/* Messenger - Collapsible */}
             <div className="mb-6">
               <button
@@ -7533,9 +8532,17 @@ const App = () => {
                                   )}
                                 </div>
                               ) : game.week === currentGameWeek ? (
-                                <div className="text-blue-400 font-bold text-sm">
-                                  ▶ THIS WEEK
-                                </div>
+                                <button
+                                  onClick={() => {
+                                    setCurrentOpponent(game);
+                                    setSelectedGamePlans({ offense: 'balanced', defense: 'balanced' });
+                                    setShowGamePlanModal(true);
+                                  }}
+                                  className="bg-green-700 border-2 border-green-500 px-4 py-2 text-sm font-bold hover:bg-green-600"
+                                  style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                                >
+                                  🏈 PLAY GAME
+                                </button>
                               ) : (
                                 <div className="text-gray-500 text-xs">
                                   Upcoming
@@ -10398,6 +11405,630 @@ const App = () => {
                       CONTINUE TO OFF-SEASON
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Plan Selection Modal */}
+      {showGamePlanModal && currentOpponent && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-900 border-4 border-green-600 max-w-4xl w-full my-4"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-green-700 p-4 border-b-4 border-green-800">
+              <h2 className="text-xl font-bold text-center">🏈 GAME DAY - WEEK {currentGameWeek}</h2>
+              <div className="text-center text-sm mt-1">
+                {selectedSchool?.name} vs {currentOpponent.opponent?.name || currentOpponent.name}
+                {currentOpponent.isRivalry && <span className="ml-2 text-yellow-400">🔥 RIVALRY</span>}
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Matchup Overview */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {/* Your Team */}
+                <div className="bg-gray-800 border-2 border-gray-600 p-4 text-center"
+                     style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="text-xs text-gray-400 mb-1">YOUR TEAM</div>
+                  <div className="text-lg font-bold" style={{ color: selectedSchool?.colors?.primary || '#ffffff' }}>
+                    {selectedSchool?.name}
+                  </div>
+                  <div className="text-2xl font-bold text-white mt-2">
+                    {calculateTeamRating(roster)} OVR
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {seasonRecord.wins}-{seasonRecord.losses} ({seasonRecord.confWins}-{seasonRecord.confLosses})
+                  </div>
+                </div>
+
+                {/* VS */}
+                <div className="flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-gray-500">VS</div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      {currentOpponent.isHome ? '🏟️ HOME' : currentOpponent.isNeutralSite ? '🏟️ NEUTRAL' : '🚌 AWAY'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opponent */}
+                <div className="bg-gray-800 border-2 border-gray-600 p-4 text-center"
+                     style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="text-xs text-gray-400 mb-1">OPPONENT</div>
+                  <div className="text-lg font-bold" style={{ color: currentOpponent.opponent?.colors?.primary || '#ffffff' }}>
+                    {currentOpponent.opponent?.name || 'Opponent'}
+                  </div>
+                  <div className="text-2xl font-bold text-white mt-2">
+                    {calculateTeamRating(aiRosters[currentOpponent.opponent?.id] || []) || '??'} OVR
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {currentOpponent.opponent?.tier || 'Unknown'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Matchup Analysis */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-6"
+                   style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                <div className="text-sm font-bold text-yellow-400 mb-3">📊 MATCHUP ANALYSIS</div>
+                {(() => {
+                  const userUnits = calculateUnitRatings(roster);
+                  const oppRoster = aiRosters[currentOpponent.opponent?.id] || [];
+                  const oppUnits = calculateUnitRatings(oppRoster);
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-gray-400 mb-2">OFFENSE vs DEFENSE</div>
+                        <div className="flex justify-between mb-1">
+                          <span>Your Passing ({userUnits.passing})</span>
+                          <span className={userUnits.passing > oppUnits.passDefense ? 'text-green-400' : 'text-red-400'}>
+                            vs {oppUnits.passDefense}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Your Rushing ({userUnits.rushing})</span>
+                          <span className={userUnits.rushing > oppUnits.runDefense ? 'text-green-400' : 'text-red-400'}>
+                            vs {oppUnits.runDefense}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400 mb-2">DEFENSE vs OFFENSE</div>
+                        <div className="flex justify-between mb-1">
+                          <span>Your Pass D ({userUnits.passDefense})</span>
+                          <span className={userUnits.passDefense > oppUnits.passing ? 'text-green-400' : 'text-red-400'}>
+                            vs {oppUnits.passing}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Your Run D ({userUnits.runDefense})</span>
+                          <span className={userUnits.runDefense > oppUnits.rushing ? 'text-green-400' : 'text-red-400'}>
+                            vs {oppUnits.rushing}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Game Plan Selection */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {/* Offensive Game Plan */}
+                <div>
+                  <div className="text-sm font-bold text-blue-400 mb-3">⚔️ OFFENSIVE GAME PLAN</div>
+                  <div className="space-y-2">
+                    {Object.entries(OFFENSIVE_GAME_PLANS).map(([key, plan]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedGamePlans(prev => ({ ...prev, offense: key }))}
+                        className={`w-full text-left p-3 border-2 ${
+                          selectedGamePlans.offense === key
+                            ? 'bg-blue-900 border-blue-500'
+                            : 'bg-gray-800 border-gray-600 hover:border-gray-500'
+                        }`}
+                        style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        <div className="font-bold text-sm">{plan.name}</div>
+                        <div className="text-xs text-gray-400">{plan.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Defensive Game Plan */}
+                <div>
+                  <div className="text-sm font-bold text-red-400 mb-3">🛡️ DEFENSIVE GAME PLAN</div>
+                  <div className="space-y-2">
+                    {Object.entries(DEFENSIVE_GAME_PLANS).map(([key, plan]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedGamePlans(prev => ({ ...prev, defense: key }))}
+                        className={`w-full text-left p-3 border-2 ${
+                          selectedGamePlans.defense === key
+                            ? 'bg-red-900 border-red-500'
+                            : 'bg-gray-800 border-gray-600 hover:border-gray-500'
+                        }`}
+                        style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        <div className="font-bold text-sm">{plan.name}</div>
+                        <div className="text-xs text-gray-400">{plan.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Play Ball Button */}
+              <div className="text-center">
+                <button
+                  onClick={() => {
+                    // Run the simulation
+                    const result = simulateGame(currentOpponent, selectedGamePlans);
+                    setCurrentGameSimulation(result);
+                    setQuarterScores({ user: result.userQuarters, opponent: result.oppQuarters });
+                    setGameWeather(result.weather);
+                    setGameEvents([...result.chaosEvents.user, ...result.chaosEvents.opponent]);
+                    setBoxScoreStats(result.boxScore);
+                    setShowGamePlanModal(false);
+                    setShowGameSimModal(true);
+                    setGameSimPhase('quarters');
+                  }}
+                  disabled={!selectedGamePlans.offense || !selectedGamePlans.defense}
+                  className={`px-12 py-4 text-xl font-bold border-4 ${
+                    selectedGamePlans.offense && selectedGamePlans.defense
+                      ? 'bg-green-700 border-green-600 hover:bg-green-600'
+                      : 'bg-gray-700 border-gray-600 cursor-not-allowed'
+                  }`}
+                  style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                >
+                  🏈 PLAY BALL!
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Simulation Modal */}
+      {showGameSimModal && currentGameSimulation && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-900 border-4 border-yellow-600 max-w-4xl w-full my-4"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* QUARTERS PHASE */}
+            {gameSimPhase === 'quarters' && (
+              <>
+                {/* Header with Weather */}
+                <div className="bg-gray-800 p-4 border-b-4 border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">Week {currentGameWeek}</div>
+                    <div className="text-lg font-bold">
+                      {gameWeather?.icon} {gameWeather?.name}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {currentGameSimulation.game?.isHome ? 'HOME' : 'AWAY'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scoreboard */}
+                <div className="bg-gray-950 p-6">
+                  <div className="grid grid-cols-7 gap-2 text-center mb-4">
+                    <div className="text-xs text-gray-500">TEAM</div>
+                    <div className="text-xs text-gray-500">Q1</div>
+                    <div className="text-xs text-gray-500">Q2</div>
+                    <div className="text-xs text-gray-500">Q3</div>
+                    <div className="text-xs text-gray-500">Q4</div>
+                    <div className="text-xs text-gray-500">FINAL</div>
+                    <div></div>
+                  </div>
+
+                  {/* Your Team */}
+                  <div className="grid grid-cols-7 gap-2 text-center mb-2 py-2 bg-gray-800 border-l-4"
+                       style={{ borderColor: selectedSchool?.colors?.primary || '#ffffff' }}>
+                    <div className="text-sm font-bold text-left pl-2">{selectedSchool?.nickname || 'YOU'}</div>
+                    {quarterScores.user.map((score, i) => (
+                      <div key={i} className="text-lg font-bold">{score}</div>
+                    ))}
+                    <div className="text-xl font-bold text-yellow-400">{currentGameSimulation.userScore}</div>
+                    {currentGameSimulation.userWins && <div className="text-green-400">◀</div>}
+                  </div>
+
+                  {/* Opponent */}
+                  <div className="grid grid-cols-7 gap-2 text-center py-2 bg-gray-800 border-l-4"
+                       style={{ borderColor: currentGameSimulation.game?.opponent?.colors?.primary || '#888888' }}>
+                    <div className="text-sm font-bold text-left pl-2">{currentGameSimulation.game?.opponent?.nickname || 'OPP'}</div>
+                    {quarterScores.opponent.map((score, i) => (
+                      <div key={i} className="text-lg font-bold">{score}</div>
+                    ))}
+                    <div className="text-xl font-bold text-yellow-400">{currentGameSimulation.oppScore}</div>
+                    {!currentGameSimulation.userWins && <div className="text-green-400">◀</div>}
+                  </div>
+                </div>
+
+                {/* Headline */}
+                <div className="bg-yellow-600 p-4 text-center">
+                  <div className="text-2xl font-bold text-black">{currentGameSimulation.headline}</div>
+                  <div className="text-sm text-gray-800">{currentGameSimulation.subheadline}</div>
+                </div>
+
+                {/* Notable Events */}
+                {gameEvents.length > 0 && (
+                  <div className="bg-gray-800 p-4 border-t-2 border-gray-700">
+                    <div className="text-sm font-bold text-yellow-400 mb-2">📰 NOTABLE PLAYS</div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {gameEvents.slice(0, 5).map((event, i) => (
+                        <div key={i} className="text-xs flex items-center gap-2">
+                          <span>{event.icon}</span>
+                          <span className={event.forUser ? 'text-green-400' : 'text-red-400'}>
+                            Q{event.quarter}:
+                          </span>
+                          <span className="text-gray-300">{event.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Continue Button */}
+                <div className="p-4 text-center">
+                  <button
+                    onClick={() => setGameSimPhase('boxscore')}
+                    className="bg-blue-700 border-4 border-blue-600 px-8 py-3 text-lg font-bold hover:bg-blue-600"
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    📊 VIEW BOX SCORE
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* BOX SCORE PHASE */}
+            {gameSimPhase === 'boxscore' && boxScoreStats && (
+              <>
+                {/* Newspaper Header */}
+                <div className="bg-yellow-100 p-6 text-center border-b-4 border-yellow-600">
+                  <div className="text-xs text-gray-600 tracking-widest mb-1">THE COLLEGE FOOTBALL TRIBUNE</div>
+                  <div className="text-3xl font-bold text-black font-serif">{currentGameSimulation.headline}</div>
+                  <div className="text-lg text-gray-700 mt-2">{currentGameSimulation.subheadline}</div>
+                  <div className="text-4xl font-bold text-black mt-4">
+                    {currentGameSimulation.userScore} - {currentGameSimulation.oppScore}
+                  </div>
+                </div>
+
+                <div className="p-6 bg-gray-100 text-black">
+                  {/* Team Stats Comparison */}
+                  <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+                    <div>
+                      <div className="text-2xl font-bold">{boxScoreStats.user.totalYards}</div>
+                      <div className="text-xs text-gray-600">TOTAL YARDS</div>
+                    </div>
+                    <div className="text-sm text-gray-500 self-center">TEAM STATS</div>
+                    <div>
+                      <div className="text-2xl font-bold">{boxScoreStats.opponent.totalYards}</div>
+                      <div className="text-xs text-gray-600">TOTAL YARDS</div>
+                    </div>
+                  </div>
+
+                  {/* Passing Stats */}
+                  <div className="bg-white border border-gray-300 p-4 mb-4">
+                    <div className="text-sm font-bold mb-2 text-gray-700">PASSING</div>
+                    <div className="text-sm">
+                      <span className="font-bold">{boxScoreStats.user.passing.player}</span>
+                      <span className="text-gray-600">: {boxScoreStats.user.passing.completions}/{boxScoreStats.user.passing.attempts}, </span>
+                      <span className="font-bold">{boxScoreStats.user.passing.yards} YDS</span>
+                      <span className="text-gray-600">, {boxScoreStats.user.passing.tds} TD, {boxScoreStats.user.passing.ints} INT</span>
+                    </div>
+                  </div>
+
+                  {/* Rushing Stats */}
+                  <div className="bg-white border border-gray-300 p-4 mb-4">
+                    <div className="text-sm font-bold mb-2 text-gray-700">RUSHING</div>
+                    {boxScoreStats.user.rushing.players.map((rb, i) => (
+                      <div key={i} className="text-sm">
+                        <span className="font-bold">{rb.name}</span>
+                        <span className="text-gray-600">: {rb.carries} CAR, </span>
+                        <span className="font-bold">{rb.yards} YDS</span>
+                        {rb.tds > 0 && <span className="text-gray-600">, {rb.tds} TD</span>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Receiving Stats */}
+                  <div className="bg-white border border-gray-300 p-4 mb-4">
+                    <div className="text-sm font-bold mb-2 text-gray-700">RECEIVING</div>
+                    {boxScoreStats.user.receiving.players.slice(0, 4).map((rec, i) => (
+                      <div key={i} className="text-sm">
+                        <span className="font-bold">{rec.name}</span>
+                        <span className="text-gray-600">: {rec.receptions} REC, </span>
+                        <span className="font-bold">{rec.yards} YDS</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Defense Stats */}
+                  <div className="bg-white border border-gray-300 p-4">
+                    <div className="text-sm font-bold mb-2 text-gray-700">DEFENSE</div>
+                    <div className="text-sm">
+                      <span className="font-bold">{boxScoreStats.user.defense.sacks} SACKS</span>
+                      <span className="text-gray-600">, {boxScoreStats.user.defense.totalTakeaways} TAKEAWAYS</span>
+                      <span className="text-gray-600"> ({boxScoreStats.user.defense.interceptions} INT, {boxScoreStats.user.defense.fumbleRec} FR)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Continue Button */}
+                <div className="p-4 text-center bg-gray-900">
+                  <button
+                    onClick={() => {
+                      // Apply recruiting impact
+                      const impact = applyRecruitingImpact(currentGameSimulation, currentGameSimulation.game);
+                      setRecruitingImpact(impact);
+                      setRecruits(impact.updatedRecruits);
+                      setGameSimPhase('recruiting');
+                    }}
+                    className="bg-purple-700 border-4 border-purple-600 px-8 py-3 text-lg font-bold hover:bg-purple-600"
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    🎯 VIEW RECRUITING IMPACT
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* RECRUITING IMPACT PHASE */}
+            {gameSimPhase === 'recruiting' && recruitingImpact && (
+              <>
+                {/* Header */}
+                <div className="bg-purple-700 p-4 border-b-4 border-purple-800">
+                  <h2 className="text-xl font-bold text-center">🎯 RECRUITING IMPACT</h2>
+                  <div className="text-center text-sm mt-1">
+                    {currentGameSimulation.userWins ? 'Victory pays dividends!' : 'Recruits are watching...'}
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {/* Total Impact */}
+                  <div className={`text-center p-4 mb-6 border-4 ${
+                    recruitingImpact.total >= 0 ? 'bg-green-900 border-green-600' : 'bg-red-900 border-red-600'
+                  }`} style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}>
+                    <div className="text-3xl font-bold">
+                      {recruitingImpact.total >= 0 ? '+' : ''}{recruitingImpact.total}%
+                    </div>
+                    <div className="text-sm text-gray-300">Overall Interest Change</div>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-6"
+                       style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                    <div className="text-sm font-bold text-yellow-400 mb-3">BREAKDOWN</div>
+                    <div className="space-y-2">
+                      {recruitingImpact.breakdown.map((item, i) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <span>{item.icon}</span>
+                            <span>{item.name}</span>
+                          </span>
+                          <span className={item.value >= 0 ? 'text-green-400' : 'text-red-400'}>
+                            {item.value >= 0 ? '+' : ''}{item.value}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Affected Recruits */}
+                  {recruitingImpact.affectedRecruits.length > 0 && (
+                    <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-6"
+                         style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                      <div className="text-sm font-bold text-blue-400 mb-3">TOP AFFECTED RECRUITS</div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {recruitingImpact.affectedRecruits.map((recruit, i) => (
+                          <div key={i} className="flex justify-between items-center text-sm bg-gray-900 p-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-yellow-400">{'⭐'.repeat(recruit.stars)}</span>
+                              <span>{recruit.name}</span>
+                              <span className="text-gray-500">({recruit.position})</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-500">{recruit.oldInterest}%</span>
+                              <span className="text-gray-500">→</span>
+                              <span className={recruit.change >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                {recruit.newInterest}%
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Continue Button */}
+                  <div className="text-center">
+                    <button
+                      onClick={() => {
+                        // Update game results
+                        setGameResults(prev => [...prev, {
+                          week: currentGameWeek,
+                          userScore: currentGameSimulation.userScore,
+                          opponentScore: currentGameSimulation.oppScore,
+                          opponent: currentGameSimulation.game.opponent,
+                          isWin: currentGameSimulation.userWins,
+                          weather: currentGameSimulation.weather,
+                          isConference: currentGameSimulation.game.isConference,
+                          isRivalry: currentGameSimulation.game.isRivalry
+                        }]);
+
+                        // Update season record
+                        setSeasonRecord(prev => ({
+                          wins: prev.wins + (currentGameSimulation.userWins ? 1 : 0),
+                          losses: prev.losses + (currentGameSimulation.userWins ? 0 : 1),
+                          confWins: prev.confWins + (currentGameSimulation.userWins && currentGameSimulation.game.isConference ? 1 : 0),
+                          confLosses: prev.confLosses + (!currentGameSimulation.userWins && currentGameSimulation.game.isConference ? 1 : 0)
+                        }));
+
+                        // Update coach record and success
+                        setCoachRecord(prev => ({
+                          wins: prev.wins + (currentGameSimulation.userWins ? 1 : 0),
+                          losses: prev.losses + (currentGameSimulation.userWins ? 0 : 1)
+                        }));
+                        setCoachSuccess(prev => Math.max(0, Math.min(100, prev + (currentGameSimulation.userWins ? 2 : -3))));
+
+                        // Update team morale
+                        setTeamMorale(prev => Math.max(0, Math.min(100, prev + (currentGameSimulation.userWins ? 5 : -8))));
+
+                        // Update season stats
+                        updateSeasonStats(boxScoreStats);
+
+                        // Check for coaching chaos events
+                        const chaosTriggered = checkCoachingChaosEvents();
+
+                        // Decrement recruiting penalty weeks if active
+                        if (recruitingPenaltyWeeks > 0) {
+                          setRecruitingPenaltyWeeks(prev => prev - 1);
+                        }
+
+                        // Close modal
+                        setShowGameSimModal(false);
+                        setCurrentGameSimulation(null);
+                        setCurrentOpponent(null);
+                        setSelectedGamePlans({ offense: 'balanced', defense: 'balanced' });
+                        setRecruitingImpact(null);
+                      }}
+                      className="bg-green-700 border-4 border-green-600 px-8 py-3 text-lg font-bold hover:bg-green-600"
+                      style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ✅ CONTINUE
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Coaching Chaos Event Modal */}
+      {showCoachingEventModal && coachingEventData && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-red-600 max-w-xl w-full"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-red-700 p-4 border-b-4 border-red-800">
+              <h2 className="text-xl font-bold text-center">
+                {coachingEventData.icon} {coachingEventData.name}
+              </h2>
+            </div>
+
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <p className="text-lg">{coachingEventData.message}</p>
+              </div>
+
+              {/* Violation */}
+              {showCoachingEventModal === 'violation' && (
+                <div className="bg-red-900 border-2 border-red-600 p-4 mb-6">
+                  <div className="text-sm text-center">
+                    <div className="text-yellow-400 font-bold mb-2">PENALTY</div>
+                    <div>-{coachingEventData.recruitingPenalty}% recruiting interest for {coachingEventData.penaltyWeeks} weeks</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Impermissible Benefits */}
+              {showCoachingEventModal === 'impermissibleBenefits' && coachingEventData.recruit && (
+                <div className="bg-red-900 border-2 border-red-600 p-4 mb-6 text-center">
+                  <div className="text-yellow-400">{'⭐'.repeat(coachingEventData.recruit.stars)}</div>
+                  <div className="font-bold">{coachingEventData.recruit.name}</div>
+                  <div className="text-sm text-gray-400">{coachingEventData.recruit.position}</div>
+                  <div className="text-red-400 mt-2">REMOVED FROM BOARD</div>
+                </div>
+              )}
+
+              {/* NFL Offer */}
+              {showCoachingEventModal === 'nflOffer' && (
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      // Stay - causes recruit concern
+                      setRecruits(prev => prev.map(r => ({
+                        ...r,
+                        interest: Math.max(0, r.interest - COACHING_CHAOS_EVENTS.nflOffer.recruitingConcern)
+                      })));
+                      setShowCoachingEventModal(null);
+                      setCoachingEventData(null);
+                    }}
+                    className="flex-1 bg-green-700 border-4 border-green-600 p-4 font-bold hover:bg-green-600"
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    STAY<br />
+                    <span className="text-xs text-yellow-400">(-15% recruit interest)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Leave - game over essentially (or could restart)
+                      alert('You have accepted the NFL job. Your college career is over... for now.');
+                      setGameState('titleScreen');
+                      setShowCoachingEventModal(null);
+                      setCoachingEventData(null);
+                    }}
+                    className="flex-1 bg-blue-700 border-4 border-blue-600 p-4 font-bold hover:bg-blue-600"
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    LEAVE FOR NFL<br />
+                    <span className="text-xs text-gray-300">(End current dynasty)</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Termination */}
+              {showCoachingEventModal === 'termination' && (
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      // Reset to G5 school selection
+                      setGameState('titleScreen');
+                      setShowCoachingEventModal(null);
+                      setCoachingEventData(null);
+                    }}
+                    className="bg-gray-700 border-4 border-gray-600 px-8 py-3 font-bold hover:bg-gray-600"
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    START OVER
+                  </button>
+                </div>
+              )}
+
+              {/* Accept button for violation/impermissible benefits */}
+              {(showCoachingEventModal === 'violation' || showCoachingEventModal === 'impermissibleBenefits') && (
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      if (showCoachingEventModal === 'violation') {
+                        setRecruitingPenaltyWeeks(coachingEventData.penaltyWeeks);
+                      } else if (showCoachingEventModal === 'impermissibleBenefits' && coachingEventData.recruit) {
+                        // Remove the recruit
+                        setRecruits(prev => prev.map(r =>
+                          r.id === coachingEventData.recruit.id
+                            ? { ...r, isTargeted: false, interest: 0 }
+                            : r
+                        ));
+                      }
+                      setShowCoachingEventModal(null);
+                      setCoachingEventData(null);
+                    }}
+                    className="bg-gray-700 border-4 border-gray-600 px-8 py-3 font-bold hover:bg-gray-600"
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    ACCEPT
+                  </button>
                 </div>
               )}
             </div>
