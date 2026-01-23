@@ -542,12 +542,233 @@ const CHAOS_EVENTS = {
   collapse: { name: 'Complete Collapse!', icon: '💀', chance: 2, type: 'momentum', description: 'Team lost a huge lead!', recruitingPenalty: 15 }
 };
 
+// Newspaper-style narrative descriptions for chaos events
+const CHAOS_EVENT_NARRATIVES = {
+  pickSix: {
+    forUser: [
+      "The defense read it like a children's book. The cornerback jumped the route, picked off the pass, and returned it to the house untouched.",
+      "A costly interception turned into six points the other way. The defensive back made the quarterback pay for that decision.",
+      "A pick-six completely shifted momentum. The defender made a spectacular play to take it to the end zone."
+    ],
+    againstUser: [
+      "A disastrous interception. The pass floated into traffic and the defender took it back for a touchdown.",
+      "The quarterback tried to force it, and it backfired spectacularly. Pick-six, house call, dagger.",
+      "One bad read, one house call. The defense gift-wrapped that pick-six with a bow on top."
+    ]
+  },
+  fumbleTD: {
+    forUser: [
+      "The ball came loose and a defender scooped it up, rumbling down the sideline for six points.",
+      "A vicious hit knocked the ball free, and the opportunistic defense pounced on it for a touchdown.",
+      "Fumble! Scoop! Score! The defense turned a turnover into points in spectacular fashion."
+    ],
+    againstUser: [
+      "The ball squirted loose at the worst possible time. The opposing defense returned it for a momentum-shifting touchdown.",
+      "A costly fumble turned into a fumble-six. That's a 14-point swing in the blink of an eye.",
+      "The running back couldn't hold on, and the defense made them pay with a scoop-and-score touchdown."
+    ]
+  },
+  blockedKick: {
+    forUser: [
+      "A perfectly timed leap by the special teams unit swatted the kick away at the line of scrimmage.",
+      "The interior push got through clean and stuffed the field goal attempt.",
+      "Block! The kick never had a chance as the defense blew up the protection."
+    ],
+    againstUser: [
+      "The field goal attempt was smothered at the line. Three points that never made it.",
+      "A breakdown in protection allowed the defender to get a hand on it. Blocked kick, no points.",
+      "The special teams woes continued as the opposition blocked the kick attempt."
+    ]
+  },
+  kickReturnTD: {
+    forUser: [
+      "The returner found the seam and hit the jets! All the way to the house on the kickoff return!",
+      "Electric. The kick coverage never had a chance as the returner blazed down the sideline for six.",
+      "Kick return touchdown! Perfect blocking and explosive speed combined for a house call."
+    ],
+    againstUser: [
+      "The kickoff coverage collapsed and the returner made them pay, taking it 100 yards the other way.",
+      "One missed tackle was all it took. The kick return went the distance for a backbreaking touchdown.",
+      "Special teams nightmare. The kick returner split the coverage and was gone, all the way for six."
+    ]
+  },
+  puntReturnTD: {
+    forUser: [
+      "The punt returner made three men miss in space and broke free for a spectacular touchdown!",
+      "What a return! Juked, spun, and sprinted for the end zone. Punt return touchdown!",
+      "The punt team had no answer. The returner weaved through traffic for a momentum-shifting score."
+    ],
+    againstUser: [
+      "Coverage completely broke down on the punt, allowing a devastating return touchdown.",
+      "The punter's leg was fine, the coverage was not. Punt return for a touchdown.",
+      "Three missed tackles and a broken angle later, the punt return went all the way for six."
+    ]
+  },
+  badCall: {
+    forUser: [
+      "A questionable call went in favor of the home crowd. The refs will be hearing about this one.",
+      "Controversial! The officials made a call that changed the complexion of the drive.",
+      "The officiating crew made a call that had one sideline livid. Breaks of the game."
+    ],
+    againstUser: [
+      "A controversial flag wiped out a big play. The replay showed it was questionable at best.",
+      "The officials made a call that didn't sit well. That one might make the weekly report.",
+      "A penalty flag at a crucial moment. The replay booth couldn't help, and it cost crucial points."
+    ]
+  },
+  careerGame: {
+    forUser: [
+      "One player simply refused to be stopped tonight. A career-defining performance when it mattered most.",
+      "Legendary performance! One player put the team on their back and willed them to victory.",
+      "This is the kind of game that gets talked about for years. A player in the zone, unstoppable."
+    ],
+    againstUser: [
+      "The opposing player had the game of their life. When they needed it most, they delivered.",
+      "Sometimes a player just has 'it' on a given night. The opposition's star was on a different level.",
+      "A career game by the opposing player. They were simply unguardable tonight."
+    ]
+  },
+  miraclePlay: {
+    forUser: [
+      "MIRACLE! A last-second heave found an open receiver in a sea of defenders! Unbelievable!",
+      "THE BAND IS ON THE FIELD! An impossible play at the buzzer for the ages!",
+      "You can't script this! A miraculous play that will live forever in program history!"
+    ],
+    againstUser: [
+      "Heartbreak. A miracle play at the death stole what seemed like certain victory.",
+      "The football gods were not kind. A last-gasp desperation play somehow found paydirt.",
+      "Devastating. A miracle finish ripped the hearts out of everyone on the sideline."
+    ]
+  },
+  collapse: {
+    forUser: [
+      "They completely fell apart. A historically bad meltdown allowed the opposition to build a commanding lead.",
+      "The wheels came off. Turnovers, penalties, and missed assignments led to a complete team collapse.",
+      "What happened out there? A total loss of composure turned a competitive game into a rout."
+    ],
+    againstUser: [
+      "A complete team collapse. Nothing went right in a nightmarish stretch that will haunt the film room.",
+      "The train derailed completely. Mental errors compounded into a catastrophic meltdown.",
+      "Programs at this level don't collapse like this. Questions will be asked. Changes may follow. A stunning, systemic failure across all three phases of the game."
+    ]
+  }
+};
+
 // Coaching Chaos Events
 const COACHING_CHAOS_EVENTS = {
   violation: { name: 'Recruiting Violation', icon: '🚨', chance: 2, penaltyWeeks: 3, recruitingPenalty: 20, description: 'NCAA investigating potential recruiting violations' },
   impermissibleBenefits: { name: 'Impermissible Benefits', icon: '💰', chance: 1, description: 'Recruit received impermissible benefits - removed from board' },
   inappropriateRelationship: { name: 'Inappropriate Relationship', icon: '⚠️', chance: 0.05, description: 'Immediate termination' },
   nflOffer: { name: 'NFL Job Offer', icon: '🏈', minCoachSuccess: 90, recruitingConcern: 15, description: 'NFL team interested in hiring you' }
+};
+
+// At-Risk Recruit Intervention Options (ESP)
+const AT_RISK_INTERVENTIONS = {
+  letItRide: {
+    id: 'letItRide',
+    name: 'Let It Ride',
+    icon: '🎲',
+    description: 'Take your chances at National Signing Day',
+    successChance: 0, // Determined by NSD algorithm
+    cost: 0,
+    risk: 'medium',
+    riskDescription: 'Recruit may flip to competing school at NSD'
+  },
+  increaseNIL: {
+    id: 'increaseNIL',
+    name: 'Increase NIL Offer',
+    icon: '💵',
+    description: 'Match or beat the competing school\'s perceived offer',
+    successChance: 85, // High success rate
+    costMultiplier: 1.5, // 50% more than current NIL deal
+    risk: 'low',
+    riskDescription: 'Costs more budget but locks them in'
+  },
+  promiseStartingRole: {
+    id: 'promiseStartingRole',
+    name: 'Promise Starting Role',
+    icon: '⭐',
+    description: 'Guarantee they\'ll start as a freshman',
+    successChance: 75,
+    cost: 0,
+    risk: 'medium',
+    riskDescription: 'If they don\'t start by Week 4, -20 morale & may transfer',
+    consequence: 'startingPromise'
+  },
+  boosterInvolvement: {
+    id: 'boosterInvolvement',
+    name: 'Booster "Assistance"',
+    icon: '🤫',
+    description: 'Boosters offer family "opportunities"',
+    successChance: 95, // Almost guaranteed
+    cost: 0, // Hidden cost
+    risk: 'low',
+    riskDescription: '5% annual chance of NCAA investigation',
+    violationChance: 5, // 5% annual chance - rare but possible
+    consequence: 'boosterDeal'
+  },
+  bagman: {
+    id: 'bagman',
+    name: 'Call the Bagman',
+    icon: '💼',
+    description: 'Under the table cash payment',
+    successChance: 99, // Basically guaranteed
+    cost: 0, // Off the books
+    risk: 'medium',
+    riskDescription: '2% annual chance of MAJOR NCAA violation - catastrophic if caught',
+    violationChance: 2, // 2% annual - very rare but devastating
+    consequence: 'bagmanDeal',
+    severePenalty: true
+  }
+};
+
+// Flip Offer Options - For flipping recruits committed to other schools
+const FLIP_OFFER_OPTIONS = {
+  standardOffer: {
+    id: 'standardOffer',
+    name: 'Standard NIL Offer',
+    icon: '💵',
+    description: 'Offer competitive NIL to entice them',
+    baseSuccessChance: 15, // Base 15% - modified by factors
+    nilMultiplier: 1.0, // Market value
+    risk: 'low',
+    riskDescription: 'Normal recruiting - no extra risk'
+  },
+  premiumOffer: {
+    id: 'premiumOffer',
+    name: 'Premium NIL Package',
+    icon: '💰',
+    description: 'Offer significantly above market value',
+    baseSuccessChance: 35, // Better odds
+    nilMultiplier: 1.5, // 50% above market
+    risk: 'low',
+    riskDescription: 'Costs more but better odds'
+  },
+  boosterPackage: {
+    id: 'boosterPackage',
+    name: 'Booster "Special" Package',
+    icon: '🤫',
+    description: 'Boosters offer family incentives',
+    baseSuccessChance: 60, // High success
+    nilMultiplier: 1.0, // Market value NIL
+    risk: 'medium',
+    riskDescription: '5% annual NCAA investigation chance',
+    violationChance: 5,
+    consequence: 'boosterDeal'
+  },
+  bagmanFlip: {
+    id: 'bagmanFlip',
+    name: 'The Bagman Special',
+    icon: '💼',
+    description: 'Cash under the table - almost guaranteed',
+    baseSuccessChance: 85, // Very high
+    nilMultiplier: 1.0,
+    risk: 'high',
+    riskDescription: '2% annual MAJOR violation chance',
+    violationChance: 2,
+    consequence: 'bagmanDeal',
+    severePenalty: true
+  }
 };
 
 // Upset Probability Table (spread → base upset chance)
@@ -727,8 +948,8 @@ const CALENDAR_EVENTS = [
   { startMonth: 7, startDay: 1, endMonth: 7, endDay: 31, title: 'Training Camp' },
   { startMonth: 8, startDay: 1, endMonth: 10, endDay: 30, title: 'Regular Season', recruitingOpen: true, reducedPoints: true },
   { startMonth: 11, startDay: earlySigningDates.startDay, endMonth: 11, endDay: earlySigningDates.endDay, title: 'Early Signing Period', signingPeriod: true, signingType: 'early', recruitingOpen: true },
-  { startMonth: 11, startDay: earlySigningDates.endDay + 1, endMonth: 11, endDay: earlySigningDates.endDay + 1, title: 'Conference Championships' },
-  { startMonth: 11, startDay: 20, endMonth: 0, endDay: 1, title: 'The Playoffs', crossesYear: true },
+  { startMonth: 11, startDay: earlySigningDates.endDay + 1, endMonth: 11, endDay: earlySigningDates.endDay + 1, title: 'Conference Championships', recruitingOpen: true, reducedPoints: true },
+  { startMonth: 11, startDay: 20, endMonth: 0, endDay: 1, title: 'The Playoffs', crossesYear: true, recruitingOpen: true, reducedPoints: true },
   { startMonth: 0, startDay: 2, endMonth: 0, endDay: 31, title: 'Transfer Portal Open', recruitingOpen: true },
   { startMonth: 1, startDay: nationalSigningDay, endMonth: 1, endDay: nationalSigningDay, title: 'National Signing Day', signingPeriod: true, signingType: 'national', recruitingOpen: true }
 ];
@@ -1266,7 +1487,7 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
           schoolId: school.id,
           schoolName: school.name,
           schoolTier: school.tier,
-          interest: Math.floor(Math.random() * 30) + 20, // Start at 20-50%
+          interest: Math.floor(Math.random() * 15) + 10, // Start at 10-25% (matches USER cap)
           lastAction: 'Offered Scholarship',
           weeksSinceAction: 0
         }));
@@ -1280,7 +1501,7 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
             schoolId: school.id,
             schoolName: school.name,
             schoolTier: school.tier,
-            interest: Math.floor(Math.random() * 20) + 10, // Start at 10-30%
+            interest: Math.floor(Math.random() * 10) + 5, // Start at 5-15% (below dream schools)
             lastAction: 'Initial Contact',
             weeksSinceAction: 0
           });
@@ -1289,78 +1510,94 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
     }
     
     // Each week, simulate recruiting actions from AI schools
+    // AI schools can take 2-3 actions per week to match user competitiveness
     recruitingSchools = recruitingSchools.map(rs => {
-      // 80% chance a school takes action each week (increased from 60% to make AI more competitive)
-      if (Math.random() < 0.8) {
-        const actions = [
-          { name: 'Phone Call', interestGain: 5 + Math.floor(Math.random() * 8) }, // 5-12
-          { name: 'Official Visit', interestGain: 10 + Math.floor(Math.random() * 12) }, // 10-22
-          { name: 'Home Visit', interestGain: 8 + Math.floor(Math.random() * 10) }, // 8-18
-          { name: 'Coach Visit', interestGain: 12 + Math.floor(Math.random() * 15) } // 12-27
-        ];
+      // Determine how many actions this school takes this week
+      // Dream schools are more aggressive (3-4 actions), others (2-3 actions)
+      const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === rs.schoolId);
+      let numActions;
+      if (isDreamSchool) {
+        numActions = 3 + (Math.random() < 0.5 ? 1 : 0); // 3-4 actions for dream schools
+      } else {
+        numActions = 2 + (Math.random() < 0.6 ? 1 : 0); // 2-3 actions for other schools
+      }
 
-        const action = actions[Math.floor(Math.random() * actions.length)];
+      // 95% chance school is actively recruiting this week
+      if (Math.random() < 0.95) {
+        let totalInterestGain = 0;
+        let lastActionName = '';
 
-        // Apply star-based difficulty (same as user)
-        let starDifficulty = 1.0;
-        if (recruit.stars === 5) {
-          starDifficulty = 0.5; // 5-stars gain HALF interest
-        } else if (recruit.stars === 4) {
-          starDifficulty = 0.7; // 4-stars gain 70% interest
-        } else if (recruit.stars === 2) {
-          starDifficulty = 1.3; // 2-stars gain 130% interest (easier)
-        }
+        for (let actionNum = 0; actionNum < numActions; actionNum++) {
+          const actions = [
+            { name: 'Phone Call', interestGain: 5 + Math.floor(Math.random() * 8) }, // 5-12
+            { name: 'Official Visit', interestGain: 10 + Math.floor(Math.random() * 12) }, // 10-22
+            { name: 'Home Visit', interestGain: 8 + Math.floor(Math.random() * 10) }, // 8-18
+            { name: 'Coach Visit', interestGain: 12 + Math.floor(Math.random() * 15) } // 12-27
+          ];
 
-        // Apply diminishing returns based on current interest (same as user)
-        let diminishingReturns = 1.0;
-        if (rs.interest < 30) {
-          diminishingReturns = 1.0; // Full effect at low interest
-        } else if (rs.interest < 50) {
-          diminishingReturns = 0.8; // 80% effect
-        } else if (rs.interest < 70) {
-          diminishingReturns = 0.6; // 60% effect
-        } else if (rs.interest < 85) {
-          diminishingReturns = 0.4; // 40% effect - much harder to reach commit threshold
-        } else {
-          diminishingReturns = 0.2; // 20% effect - very hard to get to 100%
-        }
+          const action = actions[Math.floor(Math.random() * actions.length)];
+          lastActionName = action.name;
 
-        // Blue Bloods get bonus interest gain
-        const tierBonus = rs.schoolTier === 'Blue Blood' ? 1.2 : rs.schoolTier === 'Power 4' ? 1.0 : 0.8;
-
-        // Apply trait-based modifiers for AI recruiting
-        let aiTraitModifier = 1.0;
-
-        // Championship Focused: Responds better to Blue Bloods
-        if (recruit.traits?.includes('Championship Focused')) {
-          if (rs.schoolTier === 'Blue Blood') {
-            aiTraitModifier *= 1.15; // +15% for Blue Bloods
-          } else if (rs.schoolTier === 'Group of 5') {
-            aiTraitModifier *= 0.85; // -15% for Group of 5
+          // Apply star-based difficulty (same as user)
+          let starDifficulty = 1.0;
+          if (recruit.stars === 5) {
+            starDifficulty = 0.5; // 5-stars gain HALF interest
+          } else if (recruit.stars === 4) {
+            starDifficulty = 0.7; // 4-stars gain 70% interest
+          } else if (recruit.stars === 2) {
+            starDifficulty = 1.3; // 2-stars gain 130% interest (easier)
           }
-        }
 
-        // Close to Home: Geography affects AI recruiting too
-        if (recruit.traits?.includes('Close to Home')) {
-          const aiSchool = allSchools.find(s => s.id === rs.schoolId);
-          if (aiSchool && recruit.state === aiSchool.state) {
-            aiTraitModifier *= 1.2; // +20% for same state
-          } else if (aiSchool && recruit.state !== aiSchool.state) {
-            // Simplified: assume 20% penalty for out of state (could add neighboring logic)
-            aiTraitModifier *= 0.8;
+          // Apply diminishing returns based on current interest (slightly easier than user to ensure AI commits happen)
+          const currentInterest = rs.interest + totalInterestGain;
+          let diminishingReturns = 1.0;
+          if (currentInterest < 30) {
+            diminishingReturns = 1.0; // Full effect at low interest
+          } else if (currentInterest < 50) {
+            diminishingReturns = 0.85; // 85% effect
+          } else if (currentInterest < 70) {
+            diminishingReturns = 0.7; // 70% effect
+          } else if (currentInterest < 85) {
+            diminishingReturns = 0.5; // 50% effect - reaching commit threshold is achievable
+          } else {
+            diminishingReturns = 0.35; // 35% effect - still possible to max out with persistence
           }
+
+          // Blue Bloods get bonus interest gain
+          const tierBonus = rs.schoolTier === 'Blue Blood' ? 1.2 : rs.schoolTier === 'Power 4' ? 1.0 : 0.8;
+
+          // Apply trait-based modifiers for AI recruiting
+          let aiTraitModifier = 1.0;
+
+          // Championship Focused: Responds better to Blue Bloods
+          if (recruit.traits?.includes('Championship Focused')) {
+            if (rs.schoolTier === 'Blue Blood') {
+              aiTraitModifier *= 1.15; // +15% for Blue Bloods
+            } else if (rs.schoolTier === 'Group of 5') {
+              aiTraitModifier *= 0.85; // -15% for Group of 5
+            }
+          }
+
+          // Close to Home: Geography affects AI recruiting too
+          if (recruit.traits?.includes('Close to Home')) {
+            const aiSchool = allSchools.find(s => s.id === rs.schoolId);
+            if (aiSchool && recruit.state === aiSchool.state) {
+              aiTraitModifier *= 1.2; // +20% for same state
+            } else if (aiSchool && recruit.state !== aiSchool.state) {
+              // Simplified: assume 20% penalty for out of state (could add neighboring logic)
+              aiTraitModifier *= 0.8;
+            }
+          }
+
+          // Calculate interest gain for this action
+          const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus * aiTraitModifier);
+          totalInterestGain += interestGain;
         }
-
-        // Playing Time Focused: Would need AI roster depth check (skip for now, assume neutral)
-        // Development Focused: No special modifier for regular recruiting
-
-        // Calculate final interest gain with all modifiers
-        const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus * aiTraitModifier);
 
         return {
           ...rs,
-          interest: Math.min(100, rs.interest + interestGain),
-          lastAction: action.name,
+          interest: Math.min(100, rs.interest + totalInterestGain),
+          lastAction: lastActionName + (numActions > 1 ? ` (+${numActions - 1} more)` : ''),
           weeksSinceAction: 0
         };
       } else {
@@ -1382,9 +1619,9 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
       leadingSchool = recruitingSchools[0];
       commitmentLeader = leadingSchool;
       
-      // If leading school hits 95%+ (AI threshold), check if they have room for the commit
-      // AI schools commit at 95%+ because it's nearly impossible to reach exactly 100% with their action rate
-      if (leadingSchool.interest >= 95 && !recruit.verbalCommit) {
+      // If leading school hits 85%+ (AI threshold), check if they have room for the commit
+      // AI schools commit at 85%+ which is achievable with the diminishing returns system
+      if (leadingSchool.interest >= 85 && !recruit.verbalCommit) {
         const aiSchool = allSchools.find(s => s.id === leadingSchool.schoolId);
 
         // CRITICAL: If aiSchool not found, skip commit to prevent corruption
@@ -1947,7 +2184,7 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
   // Generate recruit traits (2 per recruit)
   const traits = generateTraits(stars);
 
-  // Calculate asking price based on traits
+  // Calculate asking price based on traits and star rating
   let askingPriceMultiplier = 0.95 + Math.random() * 0.15; // Base: 95-110% of market value
 
   // NIL-Driven trait: Ask for 30-50% MORE
@@ -1955,9 +2192,20 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
     askingPriceMultiplier = 1.3 + Math.random() * 0.2; // 130-150% of market value
   }
 
-  // Development Focused trait: Ask for 20-30% LESS
+  // Development Focused trait: Ask for 20-30% LESS (but not for 5-stars)
   if (traits.includes('Development Focused')) {
-    askingPriceMultiplier = 0.7 + Math.random() * 0.1; // 70-80% of market value
+    if (stars === 5) {
+      askingPriceMultiplier = 1.0 + Math.random() * 0.1; // 5-stars: 100-110% (never below market)
+    } else if (stars === 4) {
+      askingPriceMultiplier = 0.85 + Math.random() * 0.1; // 4-stars: 85-95%
+    } else {
+      askingPriceMultiplier = 0.7 + Math.random() * 0.1; // 3-stars & below: 70-80%
+    }
+  }
+
+  // 5-stars should NEVER have asking price below market value
+  if (stars === 5 && askingPriceMultiplier < 1.0) {
+    askingPriceMultiplier = 1.0 + Math.random() * 0.1; // Floor at 100-110%
   }
 
   const askingPrice = Math.round(marketValue * askingPriceMultiplier);
@@ -2478,7 +2726,24 @@ const generateStarForAIPlayer = (tier) => {
 // Generate a single AI player
 const generateAIPlayer = (school, position, year) => {
   const stars = generateStarForAIPlayer(school.tier);
-  
+
+  // Generate rating based on stars and year (same formula as user players)
+  // Base rating from stars
+  let baseRating;
+  if (stars === 5) baseRating = 78 + Math.floor(Math.random() * 8); // 78-85
+  else if (stars === 4) baseRating = 72 + Math.floor(Math.random() * 8); // 72-79
+  else if (stars === 3) baseRating = 65 + Math.floor(Math.random() * 8); // 65-72
+  else baseRating = 58 + Math.floor(Math.random() * 8); // 58-65 (2-star)
+
+  // Year-based development bonus
+  let yearBonus = 0;
+  if (year === 'SO') yearBonus = 3 + Math.floor(Math.random() * 3); // +3-5
+  else if (year === 'JR') yearBonus = 6 + Math.floor(Math.random() * 4); // +6-9
+  else if (year === 'SR') yearBonus = 9 + Math.floor(Math.random() * 5); // +9-13
+  else if (year === '5Y') yearBonus = 12 + Math.floor(Math.random() * 5); // +12-16
+
+  const rating = Math.min(99, baseRating + yearBonus);
+
   // Generate name (simple random generation)
   const firstNames = ['James', 'Michael', 'Robert', 'John', 'David', 'William', 'Richard', 'Joseph', 'Thomas', 'Christopher',
     'Marcus', 'Jaylen', 'Tyrone', 'DeAndre', 'Darius', 'Xavier', 'Isaiah', 'Antonio', 'Brandon', 'Carlos',
@@ -2486,16 +2751,17 @@ const generateAIPlayer = (school, position, year) => {
   const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
     'Washington', 'Jackson', 'Harris', 'Thompson', 'White', 'Lewis', 'Walker', 'Hall', 'Allen', 'Young',
     'Anderson', 'Wilson', 'Moore', 'Taylor', 'Thomas', 'Lee', 'Martin', 'Clark', 'Robinson', 'King'];
-  
+
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-  
+
   return {
     id: `ai-${school.id}-${position}-${year}-${Math.random().toString(36).substr(2, 9)}`,
     name: `${firstName} ${lastName}`,
     position: position,
     year: year,
     stars: stars,
+    rating: rating,
     school: school.id,
     isStarter: false,
     aiGenerated: true
@@ -2505,7 +2771,7 @@ const generateAIPlayer = (school, position, year) => {
 // Generate full 85-player roster for AI school
 const generateAIRoster = (school) => {
   const roster = [];
-  
+
   // Position targets (85 total)
   const positionDistribution = {
     'QB': 5,
@@ -2523,18 +2789,19 @@ const generateAIRoster = (school) => {
     'K': 2,
     'P': 2
   };
-  
-  // Year distribution percentages
-  const yearDistribution = {
-    'FR': 0.25,  // 25% Freshmen
-    'SO': 0.22,  // 22% Sophomores
-    'JR': 0.22,  // 22% Juniors
-    'SR': 0.22,  // 22% Seniors
-    '5Y': 0.09   // 9% Fifth Year
+
+  // Starter counts per position
+  const starterCounts = {
+    'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1,
+    'OT': 2, 'OG': 2, 'C': 1,
+    'EDGE': 2, 'DT': 2, 'LB': 3, 'CB': 2, 'S': 2,
+    'K': 1, 'P': 1
   };
-  
+
   // Generate players for each position
   for (const [position, count] of Object.entries(positionDistribution)) {
+    const positionPlayers = [];
+
     for (let i = 0; i < count; i++) {
       // Randomly assign year based on distribution
       const rand = Math.random();
@@ -2544,11 +2811,20 @@ const generateAIRoster = (school) => {
       else if (rand < 0.69) year = 'JR';
       else if (rand < 0.91) year = 'SR';
       else year = '5Y';
-      
-      roster.push(generateAIPlayer(school, position, year));
+
+      positionPlayers.push(generateAIPlayer(school, position, year));
     }
+
+    // Sort by rating and mark top players as starters
+    positionPlayers.sort((a, b) => b.rating - a.rating);
+    const numStarters = starterCounts[position] || 1;
+    positionPlayers.forEach((player, index) => {
+      player.isStarter = index < numStarters;
+    });
+
+    roster.push(...positionPlayers);
   }
-  
+
   return roster;
 };
 
@@ -2650,12 +2926,22 @@ const App = () => {
   const [showNegotiationModal, setShowNegotiationModal] = useState(false);
   const [negotiatingRecruit, setNegotiatingRecruit] = useState(null);
   const [counterOffer, setCounterOffer] = useState(0);
+  const [nilNegotiationPhase, setNilNegotiationPhase] = useState('initial'); // 'initial' or 'counter'
 
   // Weekly Recruiting Report State
   const [showWeeklyRecruitingReport, setShowWeeklyRecruitingReport] = useState(false);
   const [weeklyAICommits, setWeeklyAICommits] = useState([]);
   const [reportTargetsExpanded, setReportTargetsExpanded] = useState(true);
+
+  // Decommitment notification state
+  const [showDecommitModal, setShowDecommitModal] = useState(false);
+  const [decommittedRecruits, setDecommittedRecruits] = useState([]);
   const [reportOthersExpanded, setReportOthersExpanded] = useState(false);
+
+  // Flip Offer Modal State
+  const [showFlipOfferModal, setShowFlipOfferModal] = useState(false);
+  const [flipOfferRecruit, setFlipOfferRecruit] = useState(null);
+  const [flipOfferResult, setFlipOfferResult] = useState(null); // null, 'success', 'failed'
   const [recruitDecisions, setRecruitDecisions] = useState({}); // Track flip/walk away decisions
 
   // Coach Names State
@@ -2702,9 +2988,18 @@ const App = () => {
   const [pushingRecruit, setPushingRecruit] = useState(null);
   const [conferenceRecruitingResults, setConferenceRecruitingResults] = useState(null); // AI school results
 
+  // At-Risk Intervention State (ESP)
+  const [showAtRiskModal, setShowAtRiskModal] = useState(false);
+  const [atRiskRecruits, setAtRiskRecruits] = useState([]); // Recruits needing intervention decision
+  const [currentAtRiskIndex, setCurrentAtRiskIndex] = useState(0); // Which at-risk recruit we're deciding on
+  const [atRiskDecisions, setAtRiskDecisions] = useState({}); // { recruitId: { intervention, ... } }
+  const [recruitPromises, setRecruitPromises] = useState({}); // { recruitId: { startingPromise: true, promisedWeek: 1 } }
+  const [boosterDeals, setBoosterDeals] = useState([]); // [{ recruitId, dealType, year, investigated: false }]
+
   // Game Simulation State
   const [seasonSchedule, setSeasonSchedule] = useState([]); // Array of 12 games: { week, opponent, isHome, isRivalry, isConference }
   const [seasonRecord, setSeasonRecord] = useState({ wins: 0, losses: 0, confWins: 0, confLosses: 0 }); // This season's record
+  const [dynastyYear, setDynastyYear] = useState(1); // Which year of the dynasty (1, 2, 3...)
   const [gameResults, setGameResults] = useState([]); // Array of completed games with scores/stats
   const [conferenceStandings, setConferenceStandings] = useState({}); // All conference records
   const [showGamePlanModal, setShowGamePlanModal] = useState(false); // Pre-game planning modal
@@ -2822,6 +3117,7 @@ const App = () => {
           // Load game simulation data
           setSeasonSchedule(gameData.seasonSchedule || []);
           setSeasonRecord(gameData.seasonRecord || { wins: 0, losses: 0, confWins: 0, confLosses: 0 });
+          setDynastyYear(gameData.dynastyYear || 1);
           setGameResults(gameData.gameResults || []);
           setConferenceStandings(gameData.conferenceStandings || {});
           // Load extended game simulation state
@@ -2904,6 +3200,28 @@ const App = () => {
 
       if (needsCleanup.length > 0) {
         console.log(`🧹 Found ${needsCleanup.length} invalid commits to clean up...`);
+
+        // Capture decommit reasons for notification
+        const decommitInfo = needsCleanup.map(r => {
+          let reason = '';
+          if (r.interest < 70) {
+            reason = `Interest dropped to ${r.interest}% (below 70% threshold)`;
+          } else if (!r.isTargeted) {
+            reason = 'Recruit was not properly targeted';
+          } else if (!r.nilOfferAccepted && !r.signedCommit) {
+            reason = 'NIL deal not finalized';
+          } else if (!r.nilDeal || r.nilDeal === 0) {
+            reason = 'No NIL agreement in place';
+          }
+          return {
+            name: r.name,
+            position: r.position,
+            stars: r.stars,
+            interest: r.interest,
+            reason
+          };
+        });
+
         const cleanedRecruits = recruits.map(r => {
           // ONLY remove commits to USER's school that are invalid
           if (r.verbalCommit &&
@@ -2929,6 +3247,10 @@ const App = () => {
         });
         setRecruits(cleanedRecruits);
         console.log(`✅ Cleanup complete - removed ${needsCleanup.length} corrupted commits`);
+
+        // Show decommitment notification modal
+        setDecommittedRecruits(decommitInfo);
+        setShowDecommitModal(true);
       }
     }
   }, [selectedSchool, recruits.length, activeTab]);
@@ -3466,6 +3788,7 @@ const App = () => {
         customConferenceNames,
         seasonSchedule,
         seasonRecord,
+        dynastyYear,
         gameResults,
         conferenceStandings,
         // Game simulation state
@@ -3487,7 +3810,7 @@ const App = () => {
         }
       }
     }
-  }, [selectedSchool, roster, recruits, recruitingPoints, budget, budgetAllocated, incomingFreshmanBudget, transferAdditionsBudget, currentDate, currentGameWeek, dismissedAlerts, offSeasonWeek, offSeasonWeeksCompleted, aiRosters, coachName, coachRecord, coachRivalRecord, coachChampionships, coachSuccess, aiCoaches, customSchoolNames, customNicknames, customConferenceNames, seasonSchedule, seasonRecord, gameResults, conferenceStandings, teamMorale, seasonStats, positionBoosts, recruitingPenaltyWeeks]);
+  }, [selectedSchool, roster, recruits, recruitingPoints, budget, budgetAllocated, incomingFreshmanBudget, transferAdditionsBudget, currentDate, currentGameWeek, dismissedAlerts, offSeasonWeek, offSeasonWeeksCompleted, aiRosters, coachName, coachRecord, coachRivalRecord, coachChampionships, coachSuccess, aiCoaches, customSchoolNames, customNicknames, customConferenceNames, seasonSchedule, seasonRecord, dynastyYear, gameResults, conferenceStandings, teamMorale, seasonStats, positionBoosts, recruitingPenaltyWeeks]);
 
   // Reusable Position Group Component for Recruiting
   const PositionGroup = ({ position, title, recruits, expandedPositions, setExpandedPositions, canRecruit, recruitingPoints, executeRecruitingAction, showSubPosition = false }) => {
@@ -3571,18 +3894,33 @@ const App = () => {
                           </span>
                         </div>
                       </div>
-                      {recruit.verbalCommit && (
-                        <div className={`border px-2 py-0.5 text-xs font-bold ${
-                          recruit.committedSchool?.id === selectedSchool?.id
-                            ? 'bg-green-900 border-green-600'
-                            : 'bg-orange-900 border-orange-600'
-                        }`}>
-                          {recruit.committedSchool?.id === selectedSchool?.id
-                            ? '✓ COMMITTED'
-                            : `COMMITTED TO ${recruit.committedSchool?.name || 'OTHER SCHOOL'}`
-                          }
-                        </div>
-                      )}
+                      {recruit.verbalCommit && (() => {
+                        const isCommittedToUser = recruit.committedSchool?.id === selectedSchool?.id;
+                        const aiSchools = recruit.recruitingSchools || [];
+                        const highestAIInterest = aiSchools.length > 0 ? Math.max(...aiSchools.map(s => s.interest)) : 0;
+                        const isAtRisk = isCommittedToUser && highestAIInterest > recruit.interest;
+                        const leadingSchool = isAtRisk ? aiSchools.find(s => s.interest === highestAIInterest) : null;
+
+                        return (
+                          <div className="flex gap-1">
+                            <div className={`border px-2 py-0.5 text-xs font-bold ${
+                              isCommittedToUser
+                                ? (isAtRisk ? 'bg-yellow-900 border-yellow-600' : 'bg-green-900 border-green-600')
+                                : 'bg-orange-900 border-orange-600'
+                            }`}>
+                              {isCommittedToUser
+                                ? (isAtRisk ? '⚠️ COMMITTED' : '✓ COMMITTED')
+                                : `COMMITTED TO ${recruit.committedSchool?.name || 'OTHER SCHOOL'}`
+                              }
+                            </div>
+                            {isAtRisk && (
+                              <div className="bg-red-900 border border-red-600 px-2 py-0.5 text-xs font-bold text-red-300">
+                                🔥 FLIP RISK ({leadingSchool?.schoolName}: {highestAIInterest}%)
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Interest & Market Info - Compact inline */}
@@ -3762,7 +4100,8 @@ const App = () => {
                     {/* Lock recruiting at 100% interest - no value in continuing. If interest drops below 100%, recruiting reopens */}
                     {canRecruit && !recruit.signedCommit && recruit.interest < 100 && recruit.isTargeted && (() => {
                       // Check if scholarship was offered THIS week - block recruiting actions if so
-                      const currentWeek = offSeasonWeek || currentGameWeek;
+                      // Use unique identifier per season to prevent collision (e.g., "offseason_1" vs "regular_1")
+                      const currentWeek = offSeasonWeek ? `offseason_${offSeasonWeek}` : `regular_${currentGameWeek}`;
                       const scholarshipOfferedThisWeek = recruit.scholarshipOfferedWeek === currentWeek;
 
                       return (
@@ -3784,11 +4123,30 @@ const App = () => {
                           <div className={`mb-2 border-2 px-2 py-1 text-xs ${
                             index % 2 === 0 ? 'bg-red-100 border-red-500 text-red-900' : 'bg-red-900 border-red-600 text-red-200'
                           }`}>
-                            <div className="font-bold">🔄 FLIP ATTEMPT</div>
-                            <div className="text-xs opacity-90">
-                              Committed to {recruit.committedSchool.name} ({recruit.committedSchool.tier})
-                              {recruit.committedSchool.tier === 'Blue Blood' && ' - Very Hard (-50%)'}
-                              {recruit.committedSchool.tier === 'Power 4' && ' - Harder (-25%)'}
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="font-bold">🔄 FLIP ATTEMPT</div>
+                                <div className="text-xs opacity-90">
+                                  Committed to {recruit.committedSchool.name} ({recruit.committedSchool.tier})
+                                  {recruit.committedSchool.tier === 'Blue Blood' && ' - Very Hard (-50%)'}
+                                  {recruit.committedSchool.tier === 'Power 4' && ' - Harder (-25%)'}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setFlipOfferRecruit(recruit);
+                                  setFlipOfferResult(null);
+                                  setShowFlipOfferModal(true);
+                                }}
+                                className={`px-3 py-1 text-xs font-bold border-2 ${
+                                  index % 2 === 0
+                                    ? 'bg-red-600 border-red-700 text-white hover:bg-red-700'
+                                    : 'bg-red-500 border-red-400 text-white hover:bg-red-600'
+                                }`}
+                                style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.3)' }}
+                              >
+                                MAKE OFFER
+                              </button>
                             </div>
                           </div>
                         )}
@@ -3887,11 +4245,12 @@ const App = () => {
                               <div className="font-bold" style={{ fontSize: '10px' }}>{action.name}</div>
                               <div className="opacity-75" style={{ fontSize: '8px' }}>
                                 {scholarshipOfferedThisWeek ? 'NEXT WK' :
+                                 (action.id === 'officialVisit' && !meetsRequirement) ? '(At 75% Interest)' :
                                  usedThisWeek || otherVisitUsedThisWeek ? '✓ THIS WK' :
                                  officialVisitPermanentlyUsed ? '✓ USED' :
                                  monthlyLimitUsed ? 'Used this month' :
                                  !canAfford ? `${adjustedCost}` :
-                                 !meetsRequirement ? (action.id === 'officialVisit' ? '(At 75% Interest)' : `${action.minInterest}%`) :
+                                 !meetsRequirement ? `${action.minInterest}%` :
                                  `${adjustedCost} pts`}
                               </div>
                               {!isDisabled && canAfford && meetsRequirement && (
@@ -3912,7 +4271,8 @@ const App = () => {
                                 commitmentInterest: recruit.interest,
                                 flipMultiplier: getFlipMultiplier(recruit.interest)
                               });
-                              setCounterOffer(Math.round(recruit.marketValue * 0.5));
+                              setCounterOffer(Math.round((recruit.marketValue + recruit.askingPrice) / 2));
+                              setNilNegotiationPhase('initial');
                               setShowNegotiationModal(true);
                             }}
                             className="w-full bg-green-700 border-2 border-green-500 p-2 text-sm font-bold hover:bg-green-600 transition-all"
@@ -4352,9 +4712,12 @@ const App = () => {
       setTransferDecisionsPending(playersNeedingDecisions);
       setShowTransferDecisionsModal(true);
     }
-    
-    // Update roster - remove players who left/transferred
-    setRoster(retainedPlayers);
+
+    // Update roster - KEEP players needing decisions until user decides
+    // Only remove players who have already left (graduated seniors, low-rated retirees, etc.)
+    const playersAwaitingDecision = playersNeedingDecisions.map(d => d.player);
+    const rosterAfterTurnover = [...retainedPlayers, ...playersAwaitingDecision];
+    setRoster(rosterAfterTurnover);
     
     // Add transfer portal players to recruits array
     if (transferPortalPlayers.length > 0) {
@@ -4367,6 +4730,89 @@ const App = () => {
       retainedCount: retainedPlayers.length,
       decisionsNeeded: playersNeedingDecisions.length
     };
+  };
+
+  // Process AI roster turnover and populate transfer portal with AI school players
+  const processAITransferPortal = () => {
+    const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+    const aiPortalPlayers = [];
+
+    allSchools.forEach(school => {
+      if (school.id === selectedSchool?.id) return; // Skip user's school
+
+      const schoolRoster = aiRosters[school.id] || [];
+      if (schoolRoster.length === 0) return;
+
+      schoolRoster.forEach(player => {
+        const year = player.year;
+        const rating = player.rating;
+        const isStarter = player.isStarter;
+
+        // 5th years and seniors don't enter portal (they graduate)
+        if (year === '5Y' || year === 'SR') return;
+
+        // Juniors: Non-starters with 70-79 rating have 50% portal chance
+        if (year === 'JR' && !isStarter && rating >= 70 && rating <= 79) {
+          if (Math.random() < 0.5) {
+            aiPortalPlayers.push({
+              ...player,
+              id: `transfer-${school.id}-${player.id || Math.random().toString(36).substr(2, 9)}`,
+              isTransfer: true,
+              previousSchool: school.name,
+              previousSchoolTier: school.tier,
+              interest: 0,
+              verbalCommit: false,
+              signedCommit: false,
+              recruitingSchools: []
+            });
+          }
+          return;
+        }
+
+        // Sophomores: Non-starters with low satisfaction have 40% portal chance
+        if (year === 'SO' && !isStarter) {
+          if (Math.random() < 0.4) {
+            aiPortalPlayers.push({
+              ...player,
+              id: `transfer-${school.id}-${player.id || Math.random().toString(36).substr(2, 9)}`,
+              isTransfer: true,
+              previousSchool: school.name,
+              previousSchoolTier: school.tier,
+              interest: 0,
+              verbalCommit: false,
+              signedCommit: false,
+              recruitingSchools: []
+            });
+          }
+          return;
+        }
+
+        // Freshmen: 25% portal chance if not starter
+        if (year === 'FR' && !isStarter) {
+          if (Math.random() < 0.25) {
+            aiPortalPlayers.push({
+              ...player,
+              id: `transfer-${school.id}-${player.id || Math.random().toString(36).substr(2, 9)}`,
+              isTransfer: true,
+              previousSchool: school.name,
+              previousSchoolTier: school.tier,
+              interest: 0,
+              verbalCommit: false,
+              signedCommit: false,
+              recruitingSchools: []
+            });
+          }
+        }
+      });
+    });
+
+    // Add AI portal players to recruits
+    if (aiPortalPlayers.length > 0) {
+      setRecruits(prev => [...prev, ...aiPortalPlayers]);
+      console.log(`🔄 ${aiPortalPlayers.length} AI players entered the transfer portal`);
+    }
+
+    return aiPortalPlayers.length;
   };
 
   // Helper function to calculate player market value
@@ -4516,9 +4962,54 @@ const App = () => {
     setCurrentDate(newDate);
   };
 
-  // Process Early Signing Period
+  // Process Early Signing Period - Phase 1: Identify at-risk recruits
   const processESP = () => {
     console.log('🖊️ Processing Early Signing Period...');
+
+    const userCommits = recruits.filter(r =>
+      r.verbalCommit &&
+      r.committedSchool?.id === selectedSchool?.id &&
+      !r.signedCommit
+    );
+
+    // First, identify at-risk recruits that need intervention
+    const atRiskList = [];
+
+    userCommits.forEach(recruit => {
+      if (recruit.signingDayDecision) return; // Already marked, skip
+
+      const aiSchools = recruit.recruitingSchools || [];
+      const highestAIInterest = aiSchools.length > 0 ? Math.max(...aiSchools.map(s => s.interest)) : 0;
+      const isAtRisk = highestAIInterest > recruit.interest;
+
+      if (isAtRisk) {
+        const leadingSchool = aiSchools.find(s => s.interest === highestAIInterest);
+        atRiskList.push({
+          ...recruit,
+          atRiskFlip: true,
+          leadingAISchool: leadingSchool,
+          interestGap: highestAIInterest - recruit.interest
+        });
+      }
+    });
+
+    // If there are at-risk recruits, show intervention modal first
+    if (atRiskList.length > 0) {
+      console.log(`⚠️ ${atRiskList.length} at-risk recruit(s) need intervention decisions`);
+      setAtRiskRecruits(atRiskList);
+      setCurrentAtRiskIndex(0);
+      setAtRiskDecisions({});
+      setShowAtRiskModal(true);
+      return; // Will continue in finalizeESP after decisions
+    }
+
+    // No at-risk recruits, proceed directly
+    finalizeESP({});
+  };
+
+  // Process Early Signing Period - Phase 2: After intervention decisions
+  const finalizeESP = (interventionDecisions) => {
+    console.log('📝 Finalizing ESP with intervention decisions:', interventionDecisions);
 
     const userCommits = recruits.filter(r =>
       r.verbalCommit &&
@@ -4529,6 +5020,8 @@ const App = () => {
     const signed = [];
     const unsigned = [];
     const signingDayDecisions = [];
+    const newPromises = { ...recruitPromises };
+    const newBoosterDeals = [...boosterDeals];
 
     userCommits.forEach(recruit => {
       // Signing Day Decision recruits NEVER sign early
@@ -4537,26 +5030,110 @@ const App = () => {
         return;
       }
 
-      // Calculate signing probability based on star rating
-      let signingChance = 0;
-      if (recruit.stars === 5) signingChance = 0.95; // 95%
-      else if (recruit.stars === 4) signingChance = 0.80; // 80%
-      else if (recruit.stars === 3) signingChance = 0.65; // 65%
-      else signingChance = 0.20; // 2-stars = 20%
+      // Check if any AI school has higher interest than user - this is an AT RISK commit
+      const aiSchools = recruit.recruitingSchools || [];
+      const highestAIInterest = aiSchools.length > 0 ? Math.max(...aiSchools.map(s => s.interest)) : 0;
+      const isAtRisk = highestAIInterest > recruit.interest;
 
-      // 100% in-state = auto-sign
+      if (isAtRisk) {
+        const decision = interventionDecisions[recruit.id];
+        const intervention = decision?.intervention;
+
+        if (!intervention || intervention === 'letItRide') {
+          // No intervention - goes to NSD
+          console.log(`🎲 ${recruit.name}: Let It Ride - going to NSD`);
+          signingDayDecisions.push({
+            ...recruit,
+            atRiskFlip: true,
+            leadingAISchool: aiSchools.find(s => s.interest === highestAIInterest)
+          });
+          return;
+        }
+
+        // Process intervention
+        const interventionData = AT_RISK_INTERVENTIONS[intervention];
+        const successRoll = Math.random() * 100;
+        const succeeded = successRoll < interventionData.successChance;
+
+        if (intervention === 'increaseNIL') {
+          if (succeeded) {
+            const newNIL = Math.round(recruit.nilDeal * interventionData.costMultiplier);
+            console.log(`💵 ${recruit.name}: NIL increased to ${newNIL} - SIGNED!`);
+            signed.push({ ...recruit, nilDeal: newNIL, interventionUsed: 'increaseNIL' });
+          } else {
+            console.log(`💵 ${recruit.name}: NIL increase failed - going to NSD`);
+            signingDayDecisions.push({ ...recruit, atRiskFlip: true, leadingAISchool: aiSchools.find(s => s.interest === highestAIInterest) });
+          }
+        } else if (intervention === 'promiseStartingRole') {
+          if (succeeded) {
+            console.log(`⭐ ${recruit.name}: Promised starting role - SIGNED!`);
+            newPromises[recruit.id] = {
+              startingPromise: true,
+              promisedYear: currentDate.year + 1,
+              position: recruit.position
+            };
+            signed.push({ ...recruit, interventionUsed: 'promiseStartingRole' });
+          } else {
+            console.log(`⭐ ${recruit.name}: Starting role promise not enough - going to NSD`);
+            signingDayDecisions.push({ ...recruit, atRiskFlip: true, leadingAISchool: aiSchools.find(s => s.interest === highestAIInterest) });
+          }
+        } else if (intervention === 'boosterInvolvement') {
+          if (succeeded) {
+            console.log(`🤫 ${recruit.name}: Booster assistance worked - SIGNED!`);
+            newBoosterDeals.push({
+              recruitId: recruit.id,
+              recruitName: recruit.name,
+              dealType: 'booster',
+              year: currentDate.year,
+              investigated: false,
+              violationChance: interventionData.violationChance
+            });
+            signed.push({ ...recruit, interventionUsed: 'boosterInvolvement' });
+          } else {
+            signingDayDecisions.push({ ...recruit, atRiskFlip: true, leadingAISchool: aiSchools.find(s => s.interest === highestAIInterest) });
+          }
+        } else if (intervention === 'bagman') {
+          if (succeeded) {
+            console.log(`💼 ${recruit.name}: Bagman sealed the deal - SIGNED!`);
+            newBoosterDeals.push({
+              recruitId: recruit.id,
+              recruitName: recruit.name,
+              dealType: 'bagman',
+              year: currentDate.year,
+              investigated: false,
+              violationChance: interventionData.violationChance,
+              severe: true
+            });
+            signed.push({ ...recruit, interventionUsed: 'bagman' });
+          } else {
+            signingDayDecisions.push({ ...recruit, atRiskFlip: true, leadingAISchool: aiSchools.find(s => s.interest === highestAIInterest) });
+          }
+        }
+        return;
+      }
+
+      // Normal signing logic for non-at-risk recruits
+      let signingChance = 0;
+      if (recruit.stars === 5) signingChance = 0.95;
+      else if (recruit.stars === 4) signingChance = 0.80;
+      else if (recruit.stars === 3) signingChance = 0.65;
+      else signingChance = 0.20;
+
       const isInState = recruit.state === selectedSchool?.state;
       if (recruit.interest >= 100 && isInState) {
         signingChance = 1.0;
       }
 
-      // Roll for signing
       if (Math.random() < signingChance) {
         signed.push(recruit);
       } else {
         unsigned.push(recruit);
       }
     });
+
+    // Update promises and booster deals state
+    setRecruitPromises(newPromises);
+    setBoosterDeals(newBoosterDeals);
 
     // Store results
     setESPResults({ signed, unsigned, signingDay: signingDayDecisions });
@@ -4619,15 +5196,20 @@ const App = () => {
 
     setConferenceRecruitingResults(conferenceResults);
 
-    // Mark signed recruits as signed and move to next season roster
+    // Mark signed recruits as signed and at-risk commits as signing day decisions
     setRecruits(prevRecruits => prevRecruits.map(r => {
       const isUserSigned = signed.find(s => s.id === r.id);
       const isAISigned = Object.values(aiSigningResults).some(result =>
         result.signed.find(s => s.id === r.id)
       );
+      const isAtRiskDecision = signingDayDecisions.find(s => s.id === r.id && s.atRiskFlip);
 
       if (isUserSigned || isAISigned) {
         return { ...r, signedCommit: true };
+      }
+      // Mark at-risk commits as signing day decisions for NSD processing
+      if (isAtRiskDecision) {
+        return { ...r, signingDayDecision: true, atRiskFlip: true };
       }
       return r;
     }));
@@ -4648,9 +5230,14 @@ const App = () => {
       !r.signingDayDecision
     );
 
+    // Get signing day decisions - includes both traditional and at-risk commits
     const signingDayDecisions = recruits.filter(r =>
-      r.signingDayDecision &&
-      r.recruitingSchools?.some(rs => rs.schoolId === selectedSchool?.id && rs.interest > 85)
+      r.signingDayDecision && (
+        // Traditional signing day decisions (uncommitted with high interest)
+        r.recruitingSchools?.some(rs => rs.schoolId === selectedSchool?.id && rs.interest > 85) ||
+        // At-risk commits (committed to user but AI has higher interest)
+        (r.atRiskFlip && r.verbalCommit && r.committedSchool?.id === selectedSchool?.id)
+      )
     );
 
     const nsdDecisions = [];
@@ -4687,7 +5274,20 @@ const App = () => {
 
     // Process signing day decisions using weighted algorithm
     signingDayDecisions.forEach(recruit => {
-      const competingSchools = recruit.recruitingSchools.filter(rs => rs.interest > 85);
+      // For at-risk commits, include user's school in competition
+      let competingSchools = (recruit.recruitingSchools || []).filter(rs => rs.interest > 85);
+
+      // Add user's school to competition for at-risk commits
+      if (recruit.atRiskFlip && recruit.verbalCommit && recruit.committedSchool?.id === selectedSchool?.id) {
+        // User's school is the committed school - add it to competing schools
+        const userSchoolEntry = {
+          schoolId: selectedSchool.id,
+          schoolName: selectedSchool.name,
+          schoolTier: selectedSchool.tier,
+          interest: recruit.interest // User's interest from recruit object
+        };
+        competingSchools = [userSchoolEntry, ...competingSchools];
+      }
 
       const schoolScores = competingSchools.map(rs => {
         // Interest component (50%)
@@ -4695,8 +5295,8 @@ const App = () => {
 
         // NIL component (30%)
         let estimatedNIL = recruit.marketValue;
-        if (rs.schoolId === selectedSchool?.id && recruit.acceptedNILAmount) {
-          estimatedNIL = recruit.acceptedNILAmount;
+        if (rs.schoolId === selectedSchool?.id && recruit.nilDeal) {
+          estimatedNIL = recruit.nilDeal; // Use agreed NIL deal for user's school
         }
         const nilScore = Math.min(30, (estimatedNIL / recruit.askingPrice) * 30);
 
@@ -4704,10 +5304,13 @@ const App = () => {
         const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === rs.schoolId);
         const dreamScore = isDreamSchool ? 15 : 0;
 
+        // Commitment loyalty bonus (10%) - recruits slightly prefer staying with committed school
+        const commitmentBonus = recruit.atRiskFlip && rs.schoolId === selectedSchool?.id ? 10 : 0;
+
         // Random factor (5%)
         const randomScore = Math.random() * 5;
 
-        const totalScore = interestScore + nilScore + dreamScore + randomScore;
+        const totalScore = interestScore + nilScore + dreamScore + commitmentBonus + randomScore;
 
         return {
           schoolId: rs.schoolId,
@@ -5027,7 +5630,7 @@ const App = () => {
     const getPositionAvg = (positions) => {
       const players = starters.filter(p => positions.includes(p.position));
       if (players.length === 0) return 70;
-      return players.reduce((sum, p) => sum + p.overall, 0) / players.length;
+      return players.reduce((sum, p) => sum + p.rating, 0) / players.length;
     };
 
     // OFFENSIVE RATING
@@ -5035,7 +5638,7 @@ const App = () => {
     const rbRating = getPositionAvg(['RB']) * 0.10; // 10%
     const wrRating = getPositionAvg(['WR']) * 0.15; // 15%
     const teRating = getPositionAvg(['TE']) * 0.05; // 5%
-    const olRating = getPositionAvg(['OL']) * 0.20; // 20%
+    const olRating = getPositionAvg(['OT', 'OG', 'C']) * 0.20; // 20% - OL is OT, OG, C positions
     const offensiveRating = qbRating + rbRating + wrRating + teRating + olRating;
 
     // DEFENSIVE RATING
@@ -5073,14 +5676,14 @@ const App = () => {
     const getPositionAvg = (positions) => {
       const players = starters.filter(p => positions.includes(p.position));
       if (players.length === 0) return 70;
-      return players.reduce((sum, p) => sum + p.overall, 0) / players.length;
+      return players.reduce((sum, p) => sum + p.rating, 0) / players.length;
     };
 
     // Passing game: QB + WR + TE
     const passing = Math.round((getPositionAvg(['QB']) * 0.5 + getPositionAvg(['WR']) * 0.35 + getPositionAvg(['TE']) * 0.15));
 
-    // Rushing game: RB + OL
-    const rushing = Math.round((getPositionAvg(['RB']) * 0.4 + getPositionAvg(['OL']) * 0.6));
+    // Rushing game: RB + OL (OT, OG, C)
+    const rushing = Math.round((getPositionAvg(['RB']) * 0.4 + getPositionAvg(['OT', 'OG', 'C']) * 0.6));
 
     // Pass defense: Secondary + EDGE (pass rush)
     const passDefense = Math.round((getPositionAvg(['CB', 'S']) * 0.7 + getPositionAvg(['EDGE']) * 0.3));
@@ -5201,6 +5804,14 @@ const App = () => {
   const generateChaosEvents = (weather) => {
     const events = { user: [], opponent: [] };
 
+    // Helper to get random narrative for an event
+    const getNarrative = (key, forUser) => {
+      const narratives = CHAOS_EVENT_NARRATIVES[key];
+      if (!narratives) return null;
+      const narrativeArray = forUser ? narratives.forUser : narratives.againstUser;
+      return narrativeArray[Math.floor(Math.random() * narrativeArray.length)];
+    };
+
     // Roll for each chaos event type
     Object.entries(CHAOS_EVENTS).forEach(([key, event]) => {
       // Adjust chances based on weather
@@ -5214,13 +5825,13 @@ const App = () => {
       // Roll for user team
       if (Math.random() * 100 < adjustedChance) {
         const quarter = Math.ceil(Math.random() * 4);
-        events.user.push({ ...event, key, quarter, forUser: true });
+        events.user.push({ ...event, key, quarter, forUser: true, narrative: getNarrative(key, true) });
       }
 
       // Roll for opponent team
       if (Math.random() * 100 < adjustedChance) {
         const quarter = Math.ceil(Math.random() * 4);
-        events.opponent.push({ ...event, key, quarter, forUser: false });
+        events.opponent.push({ ...event, key, quarter, forUser: false, narrative: getNarrative(key, false) });
       }
     });
 
@@ -5782,6 +6393,43 @@ const App = () => {
 
   // Check for coaching chaos events (called after each game)
   const checkCoachingChaosEvents = () => {
+    // Check for broken starting promises (after Week 4)
+    if (currentGameWeek >= 4) {
+      for (const [recruitId, promise] of Object.entries(recruitPromises)) {
+        if (promise.startingPromise && promise.promisedYear === currentDate.year) {
+          // Check if this player is on our roster and starting
+          const player = roster.find(p => p.recruitId === recruitId || p.name === promise.playerName);
+          if (player && !player.isStarter) {
+            // Promise broken!
+            setShowCoachingEventModal('brokenPromise');
+            setCoachingEventData({
+              name: 'BROKEN PROMISE',
+              icon: '😤',
+              message: `${player.name} was promised a starting role but is not starting.\n\nTeam morale suffers and the player may enter the transfer portal.`,
+              playerName: player.name,
+              position: player.position
+            });
+            // Apply penalties
+            setTeamMorale(prev => Math.max(0, prev - 20));
+            // Remove from promises to prevent repeat triggers
+            setRecruitPromises(prev => {
+              const newPromises = { ...prev };
+              delete newPromises[recruitId];
+              return newPromises;
+            });
+            // 50% chance player enters transfer portal
+            if (Math.random() < 0.5) {
+              // Mark player as wanting to transfer
+              setRoster(prev => prev.map(p =>
+                p.id === player.id ? { ...p, wantsTransfer: true, transferReason: 'Broken starting promise' } : p
+              ));
+            }
+            return true;
+          }
+        }
+      }
+    }
+
     // Recruiting Violation (2% chance)
     if (Math.random() * 100 < COACHING_CHAOS_EVENTS.violation.chance) {
       setShowCoachingEventModal('violation');
@@ -5857,14 +6505,15 @@ const App = () => {
 
     // Only reset recruiting actions and restore points during recruiting open periods
     if (isRecruitingOpen()) {
-      setRecruits(recruits.map(r => ({
+      // First reset actionsUsedThisWeek for all recruits
+      const recruitsWithResetActions = recruits.map(r => ({
         ...r,
         actionsUsedThisWeek: []
-      })));
-      
-      // Simulate AI school recruiting activity
+      }));
+
+      // Simulate AI school recruiting activity (using recruits with reset actions)
       const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
-      const updatedRecruits = simulateAIRecruiting(recruits, allSchools, selectedSchool?.id, aiRosters);
+      const updatedRecruits = simulateAIRecruiting(recruitsWithResetActions, allSchools, selectedSchool?.id, aiRosters);
       setRecruits(updatedRecruits);
 
       // Check if we're in a reduced points period (Regular Season)
@@ -6178,7 +6827,8 @@ const App = () => {
     setRecruitingPoints(recruitingPoints - cost);
 
     // Update recruit - Track the week scholarship was offered to prevent same-week recruiting spam
-    const currentWeek = offSeasonWeek || currentGameWeek; // Track off-season or regular season week
+    // Use unique identifier per season to prevent collision (e.g., "offseason_1" vs "regular_1")
+    const currentWeek = offSeasonWeek ? `offseason_${offSeasonWeek}` : `regular_${currentGameWeek}`;
     setRecruits(recruits.map(r =>
       r.id === recruit.id ? {
         ...r,
@@ -6387,6 +7037,27 @@ const App = () => {
 
         // Random commitment chance at 70%+ interest based on star rating
         if (updatedRecruit && updatedRecruit.interest >= 70 && !updatedRecruit.verbalCommit && !updatedRecruit.nilOfferAccepted) {
+          // Check if any AI school has higher interest than user
+          const aiSchools = updatedRecruit.recruitingSchools || [];
+          const highestAIInterest = aiSchools.length > 0 ? Math.max(...aiSchools.map(s => s.interest)) : 0;
+          const userInterest = updatedRecruit.interest;
+
+          // Calculate how much user is trailing (if at all)
+          const interestDeficit = Math.max(0, highestAIInterest - userInterest);
+
+          // Reduce commit chance based on interest deficit (but don't eliminate)
+          // If AI leads by 20+, commit chance reduced to 25%
+          // If AI leads by 10-19, commit chance reduced to 50%
+          // If AI leads by 1-9, commit chance reduced to 75%
+          let commitChanceModifier = 1.0;
+          if (interestDeficit >= 20) {
+            commitChanceModifier = 0.25;
+          } else if (interestDeficit >= 10) {
+            commitChanceModifier = 0.5;
+          } else if (interestDeficit > 0) {
+            commitChanceModifier = 0.75;
+          }
+
           // Determine commitment probability based on star rating
           let commitChance = 0;
           if (updatedRecruit.stars === 5) {
@@ -6397,21 +7068,69 @@ const App = () => {
             commitChance = 0.75; // 75% chance for 3-stars and 2-stars
           }
 
+          // Apply interest deficit modifier
+          commitChance *= commitChanceModifier;
+
           // Roll for random commitment
           if (Math.random() < commitChance) {
-            // Trigger NIL negotiation modal (outside the setState)
-            setTimeout(() => {
-              const recruitForModal = prev.find(r => r.id === recruit.id);
-              if (recruitForModal) {
-                setNegotiatingRecruit({
-                  ...recruitForModal,
-                  commitmentInterest: recruitForModal.interest,
-                  flipMultiplier: getFlipMultiplier(recruitForModal.interest)
-                });
-                setCounterOffer(Math.round(recruitForModal.marketValue * 0.5));
-                setShowNegotiationModal(true);
-              }
-            }, 0);
+            // If committing despite AI having higher interest, increase asking price
+            // Recruit wants more NIL to commit to a school they're less interested in
+            if (interestDeficit > 0) {
+              const nilPremium = 1 + (interestDeficit * 0.02); // +2% per point of deficit
+              updatedRecruit.askingPrice = Math.round(updatedRecruit.askingPrice * nilPremium);
+              console.log(`${updatedRecruit.name}: Committing despite ${interestDeficit}% interest deficit - NIL premium ${Math.round((nilPremium - 1) * 100)}%`);
+            }
+            // Check if this is a local dream school recruit who might skip NIL negotiation
+            const isDreamSchool = updatedRecruit.dreamSchools?.some(ds => ds.id === selectedSchool?.id);
+            const isLocalRecruit = updatedRecruit.state === selectedSchool?.state;
+
+            // Local dream school recruits have 40% chance to skip NIL negotiation (loyalty)
+            // 3-stars: 60% skip, 4-stars: 40% skip, 5-stars: 20% skip
+            let skipNILChance = 0;
+            if (isDreamSchool && isLocalRecruit) {
+              if (updatedRecruit.stars <= 3) skipNILChance = 0.6;
+              else if (updatedRecruit.stars === 4) skipNILChance = 0.4;
+              else skipNILChance = 0.2; // 5-stars still usually want NIL
+            }
+
+            if (skipNILChance > 0 && Math.random() < skipNILChance) {
+              // Skip NIL negotiation - auto-commit at market value
+              setTimeout(() => {
+                const recruitToCommit = prev.find(r => r.id === recruit.id);
+                if (recruitToCommit) {
+                  const flipMultiplier = getFlipMultiplier(recruitToCommit.interest);
+                  setRecruits(currentRecruits => currentRecruits.map(r =>
+                    r.id === recruitToCommit.id ? {
+                      ...r,
+                      verbalCommit: true,
+                      nilDeal: recruitToCommit.marketValue,
+                      committedSchool: selectedSchool,
+                      commitmentInterest: recruitToCommit.interest,
+                      flipMultiplier: flipMultiplier,
+                      signingDayDecision: false,
+                      nilOfferAccepted: true,
+                      acceptedNILAmount: recruitToCommit.marketValue
+                    } : r
+                  ));
+                  alert(`🏠 HOMETOWN HERO!\n\n${recruitToCommit.name} loves ${getSchoolDisplayName(selectedSchool)} so much, he's committing at market value!\n\n"This is my dream school - I don't need extra NIL to play here."\n\nNIL Deal: ${formatCurrency(recruitToCommit.marketValue)}`);
+                }
+              }, 0);
+            } else {
+              // Normal NIL negotiation flow
+              setTimeout(() => {
+                const recruitForModal = prev.find(r => r.id === recruit.id);
+                if (recruitForModal) {
+                  setNegotiatingRecruit({
+                    ...recruitForModal,
+                    commitmentInterest: recruitForModal.interest,
+                    flipMultiplier: getFlipMultiplier(recruitForModal.interest)
+                  });
+                  setCounterOffer(Math.round((recruitForModal.marketValue + recruitForModal.askingPrice) / 2));
+                  setNilNegotiationPhase('initial');
+                  setShowNegotiationModal(true);
+                }
+              }, 0);
+            }
           }
         }
 
@@ -6532,6 +7251,202 @@ const App = () => {
     setCurrentRandomEvent(null);
   };
 
+  // Check if we're at the point where new season should start
+  const isEndOfSeason = () => {
+    const currentEvent = getCurrentEvent();
+    const nextEvent = getUpcomingEvents()[0];
+
+    // New season starts when transitioning from The Off-Season to Training Camp or Regular Season
+    // This happens after off-season recruiting is complete (16 weeks)
+    if (currentEvent === 'The Off-Season' && offSeasonWeeksCompleted >= 16 && offSeasonWeek === null) {
+      return nextEvent?.title === 'Training Camp' || nextEvent?.title === 'Regular Season';
+    }
+    return false;
+  };
+
+  // Advance to new season - handles all year-end transitions
+  const advanceToNewSeason = () => {
+    console.log('🏈 ADVANCING TO NEW SEASON...');
+
+    const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+
+    // 1. Get all signed recruits for user's school
+    const signedRecruits = recruits.filter(r =>
+      r.signedCommit &&
+      r.committedSchool?.id === selectedSchool?.id
+    );
+
+    // 2. Get all signed transfers for user's school
+    const signedTransfers = recruits.filter(r =>
+      r.isTransfer &&
+      r.signedCommit &&
+      r.committedSchool?.id === selectedSchool?.id
+    );
+
+    console.log(`Adding ${signedRecruits.length} signed recruits and ${signedTransfers.length} transfers to roster`);
+
+    // 3. Age up current roster and remove graduates
+    const agedRoster = roster.map(player => {
+      const yearProgression = {
+        'FR': 'SO',
+        'SO': 'JR',
+        'JR': 'SR',
+        'SR': null, // Graduates
+        '5Y': null  // Graduates
+      };
+
+      const newYear = yearProgression[player.year];
+      if (newYear === null) {
+        return null; // Mark for removal (graduates)
+      }
+
+      // Small rating progression for returning players
+      let ratingBoost = 0;
+      if (player.year === 'FR') ratingBoost = Math.floor(Math.random() * 3) + 1; // +1-3
+      else if (player.year === 'SO') ratingBoost = Math.floor(Math.random() * 2) + 1; // +1-2
+      else if (player.year === 'JR') ratingBoost = Math.floor(Math.random() * 2); // +0-1
+
+      return {
+        ...player,
+        year: newYear,
+        rating: Math.min(99, player.rating + ratingBoost),
+        isStarter: false // Reset starters for new season
+      };
+    }).filter(p => p !== null);
+
+    // 4. Convert signed recruits to roster players
+    const newFreshmen = signedRecruits.map(recruit => ({
+      id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: recruit.name,
+      position: recruit.position,
+      year: 'FR',
+      stars: recruit.stars,
+      rating: recruit.rating,
+      potential: recruit.potential || recruit.rating + Math.floor(Math.random() * 10) + 5,
+      currentNIL: recruit.nilDeal || 0,
+      marketValue: recruit.marketValue,
+      satisfaction: 'High',
+      isStarter: false,
+      traits: recruit.traits || []
+    }));
+
+    // 5. Convert signed transfers to roster players (keep their year)
+    const newTransfers = signedTransfers.map(transfer => ({
+      id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: transfer.name,
+      position: transfer.position,
+      year: transfer.year || 'JR', // Transfers keep their year
+      stars: transfer.stars,
+      rating: transfer.rating,
+      potential: transfer.potential || transfer.rating + 5,
+      currentNIL: transfer.nilDeal || 0,
+      marketValue: transfer.marketValue,
+      satisfaction: 'High',
+      isStarter: false,
+      traits: transfer.traits || []
+    }));
+
+    // 6. Combine into new roster
+    const newRoster = [...agedRoster, ...newFreshmen, ...newTransfers];
+    console.log(`New roster size: ${newRoster.length} (${agedRoster.length} returning + ${newFreshmen.length} freshmen + ${newTransfers.length} transfers)`);
+
+    // 7. Update AI rosters similarly
+    const updatedAIRosters = {};
+    allSchools.forEach(school => {
+      if (school.id === selectedSchool?.id) return;
+
+      const schoolRoster = aiRosters[school.id] || [];
+
+      // Age up AI roster
+      const agedAIRoster = schoolRoster.map(player => {
+        const yearProgression = { 'FR': 'SO', 'SO': 'JR', 'JR': 'SR', 'SR': null, '5Y': null };
+        const newYear = yearProgression[player.year];
+        if (newYear === null) return null;
+
+        return {
+          ...player,
+          year: newYear,
+          rating: Math.min(99, player.rating + Math.floor(Math.random() * 2)),
+          isStarter: false
+        };
+      }).filter(p => p !== null);
+
+      // Add AI's signed recruits
+      const aiSignedRecruits = recruits.filter(r =>
+        r.signedCommit &&
+        r.committedSchool?.id === school.id
+      );
+
+      const aiNewFreshmen = aiSignedRecruits.map(recruit => ({
+        id: `ai-player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: recruit.name,
+        position: recruit.position,
+        year: 'FR',
+        stars: recruit.stars,
+        rating: recruit.rating,
+        isStarter: false
+      }));
+
+      updatedAIRosters[school.id] = [...agedAIRoster, ...aiNewFreshmen].slice(0, 85);
+    });
+
+    // 8. Generate fresh recruiting class
+    const freshRecruitingClass = generateRecruitingClass(newRoster, allSchools);
+    console.log(`Generated ${freshRecruitingClass.length} new recruits for upcoming class`);
+
+    // 9. Reset season-related state
+    const newYear = currentDate.year + (currentDate.month >= 7 ? 1 : 0); // Increment if past July
+    const newSeasonYear = currentDate.month >= 7 ? currentDate.year : currentDate.year;
+
+    // 10. Generate new schedule
+    const newSchedule = generateSeasonSchedule(selectedSchool);
+
+    // 11. Calculate new budget (slight increase for successful seasons)
+    const baseIncrease = seasonRecord.wins >= 10 ? 0.1 : seasonRecord.wins >= 8 ? 0.05 : 0;
+    const newBudget = Math.round(budget * (1 + baseIncrease));
+
+    // 12. Apply all state updates
+    setRoster(newRoster);
+    setAiRosters(updatedAIRosters);
+    setRecruits(freshRecruitingClass);
+    setSeasonSchedule(newSchedule);
+    setGameResults([]);
+    setSeasonRecord({ wins: 0, losses: 0, confWins: 0, confLosses: 0 });
+    setCurrentGameWeek(0);
+    setOffSeasonWeeksCompleted(0);
+    setSignedClass([]);
+    setBudget(newBudget);
+
+    // Recalculate budget allocation based on new roster
+    const newBudgetAllocated = newRoster.reduce((sum, p) => sum + (p.currentNIL || 0), 0);
+    setBudgetAllocated(newBudgetAllocated);
+
+    // Advance date to start of new season (August 1)
+    setCurrentDate({ year: newSeasonYear, month: 7, day: 1 });
+
+    // Increment dynasty year
+    setDynastyYear(prev => prev + 1);
+
+    // Show new season summary
+    setTimeout(() => {
+      alert(`🏈 WELCOME TO THE ${newSeasonYear} SEASON!\n\n` +
+            `ROSTER CHANGES:\n` +
+            `• ${agedRoster.length} returning players\n` +
+            `• ${newFreshmen.length} incoming freshmen\n` +
+            `• ${newTransfers.length} transfer additions\n` +
+            `• ${roster.length - agedRoster.length} players graduated/departed\n\n` +
+            `NEW RECRUITING CLASS:\n` +
+            `• ${freshRecruitingClass.filter(r => r.stars === 5).length} five-stars\n` +
+            `• ${freshRecruitingClass.filter(r => r.stars === 4).length} four-stars\n` +
+            `• ${freshRecruitingClass.filter(r => r.stars === 3).length} three-stars\n\n` +
+            `Your ${newSchedule.length}-game schedule has been generated.\n` +
+            `Budget: ${formatCurrency(newBudget)}\n\n` +
+            `Good luck, Coach!`);
+    }, 500);
+
+    console.log('🏈 NEW SEASON TRANSITION COMPLETE');
+  };
+
   const simulateToNextEvent = () => {
     const nextEvent = getUpcomingEvents()[0];
     if (!nextEvent) return;
@@ -6569,7 +7484,85 @@ const App = () => {
                                 'Do you want to continue to the next season?');
       if (!confirmed) return;
     }
-    
+
+    // NCAA Annual Review - Check booster deals for violations (once per year when crossing into new year)
+    // Risk increases with each deal: more cheating = more exposure
+    if (willCrossYear && boosterDeals.length > 0) {
+      const uninvestigatedDeals = boosterDeals.filter(d => !d.investigated);
+      const totalDeals = boosterDeals.length;
+      const activeDeals = uninvestigatedDeals.length;
+
+      // Base risk multiplier: each additional deal increases scrutiny on your program
+      // 1 deal = 1x, 2 deals = 1.5x, 3 deals = 2x, 4 deals = 2.5x, etc.
+      const scrutinyMultiplier = 1 + (totalDeals - 1) * 0.5;
+
+      for (const deal of uninvestigatedDeals) {
+        // Adjusted chance = base chance * scrutiny multiplier
+        // e.g., 3rd bagman deal: 2% * 2.0 = 4% chance
+        const adjustedChance = deal.violationChance * scrutinyMultiplier;
+        const rollForViolation = Math.random() * 100;
+
+        console.log(`NCAA Review: ${deal.recruitName} (${deal.dealType}) - Base ${deal.violationChance}% × ${scrutinyMultiplier.toFixed(1)} scrutiny = ${adjustedChance.toFixed(1)}% chance`);
+
+        if (rollForViolation < adjustedChance) {
+          // Mark as investigated
+          setBoosterDeals(prev => prev.map(d =>
+            d.recruitId === deal.recruitId ? { ...d, investigated: true } : d
+          ));
+
+          if (deal.severe) {
+            // Bagman deal - MAJOR violation
+            setShowCoachingEventModal('majorViolation');
+            setCoachingEventData({
+              name: 'MAJOR NCAA VIOLATION',
+              icon: '🚨',
+              message: `The NCAA's annual compliance review has uncovered evidence of cash payments to ${deal.recruitName}'s family.\n\nYour program faces SEVERE penalties.`,
+              penalties: [
+                '3-year postseason ban',
+                '20 scholarship reductions over 4 years',
+                '3-year recruiting penalty (-30% interest)',
+                'Show-cause penalty for head coach'
+              ],
+              recruitName: deal.recruitName
+            });
+            setRecruitingPenaltyWeeks(156); // 3 years
+            return; // Stop here, will need to acknowledge before continuing
+          } else {
+            // Booster deal - standard violation
+            setShowCoachingEventModal('violation');
+            setCoachingEventData({
+              ...COACHING_CHAOS_EVENTS.violation,
+              message: `The NCAA's annual compliance review discovered improper booster involvement in ${deal.recruitName}'s recruitment.\n\nYour program is under investigation.`
+            });
+            setRecruitingPenaltyWeeks(COACHING_CHAOS_EVENTS.violation.penaltyWeeks);
+            return; // Stop here, will need to acknowledge before continuing
+          }
+        }
+      }
+    }
+
+    // ROSTER TURNOVER - Only when entering Transfer Portal Open (after playoffs/bowl season ends)
+    // This is when: seniors graduate, NFL early declarers leave, dissatisfied players enter portal
+    if (willCrossYear) {
+      console.log('Season complete - Processing roster turnover...');
+      const portalResults = processTransferPortal();
+
+      // Also process AI rosters for transfer portal entries
+      const aiPortalCount = processAITransferPortal();
+
+      // Show summary to user
+      setTimeout(() => {
+        alert(`🔄 TRANSFER PORTAL OPENED\n\n` +
+              `Season complete! Your roster is being evaluated.\n\n` +
+              `YOUR TEAM:\n` +
+              `• ${portalResults.transferCount} players entered the portal\n` +
+              `• ${portalResults.retainedCount} players retained\n` +
+              `• ${portalResults.decisionsNeeded} decisions need your attention\n\n` +
+              `TRANSFER PORTAL:\n` +
+              `• ${aiPortalCount} players from other schools available`);
+      }, 500);
+    }
+
     // Check if we're simming to a game week during regular season
     if (nextEvent.isGameWeek) {
       // Advance one week (7 days)
@@ -6603,6 +7596,12 @@ const App = () => {
         advanceDay(nextEvent.daysUntil);
         setCurrentGameWeek(1); // Start at Week 1
 
+        // Reset recruiting actions when entering Regular Season
+        setRecruits(recruits.map(r => ({
+          ...r,
+          actionsUsedThisWeek: []
+        })));
+
         // Set HALF recruiting points when entering Regular Season
         let weeklyRecruitingPoints = 200; // Group of 5 default
         if (selectedSchool?.tier === 'Blue Blood') {
@@ -6623,20 +7622,8 @@ const App = () => {
           setCurrentGameWeek(0); // Reset when leaving regular season
         }
         
-        // TRIGGER TRANSFER PORTAL after Conference Championships
-        if (nextEvent.title === 'The Playoffs') {
-          // We just passed Conference Championships, process transfer portal
-          console.log('Processing Transfer Portal after Conference Championships...');
-          const portalResults = processTransferPortal();
-          
-          // Show summary to user
-          setTimeout(() => {
-            alert(`🔄 TRANSFER PORTAL OPENED\n\n` +
-                  `• ${portalResults.transferCount} players entered the portal\n` +
-                  `• ${portalResults.retainedCount} players retained\n` +
-                  `• ${portalResults.decisionsNeeded} decisions needed`);
-          }, 500);
-        }
+        // NOTE: Roster turnover (transfers, graduations, NFL departures) happens when entering Transfer Portal Open
+        // Players stay on roster during playoffs so teams can compete with their full squad
       }
     }
     
@@ -7722,18 +8709,36 @@ const App = () => {
                     
                     <button
                       onClick={() => {
-                        console.log('SIM TO NEXT EVENT clicked. offSeasonWeek:', offSeasonWeek);
-                        simulateToNextEvent();
+                        console.log('SIM TO NEXT EVENT clicked. offSeasonWeek:', offSeasonWeek, 'isEndOfSeason:', isEndOfSeason());
+                        if (isEndOfSeason()) {
+                          // Confirm before advancing to new season
+                          const confirmed = confirm(
+                            '🏈 ADVANCE TO NEW SEASON?\n\n' +
+                            'This will:\n' +
+                            '• Graduate seniors and 5th-year players\n' +
+                            '• Add signed recruits to your roster\n' +
+                            '• Generate a new recruiting class\n' +
+                            '• Create your new schedule\n\n' +
+                            'Are you ready to start the new season?'
+                          );
+                          if (confirmed) {
+                            advanceToNewSeason();
+                          }
+                        } else {
+                          simulateToNextEvent();
+                        }
                       }}
                       disabled={offSeasonWeek !== null && offSeasonWeek <= 16}
-                      className={`px-6 py-3 border-4 border-gray-300 text-sm font-bold transition-all ${
+                      className={`px-6 py-3 border-4 text-sm font-bold transition-all ${
                         offSeasonWeek !== null && offSeasonWeek <= 16
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-                          : 'bg-white text-black hover:bg-gray-200'
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50 border-gray-300'
+                          : isEndOfSeason()
+                            ? 'bg-green-600 text-white hover:bg-green-500 border-green-400'
+                            : 'bg-white text-black hover:bg-gray-200 border-gray-300'
                       }`}
                       style={{ boxShadow: '6px 6px 0px rgba(0,0,0,0.5)' }}
                     >
-                      SIM TO NEXT EVENT ▶
+                      {isEndOfSeason() ? '🏈 ADVANCE TO NEXT SEASON' : 'SIM TO NEXT EVENT ▶'}
                     </button>
                     
                     {offSeasonWeek !== null && offSeasonWeek <= 16 && (
@@ -7743,7 +8748,10 @@ const App = () => {
                     )}
                     
                     <div className="text-xs text-gray-400 mt-4">
-                      Next Event: {getUpcomingEvents()[0]?.title || 'None'}
+                      {isEndOfSeason()
+                        ? <span className="text-green-400 font-bold">Ready for New Season!</span>
+                        : `Next Event: ${getUpcomingEvents()[0]?.title || 'None'}`
+                      }
                     </div>
                     
                     {getCurrentEvent()?.includes('Regular Season') && (
@@ -8669,39 +9677,39 @@ const App = () => {
                             className="w-full bg-gray-800 border-2 border-gray-700 p-2 hover:border-yellow-500 transition-all flex justify-between items-center"
                           >
                             <div className="flex items-center gap-2">
-                              <div className="text-yellow-400 font-bold" style={{ fontSize: '8px' }}>{position}</div>
-                              <div className="text-gray-400" style={{ fontSize: '7px' }}>({starterCount} starter{starterCount !== 1 ? 's' : ''})</div>
+                              <div className="text-yellow-400 font-bold text-sm">{position}</div>
+                              <div className="text-gray-400 text-xs">({starterCount} starter{starterCount !== 1 ? 's' : ''})</div>
                             </div>
-                            {positionExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            {positionExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </button>
-                          
+
                           {positionExpanded && (
                             <div className="ml-2 mt-1 space-y-1">
                               {players.map(player => (
-                                <div 
-                                  key={player.id} 
-                                  className={`bg-gray-800 border-2 p-2 flex items-center justify-between ${
-                                    player.satisfaction === 'High' ? 'border-green-600' : 
+                                <div
+                                  key={player.id}
+                                  className={`bg-gray-800 border-2 p-3 flex items-center justify-between ${
+                                    player.satisfaction === 'High' ? 'border-green-600' :
                                     player.satisfaction === 'Medium' ? 'border-yellow-600' : 'border-red-600'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 flex-1">
+                                  <div className="flex items-center gap-3 flex-1">
                                     <input
                                       type="checkbox"
                                       checked={player.isStarter}
                                       onChange={() => toggleStarter(player.id)}
-                                      className="w-3 h-3 cursor-pointer"
+                                      className="w-4 h-4 cursor-pointer"
                                     />
                                     <div>
-                                      <div className="text-xs font-bold text-white">{player.name}</div>
-                                      <div className="text-gray-400 mt-1" style={{ fontSize: '8px' }}>
+                                      <div className="text-sm font-bold text-white">{player.name}</div>
+                                      <div className="text-gray-400 text-xs mt-1">
                                         {player.year} • {'⭐'.repeat(player.stars)}
                                       </div>
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-sm font-bold text-yellow-400">{player.rating}</div>
-                                    <div className="text-gray-400" style={{ fontSize: '7px' }}>OVR</div>
+                                    <div className="text-lg font-bold text-yellow-400">{player.rating}</div>
+                                    <div className="text-gray-400 text-xs">OVR</div>
                                   </div>
                                 </div>
                               ))}
@@ -8749,39 +9757,39 @@ const App = () => {
                             className="w-full bg-gray-800 border-2 border-gray-700 p-2 hover:border-yellow-500 transition-all flex justify-between items-center"
                           >
                             <div className="flex items-center gap-2">
-                              <div className="text-yellow-400 font-bold" style={{ fontSize: '8px' }}>{position}</div>
-                              <div className="text-gray-400" style={{ fontSize: '7px' }}>({starterCount} starter{starterCount !== 1 ? 's' : ''})</div>
+                              <div className="text-yellow-400 font-bold text-sm">{position}</div>
+                              <div className="text-gray-400 text-xs">({starterCount} starter{starterCount !== 1 ? 's' : ''})</div>
                             </div>
-                            {positionExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            {positionExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </button>
-                          
+
                           {positionExpanded && (
                             <div className="ml-2 mt-1 space-y-1">
                               {players.map(player => (
-                                <div 
-                                  key={player.id} 
-                                  className={`bg-gray-800 border-2 p-2 flex items-center justify-between ${
-                                    player.satisfaction === 'High' ? 'border-green-600' : 
+                                <div
+                                  key={player.id}
+                                  className={`bg-gray-800 border-2 p-3 flex items-center justify-between ${
+                                    player.satisfaction === 'High' ? 'border-green-600' :
                                     player.satisfaction === 'Medium' ? 'border-yellow-600' : 'border-red-600'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 flex-1">
+                                  <div className="flex items-center gap-3 flex-1">
                                     <input
                                       type="checkbox"
                                       checked={player.isStarter}
                                       onChange={() => toggleStarter(player.id)}
-                                      className="w-3 h-3 cursor-pointer"
+                                      className="w-4 h-4 cursor-pointer"
                                     />
                                     <div>
-                                      <div className="text-xs font-bold text-white">{player.name}</div>
-                                      <div className="text-gray-400 mt-1" style={{ fontSize: '8px' }}>
+                                      <div className="text-sm font-bold text-white">{player.name}</div>
+                                      <div className="text-gray-400 text-xs mt-1">
                                         {player.year} • {'⭐'.repeat(player.stars)}
                                       </div>
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-sm font-bold text-yellow-400">{player.rating}</div>
-                                    <div className="text-gray-400" style={{ fontSize: '7px' }}>OVR</div>
+                                    <div className="text-lg font-bold text-yellow-400">{player.rating}</div>
+                                    <div className="text-gray-400 text-xs">OVR</div>
                                   </div>
                                 </div>
                               ))}
@@ -8829,39 +9837,39 @@ const App = () => {
                             className="w-full bg-gray-800 border-2 border-gray-700 p-2 hover:border-yellow-500 transition-all flex justify-between items-center"
                           >
                             <div className="flex items-center gap-2">
-                              <div className="text-yellow-400 font-bold" style={{ fontSize: '8px' }}>{position}</div>
-                              <div className="text-gray-400" style={{ fontSize: '7px' }}>({starterCount} starter{starterCount !== 1 ? 's' : ''})</div>
+                              <div className="text-yellow-400 font-bold text-sm">{position}</div>
+                              <div className="text-gray-400 text-xs">({starterCount} starter{starterCount !== 1 ? 's' : ''})</div>
                             </div>
-                            {positionExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            {positionExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </button>
-                          
+
                           {positionExpanded && (
                             <div className="ml-2 mt-1 space-y-1">
                               {players.map(player => (
-                                <div 
-                                  key={player.id} 
-                                  className={`bg-gray-800 border-2 p-2 flex items-center justify-between ${
-                                    player.satisfaction === 'High' ? 'border-green-600' : 
+                                <div
+                                  key={player.id}
+                                  className={`bg-gray-800 border-2 p-3 flex items-center justify-between ${
+                                    player.satisfaction === 'High' ? 'border-green-600' :
                                     player.satisfaction === 'Medium' ? 'border-yellow-600' : 'border-red-600'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 flex-1">
+                                  <div className="flex items-center gap-3 flex-1">
                                     <input
                                       type="checkbox"
                                       checked={player.isStarter}
                                       onChange={() => toggleStarterSpecialTeams(player.id)}
-                                      className="w-3 h-3 cursor-pointer"
+                                      className="w-4 h-4 cursor-pointer"
                                     />
                                     <div>
-                                      <div className="text-xs font-bold text-white">{player.name}</div>
-                                      <div className="text-gray-400 mt-1" style={{ fontSize: '8px' }}>
+                                      <div className="text-sm font-bold text-white">{player.name}</div>
+                                      <div className="text-gray-400 text-xs mt-1">
                                         {player.year} • {'⭐'.repeat(player.stars)}
                                       </div>
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-sm font-bold text-yellow-400">{player.rating}</div>
-                                    <div className="text-gray-400" style={{ fontSize: '7px' }}>OVR</div>
+                                    <div className="text-lg font-bold text-yellow-400">{player.rating}</div>
+                                    <div className="text-gray-400 text-xs">OVR</div>
                                   </div>
                                 </div>
                               ))}
@@ -9337,7 +10345,7 @@ const App = () => {
                         {filteredRecruits.length} of {recruits.length} Prospects
                       </div>
                       <div className="text-blue-400">
-                        {recruits.filter(r => r.isTargeted).length} Targeted
+                        {recruits.filter(r => r.isTargeted).length} Targeted, {recruits.filter(r => r.verbalCommit && r.committedSchool?.id === selectedSchool?.id).length} Commitments
                       </div>
                     </div>
                   </div>
@@ -9350,12 +10358,23 @@ const App = () => {
                       positionCounts[pos] = roster.filter(p => p.position === pos).length;
                     });
 
+                    // Track which positions have commitments
+                    const commitmentsByPosition = {};
+                    recruits.filter(r => r.verbalCommit && r.committedSchool?.id === selectedSchool?.id).forEach(r => {
+                      commitmentsByPosition[r.position] = (commitmentsByPosition[r.position] || 0) + 1;
+                    });
+
                     const needs = [];
                     Object.keys(POSITION_TARGETS).forEach(pos => {
                       const current = positionCounts[pos] || 0;
                       const target = POSITION_TARGETS[pos];
                       if (current < target) {
-                        needs.push({ position: pos, deficit: target - current });
+                        needs.push({
+                          position: pos,
+                          deficit: target - current,
+                          hasCommitment: (commitmentsByPosition[pos] || 0) > 0,
+                          commitmentCount: commitmentsByPosition[pos] || 0
+                        });
                       }
                     });
 
@@ -9369,9 +10388,12 @@ const App = () => {
                         <div className="bg-gray-700 border-2 border-gray-600 px-2 py-1">
                           <div className="grid grid-flow-col auto-cols-max gap-2" style={{ fontSize: '10px' }}>
                             {needs.map((need) => (
-                              <div key={need.position} className="border border-gray-500 px-1 text-center">
-                                <div className="text-orange-300">{need.position}</div>
-                                <div className="text-gray-400">{need.deficit}</div>
+                              <div
+                                key={need.position}
+                                className={`px-1 text-center ${need.hasCommitment ? 'border-2 border-green-500' : 'border border-gray-500'}`}
+                              >
+                                <div className={need.hasCommitment ? 'text-green-400' : 'text-orange-300'}>{need.position}</div>
+                                <div className={need.hasCommitment ? 'text-green-300' : 'text-gray-400'}>{need.deficit}</div>
                               </div>
                             ))}
                           </div>
@@ -10037,9 +11059,32 @@ const App = () => {
           <div className="bg-gray-900 border-4 border-purple-500 max-w-3xl w-full max-h-screen overflow-y-auto" style={{ boxShadow: '12px 12px 0px rgba(0,0,0,0.8)' }}>
             {/* Modal Header */}
             <div className="bg-purple-500 text-black p-4 border-b-4 border-purple-600 sticky top-0">
-              <h2 className="text-lg font-bold">🔄 TRANSFER PORTAL DECISIONS</h2>
-              <div className="text-xs mt-1">
-                {transferDecisionsPending.length} player{transferDecisionsPending.length > 1 ? 's' : ''} need{transferDecisionsPending.length === 1 ? 's' : ''} your decision
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-lg font-bold">🔄 TRANSFER PORTAL DECISIONS</h2>
+                  <div className="text-xs mt-1">
+                    {transferDecisionsPending.length} player{transferDecisionsPending.length > 1 ? 's' : ''} need{transferDecisionsPending.length === 1 ? 's' : ''} your decision
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-bold uppercase">Available Budget</div>
+                  <div className="text-2xl font-bold" style={{ fontFamily: 'monospace' }}>
+                    {formatCurrency(budgetRemaining)}
+                  </div>
+                  <div className="text-xs opacity-75">
+                    of {formatCurrency(totalBudget)} total
+                  </div>
+                </div>
+              </div>
+              {/* Budget Bar */}
+              <div className="mt-3 bg-black bg-opacity-30 h-3 rounded overflow-hidden">
+                <div
+                  className="h-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, (budgetRemaining / totalBudget) * 100)}%`,
+                    backgroundColor: budgetRemaining / totalBudget > 0.3 ? '#22c55e' : budgetRemaining / totalBudget > 0.1 ? '#eab308' : '#ef4444'
+                  }}
+                />
               </div>
             </div>
             
@@ -10073,9 +11118,9 @@ const App = () => {
                       <>
                         <button
                           onClick={() => {
-                            // Offer 5th year spot
+                            // Offer 5th year spot - update existing player on roster
                             const updatedPlayer = { ...decision.player, year: '5Y' };
-                            setRoster(prev => [...prev, updatedPlayer]);
+                            setRoster(prev => prev.map(p => p.id === decision.player.id ? updatedPlayer : p));
                             setTransferDecisionsPending(prev => prev.filter((_, i) => i !== index));
                             if (transferDecisionsPending.length === 1) setShowTransferDecisionsModal(false);
                           }}
@@ -10087,7 +11132,7 @@ const App = () => {
                         </button>
                         <button
                           onClick={() => {
-                            // Send to transfer portal
+                            // Send to transfer portal - remove from roster, add to recruits
                             const portalPlayer = {
                               ...decision.player,
                               isTransfer: true,
@@ -10095,6 +11140,8 @@ const App = () => {
                               interest: 0
                             };
                             setRecruits(prev => [...prev, portalPlayer]);
+                            setRoster(prev => prev.filter(p => p.id !== decision.player.id));
+                            setBudgetAllocated(prev => prev - decision.player.currentNIL);
                             setTransferDecisionsPending(prev => prev.filter((_, i) => i !== index));
                             if (transferDecisionsPending.length === 1) setShowTransferDecisionsModal(false);
                           }}
@@ -10570,321 +11617,1000 @@ const App = () => {
         </div>
       )}
 
-      {/* NIL Negotiation Modal */}
-      {showNegotiationModal && negotiatingRecruit && (
+      {/* Decommitment Notification Modal */}
+      {showDecommitModal && decommittedRecruits.length > 0 && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border-4 border-green-500 max-w-md w-full max-h-[90vh] overflow-y-auto" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
+          <div className="bg-gray-900 border-4 border-red-600 max-w-lg w-full" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
             {/* Modal Header */}
-            <div className="bg-green-500 text-black p-3 border-b-4 border-green-600">
-              <h2 className="text-base font-bold">💰 NIL NEGOTIATION</h2>
+            <div className="bg-red-700 text-white p-4 border-b-4 border-red-800">
+              <h2 className="text-xl font-bold text-center">💔 DECOMMITMENT ALERT</h2>
+              <div className="text-center text-sm mt-1 opacity-90">
+                {decommittedRecruits.length} recruit{decommittedRecruits.length !== 1 ? 's have' : ' has'} backed out of {decommittedRecruits.length !== 1 ? 'their commitments' : 'their commitment'}
+              </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-4">
-              {/* Recruit Info */}
-              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-3">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="text-white font-bold text-lg">{negotiatingRecruit.name}</div>
-                    <div className="text-gray-400 text-xs mt-1">
-                      {negotiatingRecruit.position} • {negotiatingRecruit.hometown}, {negotiatingRecruit.state}
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-3">
+                {decommittedRecruits.map((recruit, idx) => (
+                  <div key={idx} className="bg-red-900 border-2 border-red-600 p-3" style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-yellow-400 text-sm">{'⭐'.repeat(recruit.stars)}</div>
+                        <div className="text-white font-bold">{recruit.name}</div>
+                        <div className="text-gray-400 text-xs">{recruit.position}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-red-400 text-lg font-bold">{recruit.interest}%</div>
+                        <div className="text-gray-500 text-xs">Interest</div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-yellow-400">{'⭐'.repeat(negotiatingRecruit.stars)}</span>
-                      <span className="text-white text-sm">
-                        {negotiatingRecruit.interest >= 50 ? negotiatingRecruit.rating : '??'} OVR
-                      </span>
-                      {negotiatingRecruit.isGenerational && negotiatingRecruit.interest >= 50 && (
-                        <span className="bg-yellow-600 px-2 py-1 text-xs border border-yellow-500">🏆 GENERATIONAL</span>
-                      )}
-                      {negotiatingRecruit.isDiamond && negotiatingRecruit.interest >= 50 && (
-                        <span className="bg-blue-600 px-2 py-1 text-xs border border-blue-500">💎 DIAMOND</span>
-                      )}
-                      {negotiatingRecruit.signingDayDecision && (
-                        <span className="bg-orange-600 px-2 py-1 text-xs border border-orange-500">📅 SIGNING DAY</span>
-                      )}
+                    <div className="mt-2 pt-2 border-t border-red-700">
+                      <div className="text-red-300 text-xs">
+                        <span className="font-bold">REASON:</span> {recruit.reason}
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="border-t-2 border-gray-700 pt-3 mt-3">
-                  <div className="text-green-400 font-bold mb-2">🤝 VERBAL COMMITMENT!</div>
-                  <div className="text-gray-300 text-sm">
-                    {negotiatingRecruit.name} wants to join {selectedSchool?.name}! Now you need to negotiate an NIL deal.
-                  </div>
-                  {negotiatingRecruit.interest < 100 && (
-                    <div className="mt-2 bg-yellow-900 border border-yellow-600 p-2 text-xs text-yellow-200">
-                      ⚠️ <span className="font-bold">Early Commitment:</span> Only {Math.round(negotiatingRecruit.interest)}% interest.
-                      Flip risk is <span className="text-yellow-400">{negotiatingRecruit.flipMultiplier?.toFixed(2) || 1}x higher</span> than normal.
-                      {negotiatingRecruit.interest < 80 && ' Very risky!'}
-                    </div>
-                  )}
+                ))}
+              </div>
+
+              <div className="mt-4 bg-gray-800 border-2 border-gray-600 p-3 text-sm">
+                <div className="text-yellow-400 font-bold mb-2">💡 What Happened?</div>
+                <div className="text-gray-300 text-xs space-y-1">
+                  <p>When a committed recruit's interest drops below 70%, they reconsider their commitment.</p>
+                  <p>Consecutive losses, bad losses, and program struggles can cause interest to plummet.</p>
+                  <p><span className="text-green-400">TIP:</span> Keep winning to maintain recruit interest, or increase NIL offers during at-risk intervention.</p>
                 </div>
               </div>
-              
-              {/* NIL Details */}
-              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-gray-400 text-xs mb-1">MARKET VALUE</div>
-                    <div className="text-white text-base">{formatCurrency(negotiatingRecruit.marketValue)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-xs mb-1">ASKING PRICE</div>
-                    <div className="text-yellow-400 text-base font-bold">{formatCurrency(negotiatingRecruit.askingPrice)}</div>
-                  </div>
-                </div>
+            </div>
 
-                {/* Counter Offer Slider */}
-                <div className="mt-3">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-gray-400 text-xs">YOUR OFFER</span>
-                    <span className="text-green-400 text-base font-bold">{formatCurrency(counterOffer)}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={Math.round(negotiatingRecruit.marketValue * 0.5)}
-                    max={Math.round(negotiatingRecruit.askingPrice * 1.2)}
-                    value={counterOffer}
-                    onChange={(e) => setCounterOffer(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>{formatCurrency(Math.round(negotiatingRecruit.marketValue * 0.5))}</span>
-                    <span>{formatCurrency(Math.round(negotiatingRecruit.askingPrice * 1.2))}</span>
-                  </div>
-                </div>
-                
-                {/* Budget Check */}
-                <div className="mt-3 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Your Available Budget:</span>
-                    <span className={budgetRemaining >= counterOffer ? 'text-green-400' : 'text-red-400'}>
-                      {formatCurrency(budgetRemaining)}
-                    </span>
-                  </div>
-                  {budgetRemaining < counterOffer && (
-                    <div className="text-red-400 mt-1">⚠ Not enough budget for this offer!</div>
-                  )}
-                </div>
-                
-                {/* Flip Risk Preview - Show how offer affects loyalty */}
-                <div className="mt-3 bg-gray-800 border-2 border-gray-600 p-2">
-                  <div className="text-xs text-yellow-400 font-bold mb-2">💰 OVERPAY = LOYALTY</div>
-                  {(() => {
-                    const baseFlip = negotiatingRecruit.flipMultiplier || 1.0;
-                    const currentOfferFlip = calculateFlipMultiplierFromNIL(
-                      counterOffer,
-                      negotiatingRecruit.askingPrice,
-                      negotiatingRecruit.marketValue,
-                      baseFlip
-                    );
-                    const percentOfAsking = (counterOffer / negotiatingRecruit.askingPrice * 100).toFixed(0);
-                    
-                    let loyaltyLevel = '';
-                    let loyaltyColor = '';
-                    if (currentOfferFlip <= 0.3) {
-                      loyaltyLevel = 'LOCKED IN 🔒';
-                      loyaltyColor = 'text-green-400';
-                    } else if (currentOfferFlip <= 0.5) {
-                      loyaltyLevel = 'Very Loyal';
-                      loyaltyColor = 'text-green-300';
-                    } else if (currentOfferFlip <= 0.7) {
-                      loyaltyLevel = 'Loyal';
-                      loyaltyColor = 'text-blue-400';
-                    } else if (currentOfferFlip <= 0.9) {
-                      loyaltyLevel = 'Satisfied';
-                      loyaltyColor = 'text-gray-300';
-                    } else if (currentOfferFlip <= 1.1) {
-                      loyaltyLevel = 'Content';
-                      loyaltyColor = 'text-yellow-400';
-                    } else if (currentOfferFlip <= 1.4) {
-                      loyaltyLevel = 'Uncertain';
-                      loyaltyColor = 'text-orange-400';
-                    } else {
-                      loyaltyLevel = 'FLIP RISK ⚠';
-                      loyaltyColor = 'text-red-400';
-                    }
-                    
-                    return (
-                      <>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-400">Current Offer:</span>
-                          <span className="text-white font-bold">{percentOfAsking}% of asking</span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-400">Loyalty Level:</span>
-                          <span className={`font-bold ${loyaltyColor}`}>{loyaltyLevel}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-400">Flip Multiplier:</span>
-                          <span className={`font-bold ${loyaltyColor}`}>{currentOfferFlip.toFixed(2)}x</span>
-                        </div>
-                        
-                        {/* Quick reference guide */}
-                        <div className="mt-3 pt-2 border-t border-gray-700 text-xs text-gray-400">
-                          <div className="font-bold mb-1">Quick Guide:</div>
-                          <div>• 120%+ asking = 🔒 Locked In (0.3x flip)</div>
-                          <div>• 110-120% = Very Loyal (0.5x flip)</div>
-                          <div>• 100-110% = Loyal (0.7-0.9x flip)</div>
-                          <div>• 90-100% = Risky (1.1-1.2x flip)</div>
-                          <div>• Under 90% = Very Risky (1.4x flip)</div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    // Accept their asking price
-                    if (budgetRemaining >= negotiatingRecruit.askingPrice) {
-                      const baseFlipMultiplier = negotiatingRecruit.flipMultiplier || 1.0;
-                      const finalFlipMultiplier = calculateFlipMultiplierFromNIL(
-                        negotiatingRecruit.askingPrice,
-                        negotiatingRecruit.askingPrice,
-                        negotiatingRecruit.marketValue,
-                        baseFlipMultiplier
-                      );
-
-                      // Check for competition - only auto-commit if 100% interest + no other school >85%
-                      const competingSchools = (negotiatingRecruit.recruitingSchools || []).filter(
-                        rs => rs.schoolId !== selectedSchool.id && rs.interest > 85
-                      );
-                      const hasCompetition = competingSchools.length > 0;
-                      const shouldAutoCommit = negotiatingRecruit.interest === 100 && !hasCompetition;
-
-                      setRecruits(recruits.map(r =>
-                        r.id === negotiatingRecruit.id ? {
-                          ...r,
-                          verbalCommit: true, // ALWAYS commit when NIL accepted
-                          nilDeal: negotiatingRecruit.askingPrice,
-                          committedSchool: selectedSchool, // ALWAYS set school when NIL accepted
-                          commitmentInterest: negotiatingRecruit.interest,
-                          flipMultiplier: finalFlipMultiplier,
-                          signingDayDecision: hasCompetition, // Only signing day decision if there's real competition
-                          nilOfferAccepted: true,
-                          acceptedNILAmount: negotiatingRecruit.askingPrice
-                        } : r
-                      ));
-
-                      // Show appropriate message
-                      if (shouldAutoCommit) {
-                        alert(`🎉 ${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!\n\nNo other schools had >85% interest, so this is a done deal!`);
-                      } else {
-                        alert(`💼 NIL Deal Accepted!\n\n${negotiatingRecruit.name} accepted your offer of ${formatCurrency(negotiatingRecruit.askingPrice)}.\n\n${hasCompetition ? `⚠️ SIGNING DAY DECISION: ${competingSchools.length} other school${competingSchools.length > 1 ? 's have' : ' has'} >85% interest.\n\nKeep recruiting to improve your chances on Signing Day!` : 'Continue recruiting to reach 100% interest for an auto-commit!'}`);
-                      }
-
-                      setShowNegotiationModal(false);
-                      setNegotiatingRecruit(null);
-                    }
-                  }}
-                  disabled={budgetRemaining < negotiatingRecruit.askingPrice}
-                  className="flex-1 bg-green-700 border-2 border-green-600 p-2 text-sm hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
-                >
-                  ✅ ACCEPT ASKING PRICE
-                  <div className="text-xs mt-1">{formatCurrency(negotiatingRecruit.askingPrice)}</div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    // Counter offer logic
-                    if (budgetRemaining >= counterOffer) {
-                      const acceptanceChance = Math.min(95, (counterOffer / negotiatingRecruit.askingPrice) * 100);
-                      if (Math.random() * 100 < acceptanceChance) {
-                        // Accepted counter
-                        const baseFlipMultiplier = negotiatingRecruit.flipMultiplier || 1.0;
-                        const finalFlipMultiplier = calculateFlipMultiplierFromNIL(
-                          counterOffer,
-                          negotiatingRecruit.askingPrice,
-                          negotiatingRecruit.marketValue,
-                          baseFlipMultiplier
-                        );
-
-                        // Check for competition - only auto-commit if 100% interest + no other school >85%
-                        const competingSchools = (negotiatingRecruit.recruitingSchools || []).filter(
-                          rs => rs.schoolId !== selectedSchool.id && rs.interest > 85
-                        );
-                        const hasCompetition = competingSchools.length > 0;
-                        const shouldAutoCommit = negotiatingRecruit.interest === 100 && !hasCompetition;
-
-                        setRecruits(recruits.map(r =>
-                          r.id === negotiatingRecruit.id ? {
-                            ...r,
-                            verbalCommit: true, // ALWAYS commit when NIL accepted
-                            nilDeal: counterOffer,
-                            committedSchool: selectedSchool, // ALWAYS set school when NIL accepted
-                            commitmentInterest: negotiatingRecruit.interest,
-                            flipMultiplier: finalFlipMultiplier,
-                            signingDayDecision: hasCompetition, // Only signing day decision if there's real competition
-                            nilOfferAccepted: true,
-                            acceptedNILAmount: counterOffer
-                          } : r
-                        ));
-
-                        // Show appropriate message
-                        if (shouldAutoCommit) {
-                          alert(`🎉 ${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!\n\nNo other schools had >85% interest, so this is a done deal!`);
-                        } else {
-                          alert(`💼 Counter Offer Accepted!\n\n${negotiatingRecruit.name} accepted your counter offer of ${formatCurrency(counterOffer)}.\n\n${hasCompetition ? `⚠️ SIGNING DAY DECISION: ${competingSchools.length} other school${competingSchools.length > 1 ? 's have' : ' has'} >85% interest.\n\nKeep recruiting to improve your chances on Signing Day!` : 'Continue recruiting to reach 100% interest for an auto-commit!'}`);
-                        }
-
-                        setShowNegotiationModal(false);
-                        setNegotiatingRecruit(null);
-                      } else {
-                        // Rejected counter - recruit lost
-                        alert(`${negotiatingRecruit.name} rejected your offer and will consider other schools.`);
-                        setRecruits(recruits.map(r =>
-                          r.id === negotiatingRecruit.id ? {
-                            ...r,
-                            interest: 75, // Drop interest back down
-                            actionsUsedThisWeek: [] // Allow recruiting again
-                          } : r
-                        ));
-                        setShowNegotiationModal(false);
-                        setNegotiatingRecruit(null);
-                      }
-                    }
-                  }}
-                  disabled={budgetRemaining < counterOffer}
-                  className="flex-1 bg-yellow-700 border-2 border-yellow-600 p-2 text-sm hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
-                >
-                  💵 COUNTER OFFER
-                  <div className="text-xs mt-1">{formatCurrency(counterOffer)}</div>
-                  <div className="text-xs opacity-70">
-                    {Math.round(Math.min(95, (counterOffer / negotiatingRecruit.askingPrice) * 100))}% chance
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    // Decline - lose recruit
-                    setRecruits(recruits.map(r =>
-                      r.id === negotiatingRecruit.id ? {
-                        ...r,
-                        interest: 0,
-                        actionsUsedThisWeek: []
-                      } : r
-                    ));
-                    setShowNegotiationModal(false);
-                    setNegotiatingRecruit(null);
-                  }}
-                  className="flex-1 bg-red-700 border-2 border-red-600 p-2 text-sm hover:bg-red-600"
-                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
-                >
-                  ❌ DECLINE
-                  <div className="text-xs mt-1">Let him walk</div>
-                </button>
-              </div>
+            {/* Close Button */}
+            <div className="p-4 bg-gray-800 border-t-2 border-gray-700">
+              <button
+                onClick={() => {
+                  setShowDecommitModal(false);
+                  setDecommittedRecruits([]);
+                }}
+                className="w-full bg-red-700 border-4 border-red-600 py-3 font-bold hover:bg-red-600"
+                style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+              >
+                UNDERSTOOD
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Flip Offer Modal */}
+      {showFlipOfferModal && flipOfferRecruit && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-orange-500 max-w-xl w-full max-h-[85vh] overflow-y-auto" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
+            {/* Modal Header */}
+            <div className="bg-orange-600 text-white p-4 border-b-4 border-orange-700">
+              <h2 className="text-xl font-bold text-center">🔄 FLIP OFFER</h2>
+              <div className="text-center text-sm mt-1 opacity-90">
+                Attempt to flip {flipOfferRecruit.name} from {flipOfferRecruit.committedSchool?.name}
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            {!flipOfferResult ? (
+              <div className="p-4">
+                {/* Recruit Info */}
+                <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4" style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-yellow-400 text-sm">{'⭐'.repeat(flipOfferRecruit.stars)}</div>
+                      <div className="text-white font-bold text-lg">{flipOfferRecruit.name}</div>
+                      <div className="text-gray-400 text-sm">{flipOfferRecruit.position} • {flipOfferRecruit.hometown}, {flipOfferRecruit.state}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-orange-400 font-bold">COMMITTED TO</div>
+                      <div className="text-white">{flipOfferRecruit.committedSchool?.name}</div>
+                      <div className="text-gray-400 text-xs">{flipOfferRecruit.committedSchool?.tier}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-700 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div>
+                      <div className="text-gray-500">Your Interest</div>
+                      <div className={`font-bold ${flipOfferRecruit.interest >= 70 ? 'text-green-400' : flipOfferRecruit.interest >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {flipOfferRecruit.interest}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Market Value</div>
+                      <div className="text-green-400 font-bold">{formatCurrency(flipOfferRecruit.marketValue)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Their NIL</div>
+                      <div className="text-white font-bold">{formatCurrency(flipOfferRecruit.nilDeal || flipOfferRecruit.marketValue)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Flip Difficulty Info */}
+                <div className="bg-red-900 border-2 border-red-600 p-3 mb-4 text-sm">
+                  <div className="text-red-300 font-bold mb-2">⚠️ FLIP DIFFICULTY</div>
+                  <div className="text-gray-300 space-y-1">
+                    {flipOfferRecruit.committedSchool?.tier === 'Blue Blood' && (
+                      <div>• Committed to Blue Blood: <span className="text-red-400 font-bold">-50% success rate</span></div>
+                    )}
+                    {flipOfferRecruit.committedSchool?.tier === 'Power 4' && (
+                      <div>• Committed to Power 4: <span className="text-yellow-400 font-bold">-25% success rate</span></div>
+                    )}
+                    {flipOfferRecruit.traits?.includes('Development Focused') && (
+                      <div>• Development Focused recruit: <span className="text-red-400 font-bold">-30% (very loyal)</span></div>
+                    )}
+                    {flipOfferRecruit.interest < 50 && (
+                      <div>• Low interest ({flipOfferRecruit.interest}%): <span className="text-red-400 font-bold">Harder to convince</span></div>
+                    )}
+                    {flipOfferRecruit.state === flipOfferRecruit.committedSchool?.state && (
+                      <div>• In-state recruit for them: <span className="text-red-400 font-bold">-50% (hometown loyalty)</span></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Flip Options */}
+                <div className="space-y-3">
+                  {Object.entries(FLIP_OFFER_OPTIONS).map(([key, option]) => {
+                    // Calculate actual success chance with modifiers
+                    let successChance = option.baseSuccessChance;
+
+                    // Tier penalty
+                    if (flipOfferRecruit.committedSchool?.tier === 'Blue Blood') {
+                      successChance *= 0.5;
+                    } else if (flipOfferRecruit.committedSchool?.tier === 'Power 4') {
+                      successChance *= 0.75;
+                    }
+
+                    // Development Focused penalty
+                    if (flipOfferRecruit.traits?.includes('Development Focused')) {
+                      successChance *= 0.7;
+                    }
+
+                    // Interest bonus/penalty
+                    if (flipOfferRecruit.interest >= 70) {
+                      successChance *= 1.3; // High interest bonus
+                    } else if (flipOfferRecruit.interest < 40) {
+                      successChance *= 0.7; // Low interest penalty
+                    }
+
+                    // In-state loyalty penalty
+                    if (flipOfferRecruit.state === flipOfferRecruit.committedSchool?.state) {
+                      successChance *= 0.5;
+                    }
+
+                    // Your school tier bonus
+                    if (selectedSchool?.tier === 'Blue Blood') {
+                      successChance *= 1.2;
+                    } else if (selectedSchool?.tier === 'Group of 5') {
+                      successChance *= 0.7;
+                    }
+
+                    successChance = Math.round(Math.min(95, Math.max(1, successChance)));
+
+                    const nilCost = Math.round(flipOfferRecruit.marketValue * option.nilMultiplier);
+                    const canAfford = budget >= nilCost;
+
+                    // Calculate scrutiny multiplier for risky options
+                    const existingDeals = boosterDeals.length;
+                    const scrutinyMultiplier = 1 + (existingDeals) * 0.5;
+                    const adjustedViolationChance = option.violationChance ? Math.round(option.violationChance * scrutinyMultiplier * 10) / 10 : 0;
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          if (!canAfford) return;
+
+                          // Show warning for risky options
+                          if (option.violationChance) {
+                            const warningMsg = option.severePenalty
+                              ? `🚨 WARNING 🚨\n\nUsing the Bagman has a ${adjustedViolationChance}% annual chance of MAJOR violation.\n\nIF CAUGHT:\n• 3-year postseason ban\n• 20 scholarship reductions\n• Show-cause penalty\n\nAre you sure?`
+                              : `⚠️ WARNING\n\nBooster involvement has a ${adjustedViolationChance}% annual chance of NCAA investigation.\n\nIF CAUGHT:\n• 3-week recruiting penalty\n• -20% recruit interest\n\nProceed?`;
+
+                            if (!confirm(warningMsg)) return;
+                          }
+
+                          // Roll for success
+                          const roll = Math.random() * 100;
+                          const success = roll < successChance;
+
+                          if (success) {
+                            // Flip successful!
+                            setRecruits(prev => prev.map(r => {
+                              if (r.id === flipOfferRecruit.id) {
+                                return {
+                                  ...r,
+                                  verbalCommit: true,
+                                  committedSchool: {
+                                    id: selectedSchool.id,
+                                    name: selectedSchool.name,
+                                    tier: selectedSchool.tier,
+                                    colors: selectedSchool.colors
+                                  },
+                                  nilDeal: nilCost,
+                                  nilOfferAccepted: true,
+                                  interest: Math.min(100, flipOfferRecruit.interest + 20),
+                                  flipMultiplier: 0.3 // Very loyal after flip
+                                };
+                              }
+                              return r;
+                            }));
+
+                            // Deduct NIL from budget
+                            setBudget(prev => prev - nilCost);
+
+                            // Add booster/bagman deal if applicable
+                            if (option.consequence === 'boosterDeal' || option.consequence === 'bagmanDeal') {
+                              setBoosterDeals(prev => [...prev, {
+                                recruitId: flipOfferRecruit.id,
+                                recruitName: flipOfferRecruit.name,
+                                dealType: option.consequence === 'bagmanDeal' ? 'bagman' : 'booster',
+                                year: currentDate.year,
+                                investigated: false,
+                                violationChance: option.violationChance,
+                                severe: option.severePenalty || false
+                              }]);
+                            }
+                          }
+
+                          setFlipOfferResult(success ? 'success' : 'failed');
+                        }}
+                        disabled={!canAfford}
+                        className={`w-full p-3 border-2 text-left transition-all ${
+                          canAfford
+                            ? option.severePenalty
+                              ? 'bg-red-900 border-red-500 hover:bg-red-800'
+                              : option.violationChance
+                                ? 'bg-yellow-900 border-yellow-600 hover:bg-yellow-800'
+                                : 'bg-gray-800 border-gray-600 hover:bg-gray-700'
+                            : 'bg-gray-900 border-gray-700 opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{ boxShadow: canAfford ? '3px 3px 0px rgba(0,0,0,0.5)' : 'none' }}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-white flex items-center gap-2">
+                              <span>{option.icon}</span>
+                              <span>{option.name}</span>
+                            </div>
+                            <div className="text-gray-400 text-xs mt-1">{option.description}</div>
+                            {option.violationChance && (
+                              <div className={`text-xs mt-1 ${option.severePenalty ? 'text-red-400' : 'text-yellow-400'}`}>
+                                ⚠️ {adjustedViolationChance}% violation risk {existingDeals > 0 && `(+${existingDeals} prior deals)`}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold text-lg ${successChance >= 50 ? 'text-green-400' : successChance >= 25 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {successChance}%
+                            </div>
+                            <div className="text-gray-500 text-xs">success</div>
+                            <div className={`text-sm mt-1 ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
+                              {formatCurrency(nilCost)}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Cancel Button */}
+                <button
+                  onClick={() => {
+                    setShowFlipOfferModal(false);
+                    setFlipOfferRecruit(null);
+                  }}
+                  className="w-full mt-4 bg-gray-700 border-2 border-gray-600 py-2 font-bold hover:bg-gray-600"
+                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                >
+                  CANCEL
+                </button>
+              </div>
+            ) : (
+              /* Result Screen */
+              <div className="p-6 text-center">
+                {flipOfferResult === 'success' ? (
+                  <>
+                    <div className="text-6xl mb-4">🎉</div>
+                    <div className="text-2xl font-bold text-green-400 mb-2">FLIP SUCCESSFUL!</div>
+                    <div className="text-gray-300 mb-4">
+                      {flipOfferRecruit.name} has committed to {selectedSchool?.name}!
+                    </div>
+                    <div className="bg-green-900 border-2 border-green-600 p-4 mb-6">
+                      <div className="text-yellow-400">{'⭐'.repeat(flipOfferRecruit.stars)}</div>
+                      <div className="text-white font-bold text-lg">{flipOfferRecruit.name}</div>
+                      <div className="text-gray-400">{flipOfferRecruit.position}</div>
+                      <div className="text-green-400 mt-2 font-bold">NOW COMMITTED TO YOU</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-4">😔</div>
+                    <div className="text-2xl font-bold text-red-400 mb-2">FLIP FAILED</div>
+                    <div className="text-gray-300 mb-4">
+                      {flipOfferRecruit.name} has decided to stay committed to {flipOfferRecruit.committedSchool?.name}.
+                    </div>
+                    <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-6">
+                      <div className="text-gray-400 text-sm">
+                        "I appreciate the interest, but I'm staying committed to my school."
+                      </div>
+                    </div>
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    setShowFlipOfferModal(false);
+                    setFlipOfferRecruit(null);
+                    setFlipOfferResult(null);
+                  }}
+                  className={`px-8 py-3 font-bold border-4 ${
+                    flipOfferResult === 'success'
+                      ? 'bg-green-700 border-green-600 hover:bg-green-600'
+                      : 'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                  }`}
+                  style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                >
+                  CONTINUE
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NIL Negotiation Modal - Two-Step Flow */}
+      {showNegotiationModal && negotiatingRecruit && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-2">
+          <div className="bg-gray-900 border-4 border-green-500 max-w-sm w-full max-h-[85vh] overflow-y-auto" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
+            {/* Modal Header */}
+            <div className="bg-green-500 text-black p-2 border-b-4 border-green-600">
+              <h2 className="text-sm font-bold">💰 NIL NEGOTIATION</h2>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-3">
+              {/* Recruit Info - Compact */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-2 mb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-white font-bold">{negotiatingRecruit.name}</div>
+                    <div className="text-gray-400 text-xs">
+                      {negotiatingRecruit.position} • {negotiatingRecruit.hometown}, {negotiatingRecruit.state}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-yellow-400 text-sm">{'⭐'.repeat(negotiatingRecruit.stars)}</span>
+                      <span className="text-white text-xs">
+                        {negotiatingRecruit.interest >= 50 ? negotiatingRecruit.rating : '??'} OVR
+                      </span>
+                      {negotiatingRecruit.isGenerational && negotiatingRecruit.interest >= 50 && (
+                        <span className="bg-yellow-600 px-1 text-xs border border-yellow-500">🏆</span>
+                      )}
+                      {negotiatingRecruit.isDiamond && negotiatingRecruit.interest >= 50 && (
+                        <span className="bg-blue-600 px-1 text-xs border border-blue-500">💎</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-700 pt-2 mt-2">
+                  <div className="text-green-400 font-bold text-sm">🤝 VERBAL COMMITMENT!</div>
+                  <div className="text-gray-300 text-xs">
+                    {negotiatingRecruit.name} wants to join {selectedSchool?.name}!
+                  </div>
+                  {negotiatingRecruit.interest < 100 && (
+                    <div className="mt-1 bg-yellow-900 border border-yellow-600 p-1 text-xs text-yellow-200">
+                      ⚠️ {Math.round(negotiatingRecruit.interest)}% interest • Flip risk {negotiatingRecruit.flipMultiplier?.toFixed(2) || 1}x
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* PHASE 1: Initial Choice */}
+              {nilNegotiationPhase === 'initial' && (
+                <>
+                  {/* Market Value Display */}
+                  <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-2">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-xs mb-1">MARKET VALUE</div>
+                      <div className="text-white text-xl font-bold">{formatCurrency(negotiatingRecruit.marketValue)}</div>
+                      <div className="text-gray-500 text-xs mt-1">Fair market rate for this recruit</div>
+                    </div>
+
+                    <div className="mt-3 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Your Budget:</span>
+                        <span className={budgetRemaining >= negotiatingRecruit.marketValue ? 'text-green-400' : 'text-red-400'}>
+                          {formatCurrency(budgetRemaining)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Initial Phase Buttons */}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        // Accept market value immediately
+                        if (budgetRemaining >= negotiatingRecruit.marketValue) {
+                          const baseFlipMultiplier = negotiatingRecruit.flipMultiplier || 1.0;
+                          const finalFlipMultiplier = calculateFlipMultiplierFromNIL(
+                            negotiatingRecruit.marketValue,
+                            negotiatingRecruit.askingPrice,
+                            negotiatingRecruit.marketValue,
+                            baseFlipMultiplier
+                          );
+
+                          const competingSchools = (negotiatingRecruit.recruitingSchools || []).filter(
+                            rs => rs.schoolId !== selectedSchool.id && rs.interest > 85
+                          );
+                          const hasCompetition = competingSchools.length > 0;
+                          const shouldAutoCommit = negotiatingRecruit.interest === 100 && !hasCompetition;
+
+                          setRecruits(recruits.map(r =>
+                            r.id === negotiatingRecruit.id ? {
+                              ...r,
+                              verbalCommit: true,
+                              nilDeal: negotiatingRecruit.marketValue,
+                              committedSchool: selectedSchool,
+                              commitmentInterest: negotiatingRecruit.interest,
+                              flipMultiplier: finalFlipMultiplier,
+                              signingDayDecision: hasCompetition,
+                              nilOfferAccepted: true,
+                              acceptedNILAmount: negotiatingRecruit.marketValue
+                            } : r
+                          ));
+
+                          if (shouldAutoCommit) {
+                            alert(`🎉 ${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!`);
+                          } else {
+                            alert(`💼 NIL Deal Done!\n\n${negotiatingRecruit.name} accepted market value of ${formatCurrency(negotiatingRecruit.marketValue)}.`);
+                          }
+
+                          setShowNegotiationModal(false);
+                          setNegotiatingRecruit(null);
+                        }
+                      }}
+                      disabled={budgetRemaining < negotiatingRecruit.marketValue}
+                      className="w-full bg-green-700 border-2 border-green-600 p-3 text-sm font-bold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ✅ OFFER MARKET VALUE
+                      <div className="text-xs mt-1 font-normal opacity-80">Quick deal - recruit accepts immediately</div>
+                    </button>
+
+                    <button
+                      onClick={() => setNilNegotiationPhase('counter')}
+                      className="w-full bg-yellow-700 border-2 border-yellow-600 p-3 text-sm font-bold hover:bg-yellow-600"
+                      style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      💵 COUNTER OFFER
+                      <div className="text-xs mt-1 font-normal opacity-80">Negotiate - reveal their asking price</div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setRecruits(recruits.map(r =>
+                          r.id === negotiatingRecruit.id ? {
+                            ...r,
+                            interest: 0,
+                            actionsUsedThisWeek: []
+                          } : r
+                        ));
+                        setShowNegotiationModal(false);
+                        setNegotiatingRecruit(null);
+                      }}
+                      className="w-full bg-red-800 border-2 border-red-700 p-2 text-xs hover:bg-red-700"
+                      style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ❌ DECLINE - Let him walk
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* PHASE 2: Counter Offer */}
+              {nilNegotiationPhase === 'counter' && (
+                <>
+                  {/* Values Display */}
+                  <div className="bg-gray-800 border-2 border-gray-600 p-2 mb-2">
+                    <div className="grid grid-cols-2 gap-2 text-center">
+                      <div>
+                        <div className="text-gray-400 text-xs">MARKET VALUE</div>
+                        <div className="text-white text-sm">{formatCurrency(negotiatingRecruit.marketValue)}</div>
+                      </div>
+                      <div>
+                        <div className="text-yellow-400 text-xs">ASKING PRICE</div>
+                        <div className="text-yellow-400 text-sm font-bold">{formatCurrency(negotiatingRecruit.askingPrice)}</div>
+                      </div>
+                    </div>
+
+                    {/* Counter Offer Slider */}
+                    <div className="mt-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-gray-400 text-xs">YOUR OFFER</span>
+                        <span className="text-green-400 font-bold">{formatCurrency(counterOffer)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={Math.round(negotiatingRecruit.marketValue * 0.5)}
+                        max={Math.round(negotiatingRecruit.askingPrice * 1.2)}
+                        value={counterOffer}
+                        onChange={(e) => setCounterOffer(parseInt(e.target.value))}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>{formatCurrency(Math.round(negotiatingRecruit.marketValue * 0.5))}</span>
+                        <span>{formatCurrency(Math.round(negotiatingRecruit.askingPrice * 1.2))}</span>
+                      </div>
+                    </div>
+
+                    {/* Budget Check */}
+                    <div className="mt-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Budget:</span>
+                        <span className={budgetRemaining >= counterOffer ? 'text-green-400' : 'text-red-400'}>
+                          {formatCurrency(budgetRemaining)}
+                        </span>
+                      </div>
+                      {budgetRemaining < counterOffer && (
+                        <div className="text-red-400 mt-1">⚠ Not enough budget!</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Loyalty Preview - Compact */}
+                  <div className="bg-gray-800 border-2 border-gray-600 p-2 mb-2">
+                    {(() => {
+                      const baseFlip = negotiatingRecruit.flipMultiplier || 1.0;
+                      const currentOfferFlip = calculateFlipMultiplierFromNIL(
+                        counterOffer,
+                        negotiatingRecruit.askingPrice,
+                        negotiatingRecruit.marketValue,
+                        baseFlip
+                      );
+                      const percentOfAsking = (counterOffer / negotiatingRecruit.askingPrice * 100).toFixed(0);
+
+                      let loyaltyLevel = '';
+                      let loyaltyColor = '';
+                      if (currentOfferFlip <= 0.3) {
+                        loyaltyLevel = 'LOCKED IN 🔒';
+                        loyaltyColor = 'text-green-400';
+                      } else if (currentOfferFlip <= 0.5) {
+                        loyaltyLevel = 'Very Loyal';
+                        loyaltyColor = 'text-green-300';
+                      } else if (currentOfferFlip <= 0.7) {
+                        loyaltyLevel = 'Loyal';
+                        loyaltyColor = 'text-blue-400';
+                      } else if (currentOfferFlip <= 0.9) {
+                        loyaltyLevel = 'Satisfied';
+                        loyaltyColor = 'text-gray-300';
+                      } else if (currentOfferFlip <= 1.1) {
+                        loyaltyLevel = 'Content';
+                        loyaltyColor = 'text-yellow-400';
+                      } else if (currentOfferFlip <= 1.4) {
+                        loyaltyLevel = 'Uncertain';
+                        loyaltyColor = 'text-orange-400';
+                      } else {
+                        loyaltyLevel = 'FLIP RISK ⚠';
+                        loyaltyColor = 'text-red-400';
+                      }
+
+                      // Walk-away warning if under 15% of asking
+                      const walkAwayRisk = counterOffer < negotiatingRecruit.askingPrice * 0.15;
+
+                      return (
+                        <>
+                          <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-400">{percentOfAsking}% of asking</span>
+                            <span className={`font-bold ${loyaltyColor}`}>{loyaltyLevel}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-400">Flip Multiplier:</span>
+                            <span className={`font-bold ${loyaltyColor}`}>{currentOfferFlip.toFixed(2)}x</span>
+                          </div>
+                          {walkAwayRisk && (
+                            <div className="mt-2 bg-red-900 border border-red-600 p-1 text-xs text-red-200 text-center">
+                              ⚠️ INSULTINGLY LOW - Recruit may walk away!
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Counter Phase Buttons */}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        if (budgetRemaining >= counterOffer) {
+                          // Walk-away check: if offer is under 15% of asking, 80% chance recruit walks
+                          const walkAwayThreshold = negotiatingRecruit.askingPrice * 0.15;
+                          if (counterOffer < walkAwayThreshold && Math.random() < 0.8) {
+                            alert(`😤 ${negotiatingRecruit.name} is INSULTED by your lowball offer and walks away!\n\n"That's not even close to what I'm worth."`);
+                            setRecruits(recruits.map(r =>
+                              r.id === negotiatingRecruit.id ? {
+                                ...r,
+                                interest: 0,
+                                actionsUsedThisWeek: []
+                              } : r
+                            ));
+                            setShowNegotiationModal(false);
+                            setNegotiatingRecruit(null);
+                            return;
+                          }
+
+                          const acceptanceChance = Math.min(95, (counterOffer / negotiatingRecruit.askingPrice) * 100);
+                          if (Math.random() * 100 < acceptanceChance) {
+                            const baseFlipMultiplier = negotiatingRecruit.flipMultiplier || 1.0;
+                            const finalFlipMultiplier = calculateFlipMultiplierFromNIL(
+                              counterOffer,
+                              negotiatingRecruit.askingPrice,
+                              negotiatingRecruit.marketValue,
+                              baseFlipMultiplier
+                            );
+
+                            const competingSchools = (negotiatingRecruit.recruitingSchools || []).filter(
+                              rs => rs.schoolId !== selectedSchool.id && rs.interest > 85
+                            );
+                            const hasCompetition = competingSchools.length > 0;
+                            const shouldAutoCommit = negotiatingRecruit.interest === 100 && !hasCompetition;
+
+                            setRecruits(recruits.map(r =>
+                              r.id === negotiatingRecruit.id ? {
+                                ...r,
+                                verbalCommit: true,
+                                nilDeal: counterOffer,
+                                committedSchool: selectedSchool,
+                                commitmentInterest: negotiatingRecruit.interest,
+                                flipMultiplier: finalFlipMultiplier,
+                                signingDayDecision: hasCompetition,
+                                nilOfferAccepted: true,
+                                acceptedNILAmount: counterOffer
+                              } : r
+                            ));
+
+                            if (shouldAutoCommit) {
+                              alert(`🎉 ${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!`);
+                            } else {
+                              alert(`💼 Counter Accepted!\n\n${negotiatingRecruit.name} accepted ${formatCurrency(counterOffer)}.`);
+                            }
+
+                            setShowNegotiationModal(false);
+                            setNegotiatingRecruit(null);
+                          } else {
+                            alert(`${negotiatingRecruit.name} rejected your offer and will consider other schools.`);
+                            setRecruits(recruits.map(r =>
+                              r.id === negotiatingRecruit.id ? {
+                                ...r,
+                                interest: 75,
+                                actionsUsedThisWeek: []
+                              } : r
+                            ));
+                            setShowNegotiationModal(false);
+                            setNegotiatingRecruit(null);
+                          }
+                        }
+                      }}
+                      disabled={budgetRemaining < counterOffer}
+                      className="w-full bg-green-700 border-2 border-green-600 p-2 text-sm font-bold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ✅ SUBMIT COUNTER: {formatCurrency(counterOffer)}
+                      <div className="text-xs mt-1 font-normal">
+                        {Math.round(Math.min(95, (counterOffer / negotiatingRecruit.askingPrice) * 100))}% acceptance chance
+                      </div>
+                    </button>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setNilNegotiationPhase('initial')}
+                        className="flex-1 bg-gray-700 border-2 border-gray-600 p-2 text-xs hover:bg-gray-600"
+                        style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        ← Back
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRecruits(recruits.map(r =>
+                            r.id === negotiatingRecruit.id ? {
+                              ...r,
+                              interest: 0,
+                              actionsUsedThisWeek: []
+                            } : r
+                          ));
+                          setShowNegotiationModal(false);
+                          setNegotiatingRecruit(null);
+                        }}
+                        className="flex-1 bg-red-800 border-2 border-red-700 p-2 text-xs hover:bg-red-700"
+                        style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        ❌ Walk Away
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* At-Risk Recruit Intervention Modal (ESP) */}
+      {showAtRiskModal && atRiskRecruits.length > 0 && (() => {
+        const currentRecruit = atRiskRecruits[currentAtRiskIndex];
+        if (!currentRecruit) return null;
+
+        const leadingSchool = currentRecruit.leadingAISchool;
+        const interestGap = currentRecruit.interestGap;
+        const nilIncreaseCost = Math.round(currentRecruit.nilDeal * AT_RISK_INTERVENTIONS.increaseNIL.costMultiplier) - currentRecruit.nilDeal;
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 border-4 border-red-600 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+              {/* Header */}
+              <div className="bg-red-700 p-4 border-b-4 border-red-800">
+                <h2 className="text-xl font-bold text-center">⚠️ AT-RISK COMMIT INTERVENTION</h2>
+                <div className="text-center text-sm mt-1">
+                  Recruit {currentAtRiskIndex + 1} of {atRiskRecruits.length}
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Recruit Info */}
+                <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-xl font-bold text-white">{currentRecruit.name}</div>
+                      <div className="text-sm text-gray-400">
+                        {currentRecruit.position} • {currentRecruit.hometown}, {currentRecruit.state}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-yellow-500">{'⭐'.repeat(currentRecruit.stars)}</span>
+                        <span className="text-blue-400">OVR {currentRecruit.rating}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-yellow-400 font-bold">Your Interest: {Math.round(currentRecruit.interest)}%</div>
+                      <div className="text-green-400 text-sm">NIL Deal: {formatCurrency(currentRecruit.nilDeal)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Threat Assessment */}
+                <div className="bg-red-900 border-2 border-red-600 p-4 mb-4">
+                  <div className="text-red-300 font-bold mb-2">🔥 FLIP THREAT</div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-white font-bold">{leadingSchool?.schoolName}</div>
+                      <div className="text-sm text-gray-400">{leadingSchool?.schoolTier}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-red-400 font-bold text-lg">{leadingSchool?.interest}% Interest</div>
+                      <div className="text-yellow-400 text-sm">+{interestGap}% ahead of you</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Warning */}
+                <div className="bg-yellow-900 border-2 border-yellow-600 p-3 mb-4 text-center">
+                  <div className="text-yellow-200 text-sm">
+                    Without intervention, this recruit will announce at <strong>National Signing Day</strong>
+                    <br />and may flip to {leadingSchool?.schoolName}
+                  </div>
+                </div>
+
+                {/* Intervention Options */}
+                <div className="text-gray-400 text-sm mb-2 font-bold">CHOOSE YOUR APPROACH:</div>
+                <div className="space-y-3">
+
+                  {/* Let It Ride */}
+                  <button
+                    onClick={() => {
+                      const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'letItRide' } };
+                      setAtRiskDecisions(newDecisions);
+
+                      if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                        setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                      } else {
+                        setShowAtRiskModal(false);
+                        finalizeESP(newDecisions);
+                      }
+                    }}
+                    className="w-full bg-gray-700 border-2 border-gray-500 p-3 text-left hover:bg-gray-600 transition-all"
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-white">🎲 Let It Ride</div>
+                        <div className="text-xs text-gray-400 mt-1">Take your chances at National Signing Day</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-yellow-400 text-sm">MEDIUM RISK</div>
+                        <div className="text-xs text-gray-500">Free</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Increase NIL */}
+                  <button
+                    onClick={() => {
+                      if (budgetRemaining < nilIncreaseCost) {
+                        alert('Not enough budget for this NIL increase!');
+                        return;
+                      }
+                      const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'increaseNIL', cost: nilIncreaseCost } };
+                      setAtRiskDecisions(newDecisions);
+
+                      if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                        setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                      } else {
+                        setShowAtRiskModal(false);
+                        finalizeESP(newDecisions);
+                      }
+                    }}
+                    className={`w-full border-2 p-3 text-left transition-all ${
+                      budgetRemaining >= nilIncreaseCost
+                        ? 'bg-green-800 border-green-600 hover:bg-green-700'
+                        : 'bg-gray-800 border-gray-600 opacity-50 cursor-not-allowed'
+                    }`}
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    disabled={budgetRemaining < nilIncreaseCost}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-white">💵 Increase NIL Offer</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Raise NIL to {formatCurrency(Math.round(currentRecruit.nilDeal * AT_RISK_INTERVENTIONS.increaseNIL.costMultiplier))}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-400 text-sm">{AT_RISK_INTERVENTIONS.increaseNIL.successChance}% SUCCESS</div>
+                        <div className="text-xs text-red-400">+{formatCurrency(nilIncreaseCost)} budget</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Promise Starting Role */}
+                  <button
+                    onClick={() => {
+                      const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'promiseStartingRole' } };
+                      setAtRiskDecisions(newDecisions);
+
+                      if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                        setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                      } else {
+                        setShowAtRiskModal(false);
+                        finalizeESP(newDecisions);
+                      }
+                    }}
+                    className="w-full bg-blue-800 border-2 border-blue-600 p-3 text-left hover:bg-blue-700 transition-all"
+                    style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-white">⭐ Promise Starting Role</div>
+                        <div className="text-xs text-gray-400 mt-1">Guarantee they start as a freshman</div>
+                        <div className="text-xs text-yellow-400 mt-1">⚠️ If not starting by Week 4: -20 morale, may transfer</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-blue-400 text-sm">{AT_RISK_INTERVENTIONS.promiseStartingRole.successChance}% SUCCESS</div>
+                        <div className="text-xs text-gray-500">Free</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Booster Involvement */}
+                  {(() => {
+                    const existingDeals = boosterDeals.length;
+                    const scrutinyMultiplier = 1 + existingDeals * 0.5;
+                    const adjustedChance = (5 * scrutinyMultiplier).toFixed(1);
+                    const riskLevel = existingDeals === 0 ? 'LOW' : existingDeals <= 2 ? 'MEDIUM' : 'HIGH';
+                    const riskColor = existingDeals === 0 ? 'text-yellow-400' : existingDeals <= 2 ? 'text-orange-400' : 'text-red-400';
+
+                    return (
+                      <button
+                        onClick={() => {
+                          let warningMsg = `⚠️ WARNING: Booster involvement has a ${adjustedChance}% annual chance of triggering an NCAA investigation.`;
+                          if (existingDeals > 0) {
+                            warningMsg += `\n\n⚠️ You already have ${existingDeals} deal(s) on the books - NCAA scrutiny is INCREASED.`;
+                          }
+                          warningMsg += '\n\nAre you sure you want to proceed?';
+
+                          const confirmed = confirm(warningMsg);
+                          if (!confirmed) return;
+
+                          const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'boosterInvolvement' } };
+                          setAtRiskDecisions(newDecisions);
+
+                          if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                            setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                          } else {
+                            setShowAtRiskModal(false);
+                            finalizeESP(newDecisions);
+                          }
+                        }}
+                        className="w-full bg-orange-800 border-2 border-orange-600 p-3 text-left hover:bg-orange-700 transition-all"
+                        style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-white">🤫 Booster "Assistance"</div>
+                            <div className="text-xs text-gray-400 mt-1">Boosters offer family "opportunities"</div>
+                            <div className={`text-xs ${riskColor} mt-1`}>
+                              ⚠️ {adjustedChance}% annual chance of NCAA investigation
+                              {existingDeals > 0 && ` (${existingDeals} prior deal${existingDeals > 1 ? 's' : ''} = +scrutiny)`}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-green-400 text-sm">{AT_RISK_INTERVENTIONS.boosterInvolvement.successChance}% SUCCESS</div>
+                            <div className={`text-xs ${riskColor}`}>{riskLevel} RISK</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })()}
+
+                  {/* The Bagman */}
+                  {(() => {
+                    const existingDeals = boosterDeals.length;
+                    const scrutinyMultiplier = 1 + existingDeals * 0.5;
+                    const adjustedChance = (2 * scrutinyMultiplier).toFixed(1);
+                    const riskLevel = existingDeals === 0 ? 'MEDIUM' : existingDeals <= 2 ? 'HIGH' : 'EXTREME';
+                    const riskColor = existingDeals === 0 ? 'text-orange-400' : 'text-red-400';
+
+                    return (
+                      <button
+                        onClick={() => {
+                          let warningMsg = `🚨 WARNING 🚨\n\nCalling the bagman has a ${adjustedChance}% annual chance of triggering a MAJOR NCAA violation.`;
+                          if (existingDeals > 0) {
+                            warningMsg += `\n\n⚠️ You already have ${existingDeals} deal(s) on the books - NCAA scrutiny is INCREASED.`;
+                          }
+                          warningMsg += '\n\nIF CAUGHT, this results in:\n• 3-year postseason ban\n• 20 scholarship reductions\n• 3-year recruiting penalty\n• Show-cause penalty\n\nThe odds are low, but the consequences are catastrophic.\n\nAre you sure?';
+
+                          const confirmed = confirm(warningMsg);
+                          if (!confirmed) return;
+
+                          const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'bagman' } };
+                          setAtRiskDecisions(newDecisions);
+
+                          if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                            setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                          } else {
+                            setShowAtRiskModal(false);
+                            finalizeESP(newDecisions);
+                          }
+                        }}
+                        className="w-full bg-red-900 border-2 border-red-500 p-3 text-left hover:bg-red-800 transition-all"
+                        style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-white">💼 Call the Bagman</div>
+                            <div className="text-xs text-gray-400 mt-1">Under the table cash payment</div>
+                            <div className={`text-xs ${riskColor} mt-1`}>
+                              🚨 {adjustedChance}% annual chance - CATASTROPHIC if caught
+                              {existingDeals > 0 && ` (+scrutiny)`}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-green-400 text-sm">{AT_RISK_INTERVENTIONS.bagman.successChance}% SUCCESS</div>
+                            <div className={`text-xs ${riskColor} font-bold`}>{riskLevel} RISK</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Early Signing Period Results Modal */}
       {showESPModal && espResults && (
@@ -11414,33 +13140,33 @@ const App = () => {
 
       {/* Game Plan Selection Modal */}
       {showGamePlanModal && currentOpponent && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-900 border-4 border-green-600 max-w-4xl w-full my-4"
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2">
+          <div className="bg-gray-900 border-4 border-green-600 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
 
             {/* Header */}
-            <div className="bg-green-700 p-4 border-b-4 border-green-800">
-              <h2 className="text-xl font-bold text-center">🏈 GAME DAY - WEEK {currentGameWeek}</h2>
-              <div className="text-center text-sm mt-1">
+            <div className="bg-green-700 p-3 border-b-4 border-green-800 sticky top-0 z-10">
+              <h2 className="text-lg font-bold text-center">🏈 GAME DAY - WEEK {currentGameWeek}</h2>
+              <div className="text-center text-xs mt-1">
                 {selectedSchool?.name} vs {currentOpponent.opponent?.name || currentOpponent.name}
                 {currentOpponent.isRivalry && <span className="ml-2 text-yellow-400">🔥 RIVALRY</span>}
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-3">
               {/* Matchup Overview */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-2 mb-4">
                 {/* Your Team */}
-                <div className="bg-gray-800 border-2 border-gray-600 p-4 text-center"
-                     style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
-                  <div className="text-xs text-gray-400 mb-1">YOUR TEAM</div>
-                  <div className="text-lg font-bold" style={{ color: selectedSchool?.colors?.primary || '#ffffff' }}>
+                <div className="bg-gray-800 border-2 border-gray-600 p-2 text-center"
+                     style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="text-xs text-gray-400">YOUR TEAM</div>
+                  <div className="text-sm font-bold" style={{ color: selectedSchool?.colors?.primary || '#ffffff' }}>
                     {selectedSchool?.name}
                   </div>
-                  <div className="text-2xl font-bold text-white mt-2">
+                  <div className="text-xl font-bold text-white">
                     {calculateTeamRating(roster)} OVR
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-gray-400">
                     {seasonRecord.wins}-{seasonRecord.losses} ({seasonRecord.confWins}-{seasonRecord.confLosses})
                   </div>
                 </div>
@@ -11448,33 +13174,33 @@ const App = () => {
                 {/* VS */}
                 <div className="flex items-center justify-center">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-500">VS</div>
-                    <div className="text-xs text-gray-500 mt-2">
+                    <div className="text-2xl font-bold text-gray-500">VS</div>
+                    <div className="text-xs text-gray-500">
                       {currentOpponent.isHome ? '🏟️ HOME' : currentOpponent.isNeutralSite ? '🏟️ NEUTRAL' : '🚌 AWAY'}
                     </div>
                   </div>
                 </div>
 
                 {/* Opponent */}
-                <div className="bg-gray-800 border-2 border-gray-600 p-4 text-center"
-                     style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
-                  <div className="text-xs text-gray-400 mb-1">OPPONENT</div>
-                  <div className="text-lg font-bold" style={{ color: currentOpponent.opponent?.colors?.primary || '#ffffff' }}>
+                <div className="bg-gray-800 border-2 border-gray-600 p-2 text-center"
+                     style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="text-xs text-gray-400">OPPONENT</div>
+                  <div className="text-sm font-bold" style={{ color: currentOpponent.opponent?.colors?.primary || '#ffffff' }}>
                     {currentOpponent.opponent?.name || 'Opponent'}
                   </div>
-                  <div className="text-2xl font-bold text-white mt-2">
+                  <div className="text-xl font-bold text-white">
                     {calculateTeamRating(aiRosters[currentOpponent.opponent?.id] || []) || '??'} OVR
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-gray-400">
                     {currentOpponent.opponent?.tier || 'Unknown'}
                   </div>
                 </div>
               </div>
 
               {/* Matchup Analysis */}
-              <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-6"
-                   style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
-                <div className="text-sm font-bold text-yellow-400 mb-3">📊 MATCHUP ANALYSIS</div>
+              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4"
+                   style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}>
+                <div className="text-xs font-bold text-yellow-400 mb-2">📊 MATCHUP ANALYSIS</div>
                 {(() => {
                   const userUnits = calculateUnitRatings(roster);
                   const oppRoster = aiRosters[currentOpponent.opponent?.id] || [];
@@ -11518,24 +13244,24 @@ const App = () => {
               </div>
 
               {/* Game Plan Selection */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 {/* Offensive Game Plan */}
                 <div>
-                  <div className="text-sm font-bold text-blue-400 mb-3">⚔️ OFFENSIVE GAME PLAN</div>
-                  <div className="space-y-2">
+                  <div className="text-xs font-bold text-blue-400 mb-2">⚔️ OFFENSIVE GAME PLAN</div>
+                  <div className="space-y-1">
                     {Object.entries(OFFENSIVE_GAME_PLANS).map(([key, plan]) => (
                       <button
                         key={key}
                         onClick={() => setSelectedGamePlans(prev => ({ ...prev, offense: key }))}
-                        className={`w-full text-left p-3 border-2 ${
+                        className={`w-full text-left p-2 border-2 ${
                           selectedGamePlans.offense === key
                             ? 'bg-blue-900 border-blue-500'
                             : 'bg-gray-800 border-gray-600 hover:border-gray-500'
                         }`}
                         style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
                       >
-                        <div className="font-bold text-sm">{plan.name}</div>
-                        <div className="text-xs text-gray-400">{plan.description}</div>
+                        <div className="font-bold text-xs">{plan.name}</div>
+                        <div className="text-xs text-gray-400" style={{ fontSize: '10px' }}>{plan.description}</div>
                       </button>
                     ))}
                   </div>
@@ -11543,21 +13269,21 @@ const App = () => {
 
                 {/* Defensive Game Plan */}
                 <div>
-                  <div className="text-sm font-bold text-red-400 mb-3">🛡️ DEFENSIVE GAME PLAN</div>
-                  <div className="space-y-2">
+                  <div className="text-xs font-bold text-red-400 mb-2">🛡️ DEFENSIVE GAME PLAN</div>
+                  <div className="space-y-1">
                     {Object.entries(DEFENSIVE_GAME_PLANS).map(([key, plan]) => (
                       <button
                         key={key}
                         onClick={() => setSelectedGamePlans(prev => ({ ...prev, defense: key }))}
-                        className={`w-full text-left p-3 border-2 ${
+                        className={`w-full text-left p-2 border-2 ${
                           selectedGamePlans.defense === key
                             ? 'bg-red-900 border-red-500'
                             : 'bg-gray-800 border-gray-600 hover:border-gray-500'
                         }`}
                         style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
                       >
-                        <div className="font-bold text-sm">{plan.name}</div>
-                        <div className="text-xs text-gray-400">{plan.description}</div>
+                        <div className="font-bold text-xs">{plan.name}</div>
+                        <div className="text-xs text-gray-400" style={{ fontSize: '10px' }}>{plan.description}</div>
                       </button>
                     ))}
                   </div>
@@ -11580,7 +13306,7 @@ const App = () => {
                     setGameSimPhase('quarters');
                   }}
                   disabled={!selectedGamePlans.offense || !selectedGamePlans.defense}
-                  className={`px-12 py-4 text-xl font-bold border-4 ${
+                  className={`px-8 py-3 text-lg font-bold border-4 ${
                     selectedGamePlans.offense && selectedGamePlans.defense
                       ? 'bg-green-700 border-green-600 hover:bg-green-600'
                       : 'bg-gray-700 border-gray-600 cursor-not-allowed'
@@ -11761,6 +13487,42 @@ const App = () => {
                       <span className="text-gray-600"> ({boxScoreStats.user.defense.interceptions} INT, {boxScoreStats.user.defense.fumbleRec} FR)</span>
                     </div>
                   </div>
+
+                  {/* Key Moments / Chaos Events */}
+                  {gameEvents && gameEvents.length > 0 && gameEvents.some(e => e.narrative) && (
+                    <div className="mt-4 bg-yellow-50 border-2 border-yellow-600 p-4">
+                      <div className="text-lg font-bold text-gray-800 mb-3 font-serif border-b border-yellow-600 pb-2">
+                        KEY MOMENTS
+                      </div>
+                      <div className="space-y-4">
+                        {gameEvents.filter(e => e.narrative).map((event, idx) => (
+                          <div key={idx} className={`p-3 border-l-4 ${
+                            event.forUser
+                              ? (event.key === 'collapse' ? 'border-red-600 bg-red-50' : 'border-green-600 bg-green-50')
+                              : (event.key === 'collapse' ? 'border-green-600 bg-green-50' : 'border-red-600 bg-red-50')
+                          }`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xl">{event.icon}</span>
+                              <span className="font-bold text-gray-800">
+                                {event.name}
+                                {event.quarter && <span className="text-gray-500 font-normal text-sm ml-2">(Q{event.quarter})</span>}
+                              </span>
+                            </div>
+                            <p className="text-gray-700 text-sm italic font-serif leading-relaxed">
+                              {event.narrative}
+                            </p>
+                            {event.key === 'collapse' && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                {event.forUser
+                                  ? "The collapse cost valuable recruiting momentum (-15% interest)."
+                                  : "The opponent's collapse shifted the game dramatically."}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Continue Button */}
@@ -11894,6 +13656,24 @@ const App = () => {
                           setRecruitingPenaltyWeeks(prev => prev - 1);
                         }
 
+                        // Reset recruiting for the new week (Regular Season = HALF points)
+                        // Use functional update to get latest recruits state and clear actions
+                        setRecruits(prev => prev.map(r => ({
+                          ...r,
+                          actionsUsedThisWeek: []
+                        })));
+
+                        // Restore recruiting points (HALF during Regular Season)
+                        let weeklyRecruitingPoints = 200; // Group of 5 default
+                        if (selectedSchool?.tier === 'Blue Blood') {
+                          weeklyRecruitingPoints = 600;
+                        } else if (selectedSchool?.tier === 'Power 4') {
+                          weeklyRecruitingPoints = 400;
+                        }
+                        // Cut in half for Regular Season
+                        weeklyRecruitingPoints = Math.floor(weeklyRecruitingPoints / 2);
+                        setRecruitingPoints(weeklyRecruitingPoints);
+
                         // Close modal
                         setShowGameSimModal(false);
                         setCurrentGameSimulation(null);
@@ -12003,6 +13783,60 @@ const App = () => {
                   >
                     START OVER
                   </button>
+                </div>
+              )}
+
+              {/* Major Violation (from bagman) */}
+              {showCoachingEventModal === 'majorViolation' && coachingEventData.penalties && (
+                <div className="space-y-4 mb-6">
+                  <div className="bg-red-900 border-2 border-red-500 p-4">
+                    <div className="text-red-300 font-bold text-center mb-3">SEVERE PENALTIES IMPOSED</div>
+                    <ul className="space-y-2">
+                      {coachingEventData.penalties.map((penalty, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm">
+                          <span className="text-red-500">•</span>
+                          <span>{penalty}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="text-center">
+                    <button
+                      onClick={() => {
+                        setShowCoachingEventModal(null);
+                        setCoachingEventData(null);
+                      }}
+                      className="bg-red-700 border-4 border-red-600 px-8 py-3 font-bold hover:bg-red-600"
+                      style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ACCEPT PENALTIES
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Broken Promise */}
+              {showCoachingEventModal === 'brokenPromise' && (
+                <div className="space-y-4 mb-6">
+                  <div className="bg-orange-900 border-2 border-orange-600 p-4 text-center">
+                    <div className="text-orange-300 font-bold mb-2">CONSEQUENCES</div>
+                    <div className="text-sm space-y-1">
+                      <div>-20 Team Morale</div>
+                      <div className="text-red-400">Player may enter transfer portal</div>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <button
+                      onClick={() => {
+                        setShowCoachingEventModal(null);
+                        setCoachingEventData(null);
+                      }}
+                      className="bg-gray-700 border-4 border-gray-600 px-8 py-3 font-bold hover:bg-gray-600"
+                      style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ACKNOWLEDGE
+                    </button>
+                  </div>
                 </div>
               )}
 
