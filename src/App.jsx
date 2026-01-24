@@ -771,6 +771,113 @@ const FLIP_OFFER_OPTIONS = {
   }
 };
 
+// Instant Commit System - Base rates by star rating (reduced 66% from original values)
+// Instant Commit Base Rates (INVERTED - higher stars are pickier)
+const INSTANT_COMMIT_BASE_RATES = {
+  5: 1.5, // 5-stars: 1.5% base - They have options, take their time
+  4: 3,   // 4-stars: 3% base - Knows value but can be swayed
+  3: 5,   // 3-stars: 5% base - Excited by big offers
+  2: 8    // 2-stars: 8% base - Jump at Blue Blood attention
+};
+
+// Instant Commit Multipliers (MULTIPLICATIVE, not additive)
+const INSTANT_COMMIT_MULTIPLIERS = {
+  inState: 1.5,             // Hometown kid
+  regional: 1.25,           // Neighboring state
+  blueBloodOffering: 1.4,   // Prestige factor
+  tierAbovePlayer: 1.3,     // "Wow, THEY want ME?"
+  legacyTrait: 1.6,         // Family connection to school
+  closeToHomeTrait: 1.3,    // Values staying near family
+  championshipFocused: 1.2, // Recent champion + trait match
+  developmentFocused: 1.2,  // NFL factory + trait match
+  positionBoost: 1.25,      // WRU, QBU, etc. position match
+  dreamSchool: 1.5          // Top dream school bonus
+};
+
+// School Tier Gate - restricts instant commits by school prestige
+const SCHOOL_TIER_GATE = {
+  'Blue Blood': 1.0,        // Full rate
+  'Power 4': 0.5,           // Half rate for top P4, even less for others
+  'Group of 5': 0.05        // Nearly impossible
+};
+
+// Early Season Penalty - prevents Week 1 chaos
+const EARLY_SEASON_MULTIPLIER = {
+  1: 0.5,   // Week 1-2: 50% reduction
+  2: 0.5,
+  3: 0.75,  // Week 3-4: 25% reduction
+  4: 0.75,
+  // Week 5+: 1.0 (no penalty)
+};
+
+// Hard cap on instant commit chance
+const INSTANT_COMMIT_CAP = 20;
+
+// Instant Commit Narratives - by trigger type
+const INSTANT_COMMIT_NARRATIVES = {
+  legacy: [
+    "CARRYING ON THE FAMILY NAME",
+    "LEGACY CONTINUES",
+    "LIKE FATHER, LIKE SON",
+    "FAMILY TRADITION"
+  ],
+  hometown: [
+    "STAYING HOME",
+    "HOMETOWN HERO",
+    "LOCAL KID MAKES GOOD",
+    "NO PLACE LIKE HOME"
+  ],
+  dreamRealized: [
+    "DREAM COME TRUE",
+    "AGAINST ALL ODDS",
+    "BELIEVED FROM THE START",
+    "DESTINY FULFILLED"
+  ],
+  championship: [
+    "RING CHASER",
+    "CHASING GLORY",
+    "CHAMPIONSHIP OR BUST",
+    "WINNER'S MENTALITY"
+  ],
+  development: [
+    "BUILT FOR THE LEAGUE",
+    "NFL PIPELINE",
+    "DEVELOP INTO A PRO",
+    "NEXT LEVEL READY"
+  ],
+  positionU: [
+    "RECEIVER U ADDS ANOTHER",
+    "QUARTERBACK FACTORY",
+    "DBU STRIKES AGAIN",
+    "RUNNING BACK HERITAGE",
+    "TRENCH MOB GROWS"
+  ],
+  blueBloodShock: [
+    "BLUE BLOOD BELIEVER",
+    "DREAMS DO COME TRUE",
+    "THE CALL HE WAITED FOR",
+    "SURREAL MOMENT"
+  ],
+  general: [
+    "COMMITTED",
+    "QUICK DECISION",
+    "NO HESITATION",
+    "KNEW RIGHT AWAY"
+  ]
+};
+
+// Instant Commit Story Templates
+const INSTANT_COMMIT_STORIES = {
+  legacy: (name, school) => `${name}'s father was a former All-American at ${school}. He's dreamed of this moment his whole life.`,
+  hometown: (name, school, state) => `${name} grew up just minutes from ${school}'s campus. He attended his first game at age 6. Today, he made it official.`,
+  dreamRealized: (name, school, stars) => `247 ranked him a ${stars}-star. Many passed him over. But ${school} saw something others didn't - and ${name} didn't need a second to decide.`,
+  championship: (name, school) => `After watching ${school} compete for championships, ${name} knew where he belonged.`,
+  development: (name, school) => `${school} has sent players to the league year after year. ${name} wants to be next.`,
+  positionU: (name, school, position) => `${school} has become ${position} University. ${name} wants to carry on that tradition.`,
+  blueBloodShock: (name, school, stars) => `A ${stars}-star getting THE call from ${school}? ${name} wasn't going to let this opportunity slip away.`,
+  general: (name, school) => `When ${school} offered, ${name} knew immediately. This was the one.`
+};
+
 // Upset Probability Table (spread → base upset chance)
 const UPSET_PROBABILITY = [
   { spread: 20, baseUpset: 2 },
@@ -1450,15 +1557,349 @@ const generateFlipAttempt = (recruits, allSchools, playerSchool, budget) => {
   };
 };
 
+// Calculate instant commit chance for a recruit receiving an offer from a school
+const calculateInstantCommitChance = (recruit, school, positionBoosts = [], existingCommitsAtPosition = 0, offSeasonWeek = 1) => {
+  // Must be a dream school for instant commit
+  const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === school.id);
+  if (!isDreamSchool) return { chance: 0, triggers: [] };
+
+  // If recruit was already asked to wait or dropped the school, no instant commit
+  if (recruit.askedToWait || recruit.droppedSchool) {
+    return { chance: 0, triggers: [] };
+  }
+
+  const traits = recruit.traits || [];
+
+  // Playing Time Focused + existing commit at position = NO instant commit
+  if (traits.includes('Playing Time Focused') && existingCommitsAtPosition > 0) {
+    return {
+      chance: 0,
+      triggers: [{ reason: 'Playing Time Focused - position has commit', value: 0 }],
+      blockedReason: 'playingTimeFocused'
+    };
+  }
+
+  const triggers = [];
+
+  // === MULTIPLICATIVE SYSTEM ===
+  // Start with base rate (inverted by star - higher stars are pickier)
+  let chance = INSTANT_COMMIT_BASE_RATES[recruit.stars] || 3;
+  triggers.push({ reason: `${recruit.stars}-star base`, value: `${chance}%` });
+
+  // Position depth penalty (applied as divisor, not subtraction)
+  if (existingCommitsAtPosition > 0) {
+    const depthDivisor = 1 + (existingCommitsAtPosition * 0.5); // 1.5x, 2x, 2.5x divisor
+    chance = chance / depthDivisor;
+    triggers.push({ reason: `Position depth (${existingCommitsAtPosition} commit${existingCommitsAtPosition > 1 ? 's' : ''})`, value: `÷${depthDivisor.toFixed(1)}` });
+  }
+
+  // Geography multipliers
+  if (recruit.state === school.state) {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.inState;
+    triggers.push({ reason: 'In-state', value: `×${INSTANT_COMMIT_MULTIPLIERS.inState}` });
+  } else {
+    // Check for regional (neighboring states)
+    const regionalStates = {
+      'TX': ['OK', 'LA', 'AR', 'NM'],
+      'CA': ['AZ', 'NV', 'OR'],
+      'FL': ['GA', 'AL'],
+      'OH': ['MI', 'IN', 'PA', 'KY', 'WV'],
+      'GA': ['FL', 'AL', 'TN', 'SC', 'NC'],
+      'AL': ['GA', 'FL', 'TN', 'MS'],
+      'PA': ['OH', 'NY', 'NJ', 'MD', 'WV'],
+      'MI': ['OH', 'IN'],
+      'LA': ['TX', 'MS', 'AR'],
+      'TN': ['KY', 'GA', 'AL', 'MS', 'AR', 'NC', 'VA']
+    };
+    const neighbors = regionalStates[school.state] || [];
+    if (neighbors.includes(recruit.state)) {
+      chance *= INSTANT_COMMIT_MULTIPLIERS.regional;
+      triggers.push({ reason: 'Regional', value: `×${INSTANT_COMMIT_MULTIPLIERS.regional}` });
+    }
+  }
+
+  // School tier modifier - Blue Blood prestige
+  if (school.tier === 'Blue Blood') {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.blueBloodOffering;
+    triggers.push({ reason: 'Blue Blood prestige', value: `×${INSTANT_COMMIT_MULTIPLIERS.blueBloodOffering}` });
+  }
+
+  // Tier above player (e.g., 3-star getting Blue Blood offer)
+  const playerTierValue = { 5: 3, 4: 2, 3: 1, 2: 0 };
+  const schoolTierValue = { 'Blue Blood': 3, 'Power 4': 2, 'Group of 5': 1 };
+  if (schoolTierValue[school.tier] > playerTierValue[recruit.stars]) {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.tierAbovePlayer;
+    triggers.push({ reason: 'School tier above player', value: `×${INSTANT_COMMIT_MULTIPLIERS.tierAbovePlayer}` });
+  }
+
+  // Trait-based multipliers
+  if (traits.includes('Legacy') && recruit.legacySchoolId === school.id) {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.legacyTrait;
+    triggers.push({ reason: 'Legacy connection', value: `×${INSTANT_COMMIT_MULTIPLIERS.legacyTrait}` });
+  }
+
+  if (traits.includes('Close to Home')) {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.closeToHomeTrait;
+    triggers.push({ reason: 'Close to Home trait', value: `×${INSTANT_COMMIT_MULTIPLIERS.closeToHomeTrait}` });
+  }
+
+  if (traits.includes('Championship Focused') && school.tier === 'Blue Blood') {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.championshipFocused;
+    triggers.push({ reason: 'Championship Focused + Blue Blood', value: `×${INSTANT_COMMIT_MULTIPLIERS.championshipFocused}` });
+  }
+
+  if (traits.includes('Development Focused') && school.tier === 'Blue Blood') {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.developmentFocused;
+    triggers.push({ reason: 'Development Focused + Blue Blood', value: `×${INSTANT_COMMIT_MULTIPLIERS.developmentFocused}` });
+  }
+
+  // Position boost multiplier (WRU, QBU, etc.)
+  const positionBoostMap = {
+    'QB': ['QB Excellence'],
+    'RB': ['RB Dominance'],
+    'WR': ['WR Factory'],
+    'TE': ['WR Factory'],
+    'EDGE': ['Sack City'],
+    'DT': ['Sack City'],
+    'LB': ['Defensive Powerhouse'],
+    'CB': ['Shutdown Secondary'],
+    'S': ['Shutdown Secondary'],
+    'OT': ['OL Dominance'],
+    'OG': ['OL Dominance'],
+    'C': ['OL Dominance']
+  };
+
+  const relevantBoosts = positionBoostMap[recruit.position] || [];
+  const hasPositionBoost = relevantBoosts.some(boost => positionBoosts.includes(boost));
+  if (hasPositionBoost) {
+    chance *= INSTANT_COMMIT_MULTIPLIERS.positionBoost;
+    triggers.push({ reason: 'Position U boost', value: `×${INSTANT_COMMIT_MULTIPLIERS.positionBoost}` });
+  }
+
+  // === SCHOOL TIER GATE ===
+  // This is the key restriction - G5 and low P4 almost never get instant commits
+  const tierGate = SCHOOL_TIER_GATE[school.tier] || 0.05;
+  // For P4, further reduce if not a top program (budget < $30M)
+  let effectiveTierGate = tierGate;
+  if (school.tier === 'Power 4' && school.budget < 30000000) {
+    effectiveTierGate = tierGate * 0.5; // 0.25 for lower P4
+  }
+  chance *= effectiveTierGate;
+  if (effectiveTierGate < 1) {
+    triggers.push({ reason: `${school.tier} tier gate`, value: `×${effectiveTierGate}` });
+  }
+
+  // === EARLY SEASON PENALTY ===
+  const earlySeasonMult = EARLY_SEASON_MULTIPLIER[offSeasonWeek] || 1.0;
+  if (earlySeasonMult < 1) {
+    chance *= earlySeasonMult;
+    triggers.push({ reason: `Early season (Week ${offSeasonWeek})`, value: `×${earlySeasonMult}` });
+  }
+
+  // === HARD CAP ===
+  chance = Math.min(INSTANT_COMMIT_CAP, chance);
+
+  // Round to 1 decimal place for display
+  chance = Math.round(chance * 10) / 10;
+
+  return { chance, triggers };
+};
+
+// Determine the narrative type for an instant commit
+const getInstantCommitNarrative = (recruit, school, triggers) => {
+  const triggerReasons = triggers.map(t => t.reason);
+
+  // Priority order for narrative selection
+  if (triggerReasons.includes('Legacy connection')) {
+    return {
+      type: 'legacy',
+      headline: INSTANT_COMMIT_NARRATIVES.legacy[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.legacy.length)],
+      story: INSTANT_COMMIT_STORIES.legacy(recruit.name, school.name)
+    };
+  }
+
+  if (triggerReasons.includes('In-state')) {
+    return {
+      type: 'hometown',
+      headline: INSTANT_COMMIT_NARRATIVES.hometown[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.hometown.length)],
+      story: INSTANT_COMMIT_STORIES.hometown(recruit.name, school.name, recruit.state)
+    };
+  }
+
+  if (triggerReasons.includes('Position U boost')) {
+    return {
+      type: 'positionU',
+      headline: INSTANT_COMMIT_NARRATIVES.positionU[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.positionU.length)],
+      story: INSTANT_COMMIT_STORIES.positionU(recruit.name, school.name, recruit.position)
+    };
+  }
+
+  if (triggerReasons.includes('Championship Focused + Blue Blood')) {
+    return {
+      type: 'championship',
+      headline: INSTANT_COMMIT_NARRATIVES.championship[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.championship.length)],
+      story: INSTANT_COMMIT_STORIES.championship(recruit.name, school.name)
+    };
+  }
+
+  if (triggerReasons.includes('Development Focused + Blue Blood')) {
+    return {
+      type: 'development',
+      headline: INSTANT_COMMIT_NARRATIVES.development[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.development.length)],
+      story: INSTANT_COMMIT_STORIES.development(recruit.name, school.name)
+    };
+  }
+
+  if (triggerReasons.includes('School tier above player') || triggerReasons.includes('Blue Blood prestige')) {
+    return {
+      type: 'blueBloodShock',
+      headline: INSTANT_COMMIT_NARRATIVES.blueBloodShock[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.blueBloodShock.length)],
+      story: INSTANT_COMMIT_STORIES.blueBloodShock(recruit.name, school.name, recruit.stars)
+    };
+  }
+
+  // Default - dream realized
+  return {
+    type: 'dreamRealized',
+    headline: INSTANT_COMMIT_NARRATIVES.dreamRealized[Math.floor(Math.random() * INSTANT_COMMIT_NARRATIVES.dreamRealized.length)],
+    story: INSTANT_COMMIT_STORIES.dreamRealized(recruit.name, school.name, recruit.stars)
+  };
+};
+
+// Check and process instant commit for a recruit/school pair
+const checkInstantCommit = (recruit, school, positionBoosts = [], existingCommitsAtPosition = 0, offSeasonWeek = 1) => {
+  const result = calculateInstantCommitChance(recruit, school, positionBoosts, existingCommitsAtPosition, offSeasonWeek);
+  const { chance, triggers, blockedReason } = result;
+
+  // If blocked (e.g., Playing Time Focused with existing commit), return blocked result
+  if (blockedReason) {
+    return { triggered: false, chance: 0, blockedReason, triggers };
+  }
+
+  if (chance <= 0) return null;
+
+  const roll = Math.random() * 100;
+  if (roll < chance) {
+    const narrative = getInstantCommitNarrative(recruit, school, triggers);
+    return {
+      triggered: true,
+      chance,
+      roll,
+      triggers,
+      narrative,
+      nilDeal: recruit.marketValue || 100000 // Default to market value
+    };
+  }
+
+  return {
+    triggered: false,
+    chance,
+    roll,
+    triggers
+  };
+};
+
 // Simulate AI schools recruiting each week
-const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = {}) => {
+const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = {}, offSeasonWeek = 1) => {
   return recruits.map(recruit => {
     // Skip if already committed and signed
     if (recruit.signedCommit) return recruit;
 
+    // If verbally committed to an AI school, that school should continue building interest
+    // This prevents the bug where AI commits at low interest and never recruits again
+    // Uses SAME rules as regular AI recruiting (budget, actions, limits)
+    if (recruit.verbalCommit && recruit.committedSchool?.id !== playerSchoolId) {
+      let recruitingSchools = recruit.recruitingSchools || [];
+      const committedSchoolEntry = recruitingSchools.find(rs => rs.schoolId === recruit.committedSchool.id);
+
+      if (committedSchoolEntry) {
+        // Same action definitions as regular AI recruiting
+        const AI_RECRUITING_ACTIONS = [
+          { id: 'socialMedia', name: 'Social Media', cost: 5, interestGain: 5 },
+          { id: 'call', name: 'Call', cost: 10, interestGain: 10 },
+          { id: 'schoolVisit', name: 'School Visit', cost: 15, interestGain: 12, monthlyLimit: true },
+          { id: 'campusVisit', name: 'Campus Visit', cost: 25, interestGain: 20, monthlyLimit: true },
+        ];
+        // Note: Official Visit not included - already committed, don't need it
+
+        const recruitingMonth = Math.floor((offSeasonWeek - 1) / 4) + 1;
+
+        // Cost multiplier based on recruit's star rating
+        let costMultiplier = 1.0;
+        if (recruit.stars === 5) costMultiplier = 3.0;
+        else if (recruit.stars === 4) costMultiplier = 2.0;
+        else if (recruit.stars === 2) costMultiplier = 0.5;
+
+        // Star difficulty for interest gain
+        let starDifficulty = 1.0;
+        if (recruit.stars === 5) starDifficulty = 0.5;
+        else if (recruit.stars === 4) starDifficulty = 0.7;
+        else if (recruit.stars === 2) starDifficulty = 1.3;
+
+        // Budget for committed school (smaller allocation - just maintaining)
+        let weeklyBudget = committedSchoolEntry.schoolTier === 'Blue Blood' ? 600 :
+                           committedSchoolEntry.schoolTier === 'Power 4' ? 400 : 200;
+        let remainingBudget = Math.floor(weeklyBudget * 0.15); // 15% budget for maintaining commits
+
+        let totalInterestGain = 0;
+        const monthlyActionsUsed = committedSchoolEntry.monthlyActionsUsed || {};
+
+        for (const action of AI_RECRUITING_ACTIONS) {
+          const adjustedCost = Math.round(action.cost * costMultiplier);
+          if (adjustedCost > remainingBudget) continue;
+
+          if (action.monthlyLimit && monthlyActionsUsed[action.id] === recruitingMonth) continue;
+
+          remainingBudget -= adjustedCost;
+
+          // Diminishing returns (SAME as USER)
+          let diminishingReturns = 1.0;
+          const currentInterest = committedSchoolEntry.interest + totalInterestGain;
+          if (currentInterest < 30) diminishingReturns = 1.0;
+          else if (currentInterest < 50) diminishingReturns = 0.8;
+          else if (currentInterest < 70) diminishingReturns = 0.6;
+          else if (currentInterest < 85) diminishingReturns = 0.4;
+          else diminishingReturns = 0.2;
+
+          // Tier bonus
+          const tierBonus = committedSchoolEntry.schoolTier === 'Blue Blood' ? 1.2 :
+                            committedSchoolEntry.schoolTier === 'Power 4' ? 1.0 : 0.8;
+
+          const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus);
+          totalInterestGain += interestGain;
+
+          if (action.monthlyLimit) {
+            monthlyActionsUsed[action.id] = recruitingMonth;
+          }
+        }
+
+        recruitingSchools = recruitingSchools.map(rs =>
+          rs.schoolId === recruit.committedSchool.id
+            ? { ...rs, interest: Math.min(100, rs.interest + totalInterestGain), weeksSinceAction: 0, monthlyActionsUsed }
+            : rs
+        );
+
+        recruitingSchools.sort((a, b) => b.interest - a.interest);
+
+        return {
+          ...recruit,
+          recruitingSchools,
+          leadingSchool: recruitingSchools.find(rs => rs.schoolId === recruit.committedSchool.id),
+          commitmentLeader: recruitingSchools.find(rs => rs.schoolId === recruit.committedSchool.id)
+        };
+      }
+
+      return recruit;
+    }
+
+    // Skip if committed to USER (USER handles their own commits)
+    if (recruit.verbalCommit && recruit.committedSchool?.id === playerSchoolId) {
+      return recruit;
+    }
+
     // Determine which schools should be recruiting this player
     const eligibleSchools = allSchools.filter(s => s.id !== playerSchoolId);
-    
+
     // Star-based recruiting pool
     let recruitingPoolSize;
     if (recruit.stars === 5) {
@@ -1470,15 +1911,16 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
     } else {
       recruitingPoolSize = 3; // 2-4 schools recruit 2-stars
     }
-    
+
     // Add some variance
     recruitingPoolSize += Math.floor(Math.random() * 5);
-    
+
     // Initialize or update recruiting schools
     let recruitingSchools = recruit.recruitingSchools || [];
-    
-    // If this is first week, select initial schools
-    if (recruitingSchools.length === 0) {
+    const isFirstWeek = recruitingSchools.length === 0;
+
+    // If this is first week, select initial schools and check for instant commits
+    if (isFirstWeek) {
       // Prioritize dream schools (EXCLUDE player's school from AI recruiting)
       const dreamSchoolIds = (recruit.dreamSchools || []).map(s => s.id);
       recruitingSchools = recruit.dreamSchools
@@ -1491,7 +1933,7 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
           lastAction: 'Offered Scholarship',
           weeksSinceAction: 0
         }));
-      
+
       // Add additional schools to fill the pool
       const remainingSlots = recruitingPoolSize - recruitingSchools.length;
       for (let i = 0; i < remainingSlots; i++) {
@@ -1507,105 +1949,229 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
           });
         }
       }
-    }
-    
-    // Each week, simulate recruiting actions from AI schools
-    // AI schools can take 2-3 actions per week to match user competitiveness
-    recruitingSchools = recruitingSchools.map(rs => {
-      // Determine how many actions this school takes this week
-      // Dream schools are more aggressive (3-4 actions), others (2-3 actions)
-      const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === rs.schoolId);
-      let numActions;
-      if (isDreamSchool) {
-        numActions = 3 + (Math.random() < 0.5 ? 1 : 0); // 3-4 actions for dream schools
-      } else {
-        numActions = 2 + (Math.random() < 0.6 ? 1 : 0); // 2-3 actions for other schools
+
+      // WEEK 1 ONLY: Check for instant commits from dream schools
+      // Only check the TOP dream school (first in list) to limit commit volume
+      // This prevents the "lottery effect" of checking 3-4 schools per recruit
+      const topDreamSchool = (recruit.dreamSchools || []).find(ds => ds.id !== playerSchoolId);
+
+      if (topDreamSchool) {
+        // Get the full school object for instant commit calculation
+        const fullSchool = allSchools.find(s => s.id === topDreamSchool.id);
+
+        if (fullSchool) {
+          // Check for instant commit (pass offSeasonWeek for early season penalty)
+          const instantResult = checkInstantCommit(recruit, fullSchool, [], 0, offSeasonWeek); // AI schools don't have position boosts yet
+
+          if (instantResult && instantResult.triggered) {
+          // INSTANT COMMIT for AI school!
+          console.log(`🎉 AI INSTANT COMMIT: ${recruit.name} committed to ${fullSchool.name}!`);
+          console.log(`   Chance: ${instantResult.chance}%, Roll: ${instantResult.roll.toFixed(1)}`);
+          console.log(`   Triggers: ${instantResult.triggers.map(t => t.reason).join(', ')}`);
+
+          // Check roster space
+          const aiRoster = aiRosters[fullSchool.id] || [];
+          const fifthYears = aiRoster.filter(p => p.year === '5Y').length;
+          const seniors = aiRoster.filter(p => p.year === 'SR').length;
+          const nflEligibleJuniors = aiRoster.filter(p => p.year === 'JR' && p.rating >= 93).length;
+          const expectedDepartures = fifthYears + Math.ceil(seniors * 0.75) + nflEligibleJuniors;
+          const currentCommits = recruits.filter(r => r.verbalCommit && r.committedSchool?.id === fullSchool.id).length;
+          const availableSpots = 85 - aiRoster.length + expectedDepartures - currentCommits;
+
+          if (availableSpots > 0) {
+            // Create clean school object
+            const cleanSchoolData = {
+              id: fullSchool.id,
+              name: fullSchool.name,
+              nickname: fullSchool.nickname,
+              state: fullSchool.state,
+              conference: fullSchool.conference,
+              budget: fullSchool.budget,
+              tier: fullSchool.tier,
+              colors: fullSchool.colors
+            };
+
+            // Update the committed school's interest to 100% in recruitingSchools
+            // This prevents the bug where commits show low interest (e.g., 14%)
+            const updatedRecruitingSchools = recruitingSchools.map(rs =>
+              rs.schoolId === fullSchool.id
+                ? { ...rs, interest: 100, lastAction: 'Instant Commit' }
+                : rs
+            );
+            updatedRecruitingSchools.sort((a, b) => b.interest - a.interest);
+
+            const committedSchoolEntry = updatedRecruitingSchools.find(rs => rs.schoolId === fullSchool.id);
+
+            return {
+              ...recruit,
+              verbalCommit: true,
+              committedSchool: cleanSchoolData,
+              nilDeal: instantResult.nilDeal,
+              nilOfferAccepted: true, // Mark NIL as accepted for consistency
+              commitmentInterest: 100,
+              recruitingSchools: updatedRecruitingSchools,
+              leadingSchool: committedSchoolEntry,
+              commitmentLeader: committedSchoolEntry,
+              instantCommit: true,
+              instantCommitNarrative: instantResult.narrative
+            };
+          }
+        }
+        }
       }
 
-      // 95% chance school is actively recruiting this week
-      if (Math.random() < 0.95) {
-        let totalInterestGain = 0;
-        let lastActionName = '';
+      // First week: Only initialize schools, no full recruiting actions
+      // Sort by interest level
+      recruitingSchools.sort((a, b) => b.interest - a.interest);
 
-        for (let actionNum = 0; actionNum < numActions; actionNum++) {
-          const actions = [
-            { name: 'Phone Call', interestGain: 5 + Math.floor(Math.random() * 8) }, // 5-12
-            { name: 'Official Visit', interestGain: 10 + Math.floor(Math.random() * 12) }, // 10-22
-            { name: 'Home Visit', interestGain: 8 + Math.floor(Math.random() * 10) }, // 8-18
-            { name: 'Coach Visit', interestGain: 12 + Math.floor(Math.random() * 15) } // 12-27
-          ];
+      return {
+        ...recruit,
+        recruitingSchools,
+        leadingSchool: recruitingSchools[0] || null,
+        commitmentLeader: recruitingSchools[0] || null
+      };
+    }
 
-          const action = actions[Math.floor(Math.random() * actions.length)];
-          lastActionName = action.name;
+    // WEEK 2+: Each week, simulate recruiting actions from AI schools
+    // AI uses EXACT SAME rules as USER: same actions, costs, budgets, limits
 
-          // Apply star-based difficulty (same as user)
-          let starDifficulty = 1.0;
-          if (recruit.stars === 5) {
-            starDifficulty = 0.5; // 5-stars gain HALF interest
-          } else if (recruit.stars === 4) {
-            starDifficulty = 0.7; // 4-stars gain 70% interest
-          } else if (recruit.stars === 2) {
-            starDifficulty = 1.3; // 2-stars gain 130% interest (easier)
-          }
+    // Define actions (SAME as USER RECRUITING_ACTIONS)
+    const AI_RECRUITING_ACTIONS = [
+      { id: 'socialMedia', name: 'Social Media', cost: 5, interestGain: 5 },
+      { id: 'call', name: 'Call', cost: 10, interestGain: 10 },
+      { id: 'schoolVisit', name: 'School Visit', cost: 15, interestGain: 12, monthlyLimit: true },
+      { id: 'campusVisit', name: 'Campus Visit', cost: 25, interestGain: 20, monthlyLimit: true },
+      { id: 'officialVisit', name: 'Official Visit', cost: 50, interestGain: 30, minInterest: 75, oneTimeOnly: true },
+    ];
 
-          // Apply diminishing returns based on current interest (slightly easier than user to ensure AI commits happen)
-          const currentInterest = rs.interest + totalInterestGain;
-          let diminishingReturns = 1.0;
-          if (currentInterest < 30) {
-            diminishingReturns = 1.0; // Full effect at low interest
-          } else if (currentInterest < 50) {
-            diminishingReturns = 0.85; // 85% effect
-          } else if (currentInterest < 70) {
-            diminishingReturns = 0.7; // 70% effect
-          } else if (currentInterest < 85) {
-            diminishingReturns = 0.5; // 50% effect - reaching commit threshold is achievable
-          } else {
-            diminishingReturns = 0.35; // 35% effect - still possible to max out with persistence
-          }
+    // Calculate recruiting month (resets every 4 weeks: weeks 5, 9, 13)
+    const recruitingMonth = Math.floor((offSeasonWeek - 1) / 4) + 1;
 
-          // Blue Bloods get bonus interest gain
-          const tierBonus = rs.schoolTier === 'Blue Blood' ? 1.2 : rs.schoolTier === 'Power 4' ? 1.0 : 0.8;
+    // Cost multiplier based on recruit's star rating (SAME as USER)
+    let costMultiplier = 1.0;
+    if (recruit.stars === 5) costMultiplier = 3.0;
+    else if (recruit.stars === 4) costMultiplier = 2.0;
+    else if (recruit.stars === 2) costMultiplier = 0.5;
 
-          // Apply trait-based modifiers for AI recruiting
-          let aiTraitModifier = 1.0;
+    // Star difficulty for interest gain (SAME as USER)
+    let starDifficulty = 1.0;
+    if (recruit.stars === 5) starDifficulty = 0.5;
+    else if (recruit.stars === 4) starDifficulty = 0.7;
+    else if (recruit.stars === 2) starDifficulty = 1.3;
 
-          // Championship Focused: Responds better to Blue Bloods
-          if (recruit.traits?.includes('Championship Focused')) {
-            if (rs.schoolTier === 'Blue Blood') {
-              aiTraitModifier *= 1.15; // +15% for Blue Bloods
-            } else if (rs.schoolTier === 'Group of 5') {
-              aiTraitModifier *= 0.85; // -15% for Group of 5
-            }
-          }
+    recruitingSchools = recruitingSchools.map(rs => {
+      // 90% chance school is actively recruiting this week (reduced from 95%)
+      if (Math.random() > 0.90) {
+        return {
+          ...rs,
+          weeksSinceAction: (rs.weeksSinceAction || 0) + 1,
+          actionsUsedThisWeek: [] // Reset weekly actions
+        };
+      }
 
-          // Close to Home: Geography affects AI recruiting too
-          if (recruit.traits?.includes('Close to Home')) {
-            const aiSchool = allSchools.find(s => s.id === rs.schoolId);
-            if (aiSchool && recruit.state === aiSchool.state) {
-              aiTraitModifier *= 1.2; // +20% for same state
-            } else if (aiSchool && recruit.state !== aiSchool.state) {
-              // Simplified: assume 20% penalty for out of state (could add neighboring logic)
-              aiTraitModifier *= 0.8;
-            }
-          }
+      // Get AI school's weekly budget based on tier (SAME as USER)
+      let weeklyBudget = rs.schoolTier === 'Blue Blood' ? 600 :
+                         rs.schoolTier === 'Power 4' ? 400 : 200;
 
-          // Calculate interest gain for this action
-          const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus * aiTraitModifier);
-          totalInterestGain += interestGain;
+      // AI doesn't spend entire budget on one recruit - simulate spreading across multiple recruits
+      // Dream schools prioritize this recruit more (40-60% of budget), others less (20-40%)
+      const isDreamSchool = recruit.dreamSchools?.some(ds => ds.id === rs.schoolId);
+      const budgetAllocation = isDreamSchool
+        ? 0.4 + Math.random() * 0.2  // 40-60% for dream school recruits
+        : 0.2 + Math.random() * 0.2; // 20-40% for other recruits
+
+      let remainingBudget = Math.floor(weeklyBudget * budgetAllocation);
+      let totalInterestGain = 0;
+      let actionsUsed = [];
+      let lastActionName = '';
+
+      // Initialize tracking if not present
+      const monthlyActionsUsed = rs.monthlyActionsUsed || {};
+      const officialVisitUsed = rs.officialVisitUsed || false;
+
+      // AI picks actions within budget, respecting all limits
+      const shuffledActions = [...AI_RECRUITING_ACTIONS].sort(() => Math.random() - 0.5);
+
+      for (const action of shuffledActions) {
+        const adjustedCost = Math.round(action.cost * costMultiplier);
+
+        // Check if we can afford this action
+        if (adjustedCost > remainingBudget) continue;
+
+        // Check if already used this week
+        if (actionsUsed.includes(action.id)) continue;
+
+        // Check monthly limit (School Visit, Campus Visit)
+        if (action.monthlyLimit) {
+          const lastUsedMonth = monthlyActionsUsed[action.id];
+          if (lastUsedMonth === recruitingMonth) continue;
         }
 
-        return {
-          ...rs,
-          interest: Math.min(100, rs.interest + totalInterestGain),
-          lastAction: lastActionName + (numActions > 1 ? ` (+${numActions - 1} more)` : ''),
-          weeksSinceAction: 0
-        };
-      } else {
-        return {
-          ...rs,
-          weeksSinceAction: (rs.weeksSinceAction || 0) + 1
-        };
+        // Check one-time only (Official Visit)
+        if (action.oneTimeOnly && officialVisitUsed) continue;
+
+        // Check minimum interest requirement (Official Visit needs 75%+)
+        if (action.minInterest && rs.interest < action.minInterest) continue;
+
+        // Action is valid - execute it
+        actionsUsed.push(action.id);
+        remainingBudget -= adjustedCost;
+        lastActionName = action.name;
+
+        // Calculate interest gain with all modifiers (SAME as USER)
+        const currentInterest = rs.interest + totalInterestGain;
+
+        // Diminishing returns (EXACT SAME as USER)
+        let diminishingReturns = 1.0;
+        if (currentInterest < 30) diminishingReturns = 1.0;
+        else if (currentInterest < 50) diminishingReturns = 0.8;
+        else if (currentInterest < 70) diminishingReturns = 0.6;
+        else if (currentInterest < 85) diminishingReturns = 0.4;
+        else diminishingReturns = 0.2;
+
+        // Tier bonus (SAME as USER)
+        const tierBonus = rs.schoolTier === 'Blue Blood' ? 1.2 :
+                          rs.schoolTier === 'Power 4' ? 1.0 : 0.8;
+
+        // Trait modifiers (SAME as USER)
+        let traitModifier = 1.0;
+
+        if (recruit.traits?.includes('Championship Focused')) {
+          if (rs.schoolTier === 'Blue Blood') traitModifier *= 1.15;
+          else if (rs.schoolTier === 'Group of 5') traitModifier *= 0.85;
+        }
+
+        if (recruit.traits?.includes('Close to Home')) {
+          const aiSchool = allSchools.find(s => s.id === rs.schoolId);
+          if (aiSchool && recruit.state === aiSchool.state) {
+            traitModifier *= 1.2;
+          } else if (aiSchool) {
+            traitModifier *= 0.8;
+          }
+        }
+
+        // Calculate final interest gain
+        const interestGain = Math.round(action.interestGain * starDifficulty * diminishingReturns * tierBonus * traitModifier);
+        totalInterestGain += interestGain;
+
+        // Update monthly tracking
+        if (action.monthlyLimit) {
+          monthlyActionsUsed[action.id] = recruitingMonth;
+        }
       }
+
+      // Return updated school entry with tracking
+      return {
+        ...rs,
+        interest: Math.min(100, rs.interest + totalInterestGain),
+        lastAction: actionsUsed.length > 0
+          ? lastActionName + (actionsUsed.length > 1 ? ` (+${actionsUsed.length - 1} more)` : '')
+          : rs.lastAction,
+        weeksSinceAction: actionsUsed.length > 0 ? 0 : (rs.weeksSinceAction || 0) + 1,
+        actionsUsedThisWeek: actionsUsed,
+        monthlyActionsUsed: monthlyActionsUsed,
+        officialVisitUsed: officialVisitUsed || actionsUsed.includes('officialVisit')
+      };
     });
     
     // Sort by interest level
@@ -1618,81 +2184,116 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
     if (!recruit.verbalCommit && recruitingSchools.length > 0) {
       leadingSchool = recruitingSchools[0];
       commitmentLeader = leadingSchool;
-      
-      // If leading school hits 85%+ (AI threshold), check if they have room for the commit
-      // AI schools commit at 85%+ which is achievable with the diminishing returns system
-      if (leadingSchool.interest >= 85 && !recruit.verbalCommit) {
-        const aiSchool = allSchools.find(s => s.id === leadingSchool.schoolId);
 
-        // CRITICAL: If aiSchool not found, skip commit to prevent corruption
-        if (!aiSchool) {
-          console.error(`⚠️ AI school not found for ID: ${leadingSchool.schoolId} - Skipping commit for ${recruit.name}`);
-          return {
-            ...recruit,
-            recruitingSchools,
-            leadingSchool,
-            commitmentLeader
-          };
-        }
+      // === AI COMMIT LOGIC (PARITY WITH USER) ===
+      // Two paths: Auto-commit (90%+ AND 25%+ lead) or Random commit (80%+)
 
-        // CRITICAL: Verify aiSchool is not the player's school
-        if (aiSchool.id === playerSchoolId) {
-          console.error(`⚠️ AI commit attempted to player school ${aiSchool.name} for ${recruit.name} - Skipping`);
-          return {
-            ...recruit,
-            recruitingSchools,
-            leadingSchool,
-            commitmentLeader
-          };
-        }
+      const aiSchool = allSchools.find(s => s.id === leadingSchool.schoolId);
 
-        // Calculate available spots for AI school using same logic as player
-        const aiRoster = aiRosters[leadingSchool.schoolId] || [];
-        const fifthYears = aiRoster.filter(p => p.year === '5Y').length;
-        const seniors = aiRoster.filter(p => p.year === 'SR').length;
-        const nflEligibleJuniors = aiRoster.filter(p => p.year === 'JR' && p.rating >= 93).length;
-        const expectedDepartures = fifthYears + Math.ceil(seniors * 0.75) + nflEligibleJuniors;
-        const currentCommits = recruits.filter(r => r.verbalCommit && r.committedSchool?.id === leadingSchool.schoolId).length;
-        const availableSpots = 85 - aiRoster.length + expectedDepartures - currentCommits;
+      // CRITICAL: If aiSchool not found, skip commit to prevent corruption
+      if (!aiSchool) {
+        console.error(`⚠️ AI school not found for ID: ${leadingSchool.schoolId} - Skipping commit for ${recruit.name}`);
+        return {
+          ...recruit,
+          recruitingSchools,
+          leadingSchool,
+          commitmentLeader
+        };
+      }
 
-        // Only commit if school has available spots
-        if (availableSpots > 0) {
-          // Trait-based commit threshold checks
-          let shouldCommit = true;
+      // CRITICAL: Verify aiSchool is not the player's school
+      if (aiSchool.id === playerSchoolId) {
+        console.error(`⚠️ AI commit attempted to player school ${aiSchool.name} for ${recruit.name} - Skipping`);
+        return {
+          ...recruit,
+          recruitingSchools,
+          leadingSchool,
+          commitmentLeader
+        };
+      }
 
-          // Championship Focused: Might wait for Blue Blood if leading school isn't one
-          if (recruit.traits?.includes('Championship Focused') && aiSchool.tier !== 'Blue Blood') {
-            // 30% chance to wait for a Blue Blood offer instead of committing to Power 4/G5
-            if (Math.random() < 0.3) {
-              shouldCommit = false;
-              console.log(`${recruit.name} (Championship Focused) waiting for Blue Blood offers instead of ${aiSchool.name}`);
-            }
+      // Calculate available spots for AI school
+      const aiRoster = aiRosters[leadingSchool.schoolId] || [];
+      const fifthYears = aiRoster.filter(p => p.year === '5Y').length;
+      const seniors = aiRoster.filter(p => p.year === 'SR').length;
+      const nflEligibleJuniors = aiRoster.filter(p => p.year === 'JR' && p.rating >= 93).length;
+      const expectedDepartures = fifthYears + Math.ceil(seniors * 0.75) + nflEligibleJuniors;
+      const currentCommits = recruits.filter(r => r.verbalCommit && r.committedSchool?.id === leadingSchool.schoolId).length;
+      const availableSpots = 85 - aiRoster.length + expectedDepartures - currentCommits;
+
+      // Only proceed if school has available spots
+      if (availableSpots > 0) {
+        // Get USER's interest level and calculate AI's lead
+        const userInterest = recruit.interest || 0;
+        const secondPlaceAI = recruitingSchools[1]?.interest || 0;
+        const nextClosest = Math.max(userInterest, secondPlaceAI);
+        const aiLead = leadingSchool.interest - nextClosest;
+
+        // Trait-based commit checks
+        let traitBlocksCommit = false;
+
+        // Championship Focused: Might wait for Blue Blood if leading school isn't one
+        if (recruit.traits?.includes('Championship Focused') && aiSchool.tier !== 'Blue Blood') {
+          if (Math.random() < 0.3) {
+            traitBlocksCommit = true;
+            console.log(`${recruit.name} (Championship Focused) waiting for Blue Blood offers instead of ${aiSchool.name}`);
           }
+        }
 
-          // Playing Time Focused: Check if position has depth (simplified - would need full roster check)
-          // For now, assume random 20% chance they don't commit due to depth concerns
-          if (recruit.traits?.includes('Playing Time Focused') && Math.random() < 0.2) {
-            shouldCommit = false;
-            console.log(`${recruit.name} (Playing Time Focused) concerned about depth chart at ${aiSchool.name}`);
+        // Playing Time Focused: 20% chance to not commit due to depth concerns
+        if (recruit.traits?.includes('Playing Time Focused') && Math.random() < 0.2) {
+          traitBlocksCommit = true;
+          console.log(`${recruit.name} (Playing Time Focused) concerned about depth chart at ${aiSchool.name}`);
+        }
+
+        if (!traitBlocksCommit) {
+          let shouldCommit = false;
+          let commitType = '';
+
+          // === AUTO-COMMIT: 90%+ interest AND 25%+ lead ===
+          // Recruitment is essentially decided - recruit has made up their mind
+          if (leadingSchool.interest >= 90 && aiLead >= 25) {
+            shouldCommit = true;
+            commitType = 'AUTO';
+            console.log(`🔒 AI AUTO-COMMIT: ${recruit.name} to ${aiSchool.name} (${leadingSchool.interest}% interest, ${aiLead}% lead)`);
+          }
+          // === RANDOM COMMIT: 80%+ interest (same system as USER) ===
+          else if (leadingSchool.interest >= 80) {
+            // Calculate commit chance based on star rating (same as USER)
+            let commitChance = 0;
+            if (recruit.stars === 5) commitChance = 0.15;
+            else if (recruit.stars === 4) commitChance = 0.30;
+            else commitChance = 0.75;
+
+            // Apply trailing penalty if USER is ahead of this AI school
+            if (userInterest > leadingSchool.interest) {
+              const deficit = userInterest - leadingSchool.interest;
+              if (deficit >= 20) commitChance *= 0.25;
+              else if (deficit >= 10) commitChance *= 0.50;
+              else if (deficit > 0) commitChance *= 0.75;
+            }
+
+            // Roll for random commitment
+            if (Math.random() < commitChance) {
+              shouldCommit = true;
+              commitType = 'RANDOM';
+              console.log(`🎲 AI RANDOM COMMIT: ${recruit.name} to ${aiSchool.name} (${leadingSchool.interest}% interest, rolled under ${(commitChance * 100).toFixed(1)}%)`);
+            }
           }
 
           if (shouldCommit) {
             // Calculate NIL deal based on traits
             let nilMultiplier = 1.0;
 
-            // NIL-Driven: Get higher NIL deals (30-50% more)
             if (recruit.traits?.includes('NIL-Driven')) {
-              nilMultiplier = 1.3 + Math.random() * 0.2; // 130-150% of market value
+              nilMultiplier = 1.3 + Math.random() * 0.2;
             }
-
-            // Development Focused: Accept lower NIL (70-80% of market value)
             if (recruit.traits?.includes('Development Focused')) {
-              nilMultiplier = 0.7 + Math.random() * 0.1; // 70-80% of market value
+              nilMultiplier = 0.7 + Math.random() * 0.1;
             }
 
             const nilDeal = Math.round(recruit.marketValue * nilMultiplier);
 
-            // Create a clean school object to avoid reference issues
             const cleanSchoolData = {
               id: aiSchool.id,
               name: aiSchool.name,
@@ -1709,7 +2310,7 @@ const simulateAIRecruiting = (recruits, allSchools, playerSchoolId, aiRosters = 
               verbalCommit: true,
               committedSchool: cleanSchoolData,
               nilDeal: nilDeal,
-              commitmentInterest: 100,
+              commitmentInterest: leadingSchool.interest,
               recruitingSchools,
               leadingSchool,
               commitmentLeader
@@ -2055,38 +2656,44 @@ const generateTraits = (stars) => {
     'Playing Time Focused',
     'Close to Home',
     'Championship Focused',
-    'Development Focused'
+    'Development Focused',
+    'Legacy'  // New trait - family connection to a school
   ];
 
   // Trait distribution percentages by star rating
+  // Legacy is rare (5-8%) - represents family connection to a specific school
   let traitWeights;
   if (stars === 5) {
     traitWeights = {
-      'NIL-Driven': 0.40,
-      'Championship Focused': 0.30,
-      'Playing Time Focused': 0.20,
-      'Development Focused': 0.10
+      'NIL-Driven': 0.38,
+      'Championship Focused': 0.28,
+      'Playing Time Focused': 0.18,
+      'Development Focused': 0.09,
+      'Legacy': 0.07  // 7% - rare for 5-stars
     };
   } else if (stars === 4) {
     traitWeights = {
-      'NIL-Driven': 0.35,
-      'Championship Focused': 0.25,
-      'Playing Time Focused': 0.25,
-      'Development Focused': 0.15
+      'NIL-Driven': 0.33,
+      'Championship Focused': 0.23,
+      'Playing Time Focused': 0.23,
+      'Development Focused': 0.14,
+      'Legacy': 0.07  // 7%
     };
   } else if (stars === 3) {
     traitWeights = {
-      'Playing Time Focused': 0.30,
-      'Close to Home': 0.30,
-      'Development Focused': 0.20,
-      'NIL-Driven': 0.20
+      'Playing Time Focused': 0.28,
+      'Close to Home': 0.28,
+      'Development Focused': 0.18,
+      'NIL-Driven': 0.18,
+      'Legacy': 0.08  // 8% - slightly more common for 3-stars
     };
   } else { // 2-stars
     traitWeights = {
-      'Playing Time Focused': 0.35,
-      'Close to Home': 0.30,
-      'Development Focused': 0.25,
-      'NIL-Driven': 0.10
+      'Playing Time Focused': 0.32,
+      'Close to Home': 0.28,
+      'Development Focused': 0.23,
+      'NIL-Driven': 0.09,
+      'Legacy': 0.08  // 8%
     };
   }
 
@@ -2213,6 +2820,13 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
   // Generate dream schools based on star level
   const dreamSchools = generateDreamSchools(stars, allSchools, state);
 
+  // If recruit has Legacy trait, assign one of their dream schools as the legacy school
+  let legacySchoolId = null;
+  if (traits.includes('Legacy') && dreamSchools.length > 0) {
+    // Pick the first dream school as the legacy school (most realistic match)
+    legacySchoolId = dreamSchools[0].id;
+  }
+
   return {
     id: `recruit_${id}`,
     name: `${firstName} ${lastName}`,
@@ -2229,6 +2843,7 @@ const generateRecruit = (id, stars, rosterAvgForStars, allSchools, firstNames, l
     isTargeted: false, // User has offered scholarship to this recruit
     isScouted: false, // User has scouted this recruit (reveals traits)
     traits, // 2 traits per recruit - revealed after scouting
+    legacySchoolId, // If Legacy trait, which school is their family's school
     scholarshipOfferedWeek: null, // Track week when scholarship was offered (prevents same-week recruiting spam)
     actionsUsedThisWeek: [], // Track which actions have been used this week: 'socialMedia', 'call', 'schoolVisit', 'campusVisit', 'officialVisit'
     monthlyActionsUsed: {}, // Track monthly limited actions: 'schoolVisit', 'campusVisit' - {actionId: {month, year}}
@@ -2899,6 +3514,11 @@ const App = () => {
     QB: false, RB: false, WR: false, TE: false, OL: false,
     EDGE: false, DT: false, LB: false, CB: false, S: false
   });
+
+  // OL sub-position expansion (OT, OG, C)
+  const [expandedOLSubPositions, setExpandedOLSubPositions] = useState({
+    OT: true, OG: true, C: true  // Start expanded within OL
+  });
   
   // Schools tab - expanded conferences
   const [expandedConferences, setExpandedConferences] = useState({});
@@ -2937,6 +3557,14 @@ const App = () => {
   const [showDecommitModal, setShowDecommitModal] = useState(false);
   const [decommittedRecruits, setDecommittedRecruits] = useState([]);
   const [reportOthersExpanded, setReportOthersExpanded] = useState(false);
+
+  // Instant Commit Modal State
+  const [showInstantCommitModal, setShowInstantCommitModal] = useState(false);
+  const [instantCommitData, setInstantCommitData] = useState(null); // { recruit, school, narrative, triggers }
+
+  // Instant Commit Choice Modal State (Accept vs Ask to Wait)
+  const [showInstantCommitChoice, setShowInstantCommitChoice] = useState(false);
+  const [pendingInstantCommit, setPendingInstantCommit] = useState(null); // { recruit, result, existingCommits }
 
   // Flip Offer Modal State
   const [showFlipOfferModal, setShowFlipOfferModal] = useState(false);
@@ -3823,6 +4451,9 @@ const App = () => {
       { id: 'campusVisit', name: 'CAMPUS VISIT', cost: 25, interestGain: 20, minInterest: 0, monthlyLimit: true },
       { id: 'officialVisit', name: 'OFFICIAL VISIT', cost: 50, interestGain: 30, minInterest: 75, oneTimeOnly: true },
     ];
+
+    // Flip attempt costs by star rating
+    const FLIP_ATTEMPT_COSTS = { 5: 200, 4: 150, 3: 100, 2: 75 };
     
     return (
       <div className="bg-gray-800 border-2 border-gray-600">
@@ -3876,7 +4507,7 @@ const App = () => {
                           {recruit.isDiamond && recruit.interest >= 50 && (
                             <span className="bg-blue-600 px-1 py-0.5 text-xs border border-blue-400">💎</span>
                           )}
-                          {recruit.signingDayDecision && (
+                          {recruit.signingDayDecision && !recruit.signedCommit && (
                             <span className="bg-orange-600 px-1 py-0.5 text-xs border border-orange-400" title="Signing Day Decision - Multiple schools competing">📅 SIGNING DAY</span>
                           )}
                         </div>
@@ -3894,26 +4525,30 @@ const App = () => {
                           </span>
                         </div>
                       </div>
-                      {recruit.verbalCommit && (() => {
+                      {(recruit.verbalCommit || recruit.signedCommit) && (() => {
                         const isCommittedToUser = recruit.committedSchool?.id === selectedSchool?.id;
                         const aiSchools = recruit.recruitingSchools || [];
                         const highestAIInterest = aiSchools.length > 0 ? Math.max(...aiSchools.map(s => s.interest)) : 0;
-                        const isAtRisk = isCommittedToUser && highestAIInterest > recruit.interest;
+                        const isAtRisk = isCommittedToUser && !recruit.signedCommit && highestAIInterest > recruit.interest;
                         const leadingSchool = isAtRisk ? aiSchools.find(s => s.interest === highestAIInterest) : null;
 
                         return (
                           <div className="flex gap-1">
                             <div className={`border px-2 py-0.5 text-xs font-bold ${
-                              isCommittedToUser
-                                ? (isAtRisk ? 'bg-yellow-900 border-yellow-600' : 'bg-green-900 border-green-600')
-                                : 'bg-orange-900 border-orange-600'
+                              recruit.signedCommit
+                                ? 'bg-green-700 border-green-500'
+                                : isCommittedToUser
+                                  ? (isAtRisk ? 'bg-yellow-900 border-yellow-600' : 'bg-green-900 border-green-600')
+                                  : 'bg-orange-900 border-orange-600'
                             }`}>
-                              {isCommittedToUser
-                                ? (isAtRisk ? '⚠️ COMMITTED' : '✓ COMMITTED')
-                                : `COMMITTED TO ${recruit.committedSchool?.name || 'OTHER SCHOOL'}`
+                              {recruit.signedCommit
+                                ? '✅ SIGNED'
+                                : isCommittedToUser
+                                  ? (isAtRisk ? '⚠️ COMMITTED' : '✓ COMMITTED')
+                                  : `COMMITTED TO ${recruit.committedSchool?.name || 'OTHER SCHOOL'}`
                               }
                             </div>
-                            {isAtRisk && (
+                            {isAtRisk && !recruit.signedCommit && (
                               <div className="bg-red-900 border border-red-600 px-2 py-0.5 text-xs font-bold text-red-300">
                                 🔥 FLIP RISK ({leadingSchool?.schoolName}: {highestAIInterest}%)
                               </div>
@@ -4119,37 +4754,52 @@ const App = () => {
                         )}
 
                         {/* Flip Attempt Warning - Only show if committed to ANOTHER school */}
-                        {recruit.verbalCommit && recruit.committedSchool?.id !== selectedSchool?.id && (
-                          <div className={`mb-2 border-2 px-2 py-1 text-xs ${
-                            index % 2 === 0 ? 'bg-red-100 border-red-500 text-red-900' : 'bg-red-900 border-red-600 text-red-200'
-                          }`}>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="font-bold">🔄 FLIP ATTEMPT</div>
-                                <div className="text-xs opacity-90">
-                                  Committed to {recruit.committedSchool.name} ({recruit.committedSchool.tier})
-                                  {recruit.committedSchool.tier === 'Blue Blood' && ' - Very Hard (-50%)'}
-                                  {recruit.committedSchool.tier === 'Power 4' && ' - Harder (-25%)'}
+                        {recruit.verbalCommit && recruit.committedSchool?.id !== selectedSchool?.id && (() => {
+                          const flipCost = FLIP_ATTEMPT_COSTS[recruit.stars] || 100;
+                          const flipAttemptedThisWeek = recruit.flipAttemptThisWeek || false;
+                          const canAffordFlip = recruitingPoints >= flipCost;
+                          const flipDisabled = flipAttemptedThisWeek || !canAffordFlip;
+
+                          return (
+                            <div className={`mb-2 border-2 px-2 py-1 text-xs ${
+                              index % 2 === 0 ? 'bg-red-100 border-red-500 text-red-900' : 'bg-red-900 border-red-600 text-red-200'
+                            }`}>
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-bold">🔄 FLIP ATTEMPT</div>
+                                  <div className="text-xs opacity-90">
+                                    Committed to {recruit.committedSchool.name} ({recruit.committedSchool.tier})
+                                    {recruit.committedSchool.tier === 'Blue Blood' && ' - Very Hard (-50%)'}
+                                    {recruit.committedSchool.tier === 'Power 4' && ' - Harder (-25%)'}
+                                  </div>
+                                  {flipAttemptedThisWeek && (
+                                    <div className="text-yellow-600 font-bold mt-1">⚠️ Already attempted this week</div>
+                                  )}
                                 </div>
+                                <button
+                                  onClick={() => {
+                                    if (flipDisabled) return;
+                                    setFlipOfferRecruit(recruit);
+                                    setFlipOfferResult(null);
+                                    setShowFlipOfferModal(true);
+                                  }}
+                                  disabled={flipDisabled}
+                                  className={`px-3 py-1 text-xs font-bold border-2 ${
+                                    flipDisabled
+                                      ? 'bg-gray-500 border-gray-600 text-gray-300 cursor-not-allowed opacity-50'
+                                      : index % 2 === 0
+                                        ? 'bg-red-600 border-red-700 text-white hover:bg-red-700'
+                                        : 'bg-red-500 border-red-400 text-white hover:bg-red-600'
+                                  }`}
+                                  style={{ boxShadow: flipDisabled ? 'none' : '2px 2px 0px rgba(0,0,0,0.3)' }}
+                                >
+                                  <div>MAKE OFFER</div>
+                                  <div className={`text-xs ${canAffordFlip ? '' : 'text-red-300'}`}>({flipCost} pts)</div>
+                                </button>
                               </div>
-                              <button
-                                onClick={() => {
-                                  setFlipOfferRecruit(recruit);
-                                  setFlipOfferResult(null);
-                                  setShowFlipOfferModal(true);
-                                }}
-                                className={`px-3 py-1 text-xs font-bold border-2 ${
-                                  index % 2 === 0
-                                    ? 'bg-red-600 border-red-700 text-white hover:bg-red-700'
-                                    : 'bg-red-500 border-red-400 text-white hover:bg-red-600'
-                                }`}
-                                style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.3)' }}
-                              >
-                                MAKE OFFER
-                              </button>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                         <div className="grid grid-cols-4 gap-1"
 >
                         {RECRUITING_ACTIONS.map(action => {
@@ -4189,9 +4839,10 @@ const App = () => {
 
                           const canAfford = recruitingPoints >= adjustedCost;
                           const meetsRequirement = recruit.interest >= action.minInterest;
+                          const flipAttemptedThisWeek = recruit.flipAttemptThisWeek || false;
 
-                          // Button is disabled if: scholarship offered this week, used this week, other visit used this week, permanently used (official visit only), monthly limit used, can't afford, or doesn't meet requirement
-                          const isDisabled = scholarshipOfferedThisWeek || usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed || !canAfford || !meetsRequirement;
+                          // Button is disabled if: flip attempted this week, scholarship offered this week, used this week, other visit used this week, permanently used (official visit only), monthly limit used, can't afford, or doesn't meet requirement
+                          const isDisabled = flipAttemptedThisWeek || scholarshipOfferedThisWeek || usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed || !canAfford || !meetsRequirement;
 
                           // Calculate adjusted interest gain to show on button (same formula as handleRecruitingAction)
                           let starDifficulty = 1.0;
@@ -4232,6 +4883,7 @@ const App = () => {
                               }}
                               disabled={isDisabled}
                               className={`border-2 p-1 text-xs transition-all ${
+                                flipAttemptedThisWeek ? 'bg-red-800 border-red-600 opacity-60 cursor-not-allowed' :
                                 scholarshipOfferedThisWeek ? 'bg-yellow-800 border-yellow-600 opacity-60 cursor-not-allowed' :
                                 usedThisWeek || otherVisitUsedThisWeek ? 'bg-gray-600 border-gray-500 opacity-60 cursor-not-allowed' :
                                 officialVisitPermanentlyUsed ? 'bg-gray-700 border-gray-600 opacity-50 cursor-not-allowed' :
@@ -4240,11 +4892,12 @@ const App = () => {
                                 !meetsRequirement ? 'bg-orange-900 border-orange-700 opacity-50 cursor-not-allowed' :
                                 'bg-blue-700 border-blue-500 hover:bg-blue-600'
                               }`}
-                              style={{ boxShadow: (scholarshipOfferedThisWeek || usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed) ? 'none' : '2px 2px 0px rgba(0,0,0,0.5)' }}
+                              style={{ boxShadow: (flipAttemptedThisWeek || scholarshipOfferedThisWeek || usedThisWeek || otherVisitUsedThisWeek || officialVisitPermanentlyUsed || monthlyLimitUsed) ? 'none' : '2px 2px 0px rgba(0,0,0,0.5)' }}
                             >
                               <div className="font-bold" style={{ fontSize: '10px' }}>{action.name}</div>
                               <div className="opacity-75" style={{ fontSize: '8px' }}>
-                                {scholarshipOfferedThisWeek ? 'NEXT WK' :
+                                {flipAttemptedThisWeek ? '🔄 FLIP USED' :
+                                 scholarshipOfferedThisWeek ? 'NEXT WK' :
                                  (action.id === 'officialVisit' && !meetsRequirement) ? '(At 75% Interest)' :
                                  usedThisWeek || otherVisitUsedThisWeek ? '✓ THIS WK' :
                                  officialVisitPermanentlyUsed ? '✓ USED' :
@@ -4295,6 +4948,25 @@ const App = () => {
                         <div className="text-xs opacity-90 mt-1">
                           Maximum interest reached. {recruit.verbalCommit ? 'Maintain this commitment!' : 'Ready for NIL offer!'}
                         </div>
+                        {/* Show NIL Offer button at 100% if not yet committed */}
+                        {!recruit.nilOfferAccepted && !recruit.verbalCommit && recruit.isTargeted && (
+                          <button
+                            onClick={() => {
+                              setNegotiatingRecruit({
+                                ...recruit,
+                                commitmentInterest: recruit.interest,
+                                flipMultiplier: getFlipMultiplier(recruit.interest)
+                              });
+                              setCounterOffer(Math.round((recruit.marketValue + recruit.askingPrice) / 2));
+                              setNilNegotiationPhase('initial');
+                              setShowNegotiationModal(true);
+                            }}
+                            className="w-full mt-2 bg-green-700 border-2 border-green-500 p-2 text-sm font-bold hover:bg-green-600 transition-all text-white"
+                            style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                          >
+                            💰 MAKE NIL OFFER
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -4423,6 +5095,13 @@ const App = () => {
       const title = e.title;
       return currentEvent === title || currentEvent?.includes(title);
     });
+
+    // Special case: Off-Season is "complete" when all 16 weeks are done
+    // User should not be able to recruit after clicking "COMPLETE OFF-SEASON"
+    if (currentEvent === 'The Off-Season' && offSeasonWeeksCompleted >= 16 && offSeasonWeek === null) {
+      return false;
+    }
+
     return event?.recruitingOpen === true;
   };
   
@@ -4460,16 +5139,17 @@ const App = () => {
   
   const handleSignRecruit = (recruit) => {
     // Move recruit from verbal commit to signed
-    setRecruits(recruits.map(r => 
+    setRecruits(recruits.map(r =>
       r.id === recruit.id ? {
         ...r,
         signedCommit: true,
+        signingDayDecision: false, // Clear signing day flag once signed
         signedDuring: isSigningPeriod() ? (getCurrentEvent().includes('Early') ? 'early' : 'national') : 'early'
       } : r
     ));
-    
+
     // Add to signed class
-    setSignedClass([...signedClass, { ...recruit, signedCommit: true }]);
+    setSignedClass([...signedClass, { ...recruit, signedCommit: true, signingDayDecision: false }]);
   };
 
   const getUpcomingEvents = () => {
@@ -5205,7 +5885,7 @@ const App = () => {
       const isAtRiskDecision = signingDayDecisions.find(s => s.id === r.id && s.atRiskFlip);
 
       if (isUserSigned || isAISigned) {
-        return { ...r, signedCommit: true };
+        return { ...r, signedCommit: true, signingDayDecision: false };
       }
       // Mark at-risk commits as signing day decisions for NSD processing
       if (isAtRiskDecision) {
@@ -6505,15 +7185,16 @@ const App = () => {
 
     // Only reset recruiting actions and restore points during recruiting open periods
     if (isRecruitingOpen()) {
-      // First reset actionsUsedThisWeek for all recruits
+      // First reset actionsUsedThisWeek and flipAttemptThisWeek for all recruits
       const recruitsWithResetActions = recruits.map(r => ({
         ...r,
-        actionsUsedThisWeek: []
+        actionsUsedThisWeek: [],
+        flipAttemptThisWeek: false
       }));
 
       // Simulate AI school recruiting activity (using recruits with reset actions)
       const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
-      const updatedRecruits = simulateAIRecruiting(recruitsWithResetActions, allSchools, selectedSchool?.id, aiRosters);
+      const updatedRecruits = simulateAIRecruiting(recruitsWithResetActions, allSchools, selectedSchool?.id, aiRosters, offSeasonWeek);
       setRecruits(updatedRecruits);
 
       // Check if we're in a reduced points period (Regular Season)
@@ -6598,15 +7279,16 @@ const App = () => {
     setOffSeasonWeek(offSeasonWeek + 1);
     setOffSeasonWeeksCompleted(offSeasonWeek);
     
-    // Reset recruiting actions
+    // Reset recruiting actions and flip attempts
     const recruitsBeforeAI = recruits.map(r => ({
       ...r,
-      actionsUsedThisWeek: []
+      actionsUsedThisWeek: [],
+      flipAttemptThisWeek: false
     }));
 
     // Simulate AI school recruiting activity
     const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
-    const updatedRecruits = simulateAIRecruiting(recruitsBeforeAI, allSchools, selectedSchool?.id, aiRosters);
+    const updatedRecruits = simulateAIRecruiting(recruitsBeforeAI, allSchools, selectedSchool?.id, aiRosters, offSeasonWeek);
 
     // Find NEW AI commits this week
     const newAICommits = updatedRecruits.filter(recruit => {
@@ -6820,6 +7502,49 @@ const App = () => {
       return; // Already offered
     }
 
+    // Count existing commits at this position (for position-aware instant commit logic)
+    const existingCommitsAtPosition = recruits.filter(r =>
+      r.verbalCommit &&
+      r.committedSchool?.id === selectedSchool?.id &&
+      r.position === recruit.position
+    ).length;
+
+    // Check for instant commit (dream school + conditions met + position awareness)
+    const instantCommitResult = checkInstantCommit(recruit, selectedSchool, positionBoosts, existingCommitsAtPosition, offSeasonWeek || 99);
+
+    if (instantCommitResult && instantCommitResult.triggered) {
+      // INSTANT COMMIT triggered! Show choice modal to user
+      console.log(`⚡ INSTANT COMMIT TRIGGERED for ${recruit.name}!`);
+      console.log(`Chance was ${instantCommitResult.chance}%, rolled ${instantCommitResult.roll.toFixed(1)}`);
+      console.log(`Triggers: ${instantCommitResult.triggers.map(t => t.reason).join(', ')}`);
+      console.log(`Existing commits at ${recruit.position}: ${existingCommitsAtPosition}`);
+
+      // Deduct recruiting points (offering scholarship costs points regardless)
+      setRecruitingPoints(recruitingPoints - cost);
+
+      // Mark as targeted but not committed yet
+      const currentWeek = offSeasonWeek ? `offseason_${offSeasonWeek}` : `regular_${currentGameWeek}`;
+      setRecruits(recruits.map(r =>
+        r.id === recruit.id ? {
+          ...r,
+          isTargeted: true,
+          interest: calculateInitialInterest(recruit), // Set initial interest
+          scholarshipOfferedWeek: currentWeek
+        } : r
+      ));
+
+      // Show instant commit CHOICE modal (Accept or Ask to Wait)
+      setPendingInstantCommit({
+        recruit: { ...recruit, isTargeted: true },
+        result: instantCommitResult,
+        existingCommitsAtPosition
+      });
+      setShowInstantCommitChoice(true);
+
+      return;
+    }
+
+    // Normal flow - no instant commit
     // Calculate initial interest
     const initialInterest = calculateInitialInterest(recruit);
 
@@ -7030,49 +7755,73 @@ const App = () => {
               committedSchool: selectedSchool,
               commitmentInterest: r.interest, // Use current interest from state
               flipMultiplier: 0.5, // Hometown loyalty = half normal flip chance
-              isTargeted: true // Keep in My Recruits
+              isTargeted: true, // Keep in My Recruits
+              nilOfferAccepted: true, // CRITICAL: Mark NIL as accepted to prevent decommitment
+              acceptedNILAmount: autoCommitDeal
             } : r
           );
         }
 
-        // Random commitment chance at 70%+ interest based on star rating
-        if (updatedRecruit && updatedRecruit.interest >= 70 && !updatedRecruit.verbalCommit && !updatedRecruit.nilOfferAccepted) {
-          // Check if any AI school has higher interest than user
+        // === USER COMMIT LOGIC (PARITY WITH AI) ===
+        // Two paths: Auto-commit (90%+ AND 25%+ lead) or Random commit (80%+)
+        if (updatedRecruit && !updatedRecruit.verbalCommit && !updatedRecruit.nilOfferAccepted) {
+          // Check AI school interests
           const aiSchools = updatedRecruit.recruitingSchools || [];
           const highestAIInterest = aiSchools.length > 0 ? Math.max(...aiSchools.map(s => s.interest)) : 0;
           const userInterest = updatedRecruit.interest;
+          const userLead = userInterest - highestAIInterest;
 
-          // Calculate how much user is trailing (if at all)
-          const interestDeficit = Math.max(0, highestAIInterest - userInterest);
+          let shouldTriggerCommit = false;
+          let commitType = null;
 
-          // Reduce commit chance based on interest deficit (but don't eliminate)
-          // If AI leads by 20+, commit chance reduced to 25%
-          // If AI leads by 10-19, commit chance reduced to 50%
-          // If AI leads by 1-9, commit chance reduced to 75%
-          let commitChanceModifier = 1.0;
-          if (interestDeficit >= 20) {
-            commitChanceModifier = 0.25;
-          } else if (interestDeficit >= 10) {
-            commitChanceModifier = 0.5;
-          } else if (interestDeficit > 0) {
-            commitChanceModifier = 0.75;
+          // === AUTO-COMMIT: 90%+ interest AND 25%+ lead over AI ===
+          if (userInterest >= 90 && userLead >= 25) {
+            shouldTriggerCommit = true;
+            commitType = 'AUTO';
+            console.log(`${updatedRecruit.name}: AUTO-COMMIT triggered (${userInterest}% interest, ${userLead}pt lead)`);
+          }
+          // === RANDOM COMMIT: 80%+ interest (same system as AI) ===
+          else if (userInterest >= 80) {
+            // Calculate how much user is trailing (if at all)
+            const interestDeficit = Math.max(0, highestAIInterest - userInterest);
+
+            // Reduce commit chance based on interest deficit (but don't eliminate)
+            // If AI leads by 20+, commit chance reduced to 25%
+            // If AI leads by 10-19, commit chance reduced to 50%
+            // If AI leads by 1-9, commit chance reduced to 75%
+            let commitChanceModifier = 1.0;
+            if (interestDeficit >= 20) {
+              commitChanceModifier = 0.25;
+            } else if (interestDeficit >= 10) {
+              commitChanceModifier = 0.5;
+            } else if (interestDeficit > 0) {
+              commitChanceModifier = 0.75;
+            }
+
+            // Determine commitment probability based on star rating
+            let commitChance = 0;
+            if (updatedRecruit.stars === 5) {
+              commitChance = 0.15; // 15% chance for 5-stars
+            } else if (updatedRecruit.stars === 4) {
+              commitChance = 0.30; // 30% chance for 4-stars
+            } else {
+              commitChance = 0.75; // 75% chance for 3-stars and 2-stars
+            }
+
+            // Apply interest deficit modifier
+            commitChance *= commitChanceModifier;
+
+            // Roll for random commitment
+            if (Math.random() < commitChance) {
+              shouldTriggerCommit = true;
+              commitType = 'RANDOM';
+              console.log(`${updatedRecruit.name}: RANDOM commit triggered at ${userInterest}% (deficit: ${interestDeficit})`);
+            }
           }
 
-          // Determine commitment probability based on star rating
-          let commitChance = 0;
-          if (updatedRecruit.stars === 5) {
-            commitChance = 0.15; // 15% chance for 5-stars
-          } else if (updatedRecruit.stars === 4) {
-            commitChance = 0.30; // 30% chance for 4-stars
-          } else {
-            commitChance = 0.75; // 75% chance for 3-stars and 2-stars
-          }
-
-          // Apply interest deficit modifier
-          commitChance *= commitChanceModifier;
-
-          // Roll for random commitment
-          if (Math.random() < commitChance) {
+          if (shouldTriggerCommit) {
+            // Calculate interest deficit for NIL premium (if trailing)
+            const interestDeficit = Math.max(0, highestAIInterest - userInterest);
             // If committing despite AI having higher interest, increase asking price
             // Recruit wants more NIL to commit to a school they're less interested in
             if (interestDeficit > 0) {
@@ -7084,13 +7833,15 @@ const App = () => {
             const isDreamSchool = updatedRecruit.dreamSchools?.some(ds => ds.id === selectedSchool?.id);
             const isLocalRecruit = updatedRecruit.state === selectedSchool?.state;
 
-            // Local dream school recruits have 40% chance to skip NIL negotiation (loyalty)
-            // 3-stars: 60% skip, 4-stars: 40% skip, 5-stars: 20% skip
+            // Local dream school recruits MAY skip NIL negotiation (loyalty)
+            // But 4-5 star recruits almost ALWAYS require NIL in modern CFB
+            // 2-stars: 50% skip, 3-stars: 30% skip, 4-stars: 5% skip, 5-stars: 0% skip
             let skipNILChance = 0;
             if (isDreamSchool && isLocalRecruit) {
-              if (updatedRecruit.stars <= 3) skipNILChance = 0.6;
-              else if (updatedRecruit.stars === 4) skipNILChance = 0.4;
-              else skipNILChance = 0.2; // 5-stars still usually want NIL
+              if (updatedRecruit.stars === 2) skipNILChance = 0.50;
+              else if (updatedRecruit.stars === 3) skipNILChance = 0.30;
+              else if (updatedRecruit.stars === 4) skipNILChance = 0.05; // Very rare - top recruits want NIL
+              // 5-stars: 0% - they ALWAYS negotiate NIL
             }
 
             if (skipNILChance > 0 && Math.random() < skipNILChance) {
@@ -7255,6 +8006,13 @@ const App = () => {
   const isEndOfSeason = () => {
     const currentEvent = getCurrentEvent();
     const nextEvent = getUpcomingEvents()[0];
+
+    // IMPORTANT: Must have played at least one game to be "end of season"
+    // If no games played yet, this is the START of the first season, not end of a season
+    const hasPlayedAnyGames = (coachRecord.wins + coachRecord.losses) > 0;
+    if (!hasPlayedAnyGames) {
+      return false;
+    }
 
     // New season starts when transitioning from The Off-Season to Training Camp or Regular Season
     // This happens after off-season recruiting is complete (16 weeks)
@@ -7564,30 +8322,33 @@ const App = () => {
     }
 
     // Check if we're simming to a game week during regular season
+    // Track if we need to reset recruiting actions this week
+    let recruitsWithResetActions = recruits;
+    let shouldResetRecruitingPoints = false;
+    let weeklyRecruitingPoints = 200; // Group of 5 default
+
     if (nextEvent.isGameWeek) {
       // Advance one week (7 days)
       advanceDay(7);
       setCurrentGameWeek(prev => prev + 1);
-      
-      // Reset recruiting actions and restore points (HALF during Regular Season)
+
+      // Reset recruiting actions (HALF points during Regular Season)
       if (isRecruitingOpen()) {
-        setRecruits(recruits.map(r => ({
+        recruitsWithResetActions = recruits.map(r => ({
           ...r,
-          actionsUsedThisWeek: []
-        })));
-        
-        // Restore recruiting points - HALF during Regular Season
-        let weeklyRecruitingPoints = 200; // Group of 5 default
+          actionsUsedThisWeek: [],
+          flipAttemptThisWeek: false
+        }));
+        shouldResetRecruitingPoints = true;
+
         if (selectedSchool?.tier === 'Blue Blood') {
           weeklyRecruitingPoints = 600;
         } else if (selectedSchool?.tier === 'Power 4') {
           weeklyRecruitingPoints = 400;
         }
-        
         // Cut in half for Regular Season
         weeklyRecruitingPoints = Math.floor(weeklyRecruitingPoints / 2);
-        setRecruitingPoints(weeklyRecruitingPoints);
-        
+
         console.log(`Regular Season Week ${nextEvent.week} - HALF recruiting points restored: ${weeklyRecruitingPoints}`);
       }
     } else {
@@ -7596,43 +8357,55 @@ const App = () => {
         advanceDay(nextEvent.daysUntil);
         setCurrentGameWeek(1); // Start at Week 1
 
-        // Reset recruiting actions when entering Regular Season
-        setRecruits(recruits.map(r => ({
+        // Reset recruiting actions and flip attempts when entering Regular Season
+        recruitsWithResetActions = recruits.map(r => ({
           ...r,
-          actionsUsedThisWeek: []
-        })));
+          actionsUsedThisWeek: [],
+          flipAttemptThisWeek: false
+        }));
+        shouldResetRecruitingPoints = true;
 
-        // Set HALF recruiting points when entering Regular Season
-        let weeklyRecruitingPoints = 200; // Group of 5 default
         if (selectedSchool?.tier === 'Blue Blood') {
           weeklyRecruitingPoints = 600;
         } else if (selectedSchool?.tier === 'Power 4') {
           weeklyRecruitingPoints = 400;
         }
         weeklyRecruitingPoints = Math.floor(weeklyRecruitingPoints / 2);
-        setRecruitingPoints(weeklyRecruitingPoints);
         console.log('Entering Regular Season - HALF recruiting points set:', weeklyRecruitingPoints);
 
-        // Schedule was already generated at The Off-Season start
-        console.log('Regular Season started with', seasonSchedule.length, 'games scheduled');
+        // Safety check: If schedule is empty, regenerate it
+        if (seasonSchedule.length === 0) {
+          console.log('WARNING: Season schedule was empty! Regenerating...');
+          const newSchedule = generateSeasonSchedule(selectedSchool);
+          setSeasonSchedule(newSchedule);
+          console.log('Regenerated schedule with', newSchedule.length, 'games');
+        } else {
+          console.log('Regular Season started with', seasonSchedule.length, 'games scheduled');
+        }
       } else {
         // Regular event, reset game week if leaving season
         advanceDay(nextEvent.daysUntil);
         if (currentGameWeek > 0) {
           setCurrentGameWeek(0); // Reset when leaving regular season
         }
-        
+
         // NOTE: Roster turnover (transfers, graduations, NFL departures) happens when entering Transfer Portal Open
         // Players stay on roster during playoffs so teams can compete with their full squad
       }
     }
-    
+
     // Simulate AI school recruiting activity during recruiting-open periods
+    // IMPORTANT: Use recruitsWithResetActions so weekly reset is preserved
     if (isRecruitingOpen() || nextEvent.recruitingOpen) {
       const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
-      const oldRecruits = recruits;
-      const updatedRecruits = simulateAIRecruiting(recruits, allSchools, selectedSchool?.id, aiRosters);
+      const oldRecruits = recruitsWithResetActions;
+      const updatedRecruits = simulateAIRecruiting(recruitsWithResetActions, allSchools, selectedSchool?.id, aiRosters, offSeasonWeek || 99);
       setRecruits(updatedRecruits);
+
+      // Set recruiting points after AI simulation
+      if (shouldResetRecruitingPoints) {
+        setRecruitingPoints(weeklyRecruitingPoints);
+      }
       
       // Generate recruiting update summary
       const myTargets = updatedRecruits.filter(r => r.isTargeted || r.interest > 0);
@@ -7663,8 +8436,16 @@ const App = () => {
           alert(`💔 COMMITMENT ALERT!\n\n${lostRecruit.name} has committed to ${lostRecruit.committedSchool.name}!\n\n${lostRecruit.isTargeted ? 'This was one of your targets!' : ''}\n\nYou had ${lostRecruit.interest}% interest.`);
         }, 1000);
       }
+    } else {
+      // AI recruiting didn't run, but still apply weekly reset if needed
+      if (recruitsWithResetActions !== recruits) {
+        setRecruits(recruitsWithResetActions);
+      }
+      if (shouldResetRecruitingPoints) {
+        setRecruitingPoints(weeklyRecruitingPoints);
+      }
     }
-    
+
     // Check for random event
     const eventContext = nextEvent.isGameWeek ? `Regular Season - Week ${currentGameWeek + 1}` : nextEvent.title;
     const randomEvent = generateRandomEvent(roster, eventContext, budget);
@@ -8501,10 +9282,34 @@ const App = () => {
       <div className="max-w-7xl mx-auto p-6">
         {activeTab === 'dashboard' && (
           <div>
+            {/* Schedule Error Banner - Shows if in Regular Season but no schedule */}
+            {currentGameWeek > 0 && seasonSchedule.length === 0 && (
+              <div className="mb-6 bg-red-900 border-4 border-red-500 p-4"
+                   style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                <div className="text-red-400 font-bold">⚠️ SCHEDULE ERROR</div>
+                <div className="text-sm mt-2">No season schedule found. This is a bug - please save and reload, or advance to the next event to regenerate.</div>
+                <button
+                  onClick={() => {
+                    const newSchedule = generateSeasonSchedule(selectedSchool);
+                    setSeasonSchedule(newSchedule);
+                    alert(`Schedule regenerated with ${newSchedule.length} games!`);
+                  }}
+                  className="mt-2 bg-red-700 border-2 border-red-500 px-4 py-2 text-sm font-bold hover:bg-red-600"
+                >
+                  🔄 REGENERATE SCHEDULE
+                </button>
+              </div>
+            )}
+
             {/* Game Day Banner - Shows during Regular Season when there's a game to play */}
             {currentGameWeek > 0 && seasonSchedule.length > 0 && (() => {
               const currentGame = seasonSchedule.find(g => g.week === currentGameWeek);
               const gameAlreadyPlayed = gameResults.find(r => r.week === currentGameWeek);
+
+              // Debug: log if game not found
+              if (!currentGame) {
+                console.log('WARNING: No game found for week', currentGameWeek, 'in schedule:', seasonSchedule.map(g => g.week));
+              }
 
               if (currentGame && !gameAlreadyPlayed) {
                 return (
@@ -10598,17 +11403,68 @@ const App = () => {
                     )}
 
                     {filteredRecruits.filter(r => ['OT', 'OG', 'C'].includes(r.position)).length > 0 && (
-                      <PositionGroup
-                        position="OL"
-                        title="OL - OFFENSIVE LINE"
-                        recruits={filteredRecruits.filter(r => ['OT', 'OG', 'C'].includes(r.position))}
-                        expandedPositions={expandedRecruitingPositions}
-                        setExpandedPositions={setExpandedRecruitingPositions}
-                        canRecruit={isRecruitingOpen()}
-                        recruitingPoints={recruitingPoints}
-                        executeRecruitingAction={handleRecruitingAction}
-                        showSubPosition={true}
-                      />
+                      <div className="bg-gray-800 border-2 border-gray-600">
+                        {/* OL Parent Header */}
+                        <button
+                          onClick={() => setExpandedRecruitingPositions({...expandedRecruitingPositions, OL: !expandedRecruitingPositions.OL})}
+                          className="w-full p-2 flex justify-between items-center hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-bold text-sm">OL - OFFENSIVE LINE</span>
+                            <span className="text-gray-400 text-xs">
+                              ({filteredRecruits.filter(r => ['OT', 'OG', 'C'].includes(r.position)).length} recruits)
+                            </span>
+                          </div>
+                          {expandedRecruitingPositions.OL ? <ChevronUp className="text-gray-400 w-4 h-4" /> : <ChevronDown className="text-gray-400 w-4 h-4" />}
+                        </button>
+
+                        {/* OL Sub-Positions */}
+                        {expandedRecruitingPositions.OL && (
+                          <div className="border-t-2 border-gray-600 pl-2">
+                            {/* OT - Offensive Tackles */}
+                            {filteredRecruits.filter(r => r.position === 'OT').length > 0 && (
+                              <PositionGroup
+                                position="OT"
+                                title="OT - OFFENSIVE TACKLES"
+                                recruits={filteredRecruits.filter(r => r.position === 'OT')}
+                                expandedPositions={expandedOLSubPositions}
+                                setExpandedPositions={setExpandedOLSubPositions}
+                                canRecruit={isRecruitingOpen()}
+                                recruitingPoints={recruitingPoints}
+                                executeRecruitingAction={handleRecruitingAction}
+                              />
+                            )}
+
+                            {/* OG - Offensive Guards */}
+                            {filteredRecruits.filter(r => r.position === 'OG').length > 0 && (
+                              <PositionGroup
+                                position="OG"
+                                title="OG - OFFENSIVE GUARDS"
+                                recruits={filteredRecruits.filter(r => r.position === 'OG')}
+                                expandedPositions={expandedOLSubPositions}
+                                setExpandedPositions={setExpandedOLSubPositions}
+                                canRecruit={isRecruitingOpen()}
+                                recruitingPoints={recruitingPoints}
+                                executeRecruitingAction={handleRecruitingAction}
+                              />
+                            )}
+
+                            {/* C - Centers */}
+                            {filteredRecruits.filter(r => r.position === 'C').length > 0 && (
+                              <PositionGroup
+                                position="C"
+                                title="C - CENTERS"
+                                recruits={filteredRecruits.filter(r => r.position === 'C')}
+                                expandedPositions={expandedOLSubPositions}
+                                setExpandedPositions={setExpandedOLSubPositions}
+                                canRecruit={isRecruitingOpen()}
+                                recruitingPoints={recruitingPoints}
+                                executeRecruitingAction={handleRecruitingAction}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {/* DEFENSE POSITIONS */}
@@ -10849,17 +11705,68 @@ const App = () => {
                     )}
 
                     {filteredRecruits.filter(r => ['OT', 'OG', 'C'].includes(r.position) && r.isTransfer).length > 0 && (
-                      <PositionGroup
-                        position="OL"
-                        title="OL - OFFENSIVE LINE"
-                        recruits={filteredRecruits.filter(r => ['OT', 'OG', 'C'].includes(r.position) && r.isTransfer)}
-                        expandedPositions={expandedRecruitingPositions}
-                        setExpandedPositions={setExpandedRecruitingPositions}
-                        canRecruit={isRecruitingOpen()}
-                        recruitingPoints={recruitingPoints}
-                        executeRecruitingAction={handleRecruitingAction}
-                        showSubPosition={true}
-                      />
+                      <div className="bg-gray-800 border-2 border-gray-600">
+                        {/* OL Parent Header */}
+                        <button
+                          onClick={() => setExpandedRecruitingPositions({...expandedRecruitingPositions, OL: !expandedRecruitingPositions.OL})}
+                          className="w-full p-2 flex justify-between items-center hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-bold text-sm">OL - OFFENSIVE LINE</span>
+                            <span className="text-gray-400 text-xs">
+                              ({filteredRecruits.filter(r => ['OT', 'OG', 'C'].includes(r.position) && r.isTransfer).length} transfers)
+                            </span>
+                          </div>
+                          {expandedRecruitingPositions.OL ? <ChevronUp className="text-gray-400 w-4 h-4" /> : <ChevronDown className="text-gray-400 w-4 h-4" />}
+                        </button>
+
+                        {/* OL Sub-Positions */}
+                        {expandedRecruitingPositions.OL && (
+                          <div className="border-t-2 border-gray-600 pl-2">
+                            {/* OT - Offensive Tackles */}
+                            {filteredRecruits.filter(r => r.position === 'OT' && r.isTransfer).length > 0 && (
+                              <PositionGroup
+                                position="OT"
+                                title="OT - OFFENSIVE TACKLES"
+                                recruits={filteredRecruits.filter(r => r.position === 'OT' && r.isTransfer)}
+                                expandedPositions={expandedOLSubPositions}
+                                setExpandedPositions={setExpandedOLSubPositions}
+                                canRecruit={isRecruitingOpen()}
+                                recruitingPoints={recruitingPoints}
+                                executeRecruitingAction={handleRecruitingAction}
+                              />
+                            )}
+
+                            {/* OG - Offensive Guards */}
+                            {filteredRecruits.filter(r => r.position === 'OG' && r.isTransfer).length > 0 && (
+                              <PositionGroup
+                                position="OG"
+                                title="OG - OFFENSIVE GUARDS"
+                                recruits={filteredRecruits.filter(r => r.position === 'OG' && r.isTransfer)}
+                                expandedPositions={expandedOLSubPositions}
+                                setExpandedPositions={setExpandedOLSubPositions}
+                                canRecruit={isRecruitingOpen()}
+                                recruitingPoints={recruitingPoints}
+                                executeRecruitingAction={handleRecruitingAction}
+                              />
+                            )}
+
+                            {/* C - Centers */}
+                            {filteredRecruits.filter(r => r.position === 'C' && r.isTransfer).length > 0 && (
+                              <PositionGroup
+                                position="C"
+                                title="C - CENTERS"
+                                recruits={filteredRecruits.filter(r => r.position === 'C' && r.isTransfer)}
+                                expandedPositions={expandedOLSubPositions}
+                                setExpandedPositions={setExpandedOLSubPositions}
+                                canRecruit={isRecruitingOpen()}
+                                recruitingPoints={recruitingPoints}
+                                executeRecruitingAction={handleRecruitingAction}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {/* DEFENSE POSITIONS */}
@@ -11072,7 +11979,7 @@ const App = () => {
                     {formatCurrency(budgetRemaining)}
                   </div>
                   <div className="text-xs opacity-75">
-                    of {formatCurrency(totalBudget)} total
+                    of {formatCurrency(budget)} total
                   </div>
                 </div>
               </div>
@@ -11081,8 +11988,8 @@ const App = () => {
                 <div
                   className="h-full transition-all duration-300"
                   style={{
-                    width: `${Math.min(100, (budgetRemaining / totalBudget) * 100)}%`,
-                    backgroundColor: budgetRemaining / totalBudget > 0.3 ? '#22c55e' : budgetRemaining / totalBudget > 0.1 ? '#eab308' : '#ef4444'
+                    width: `${Math.min(100, (budgetRemaining / budget) * 100)}%`,
+                    backgroundColor: budgetRemaining / budget > 0.3 ? '#22c55e' : budgetRemaining / budget > 0.1 ? '#eab308' : '#ef4444'
                   }}
                 />
               </div>
@@ -11681,6 +12588,284 @@ const App = () => {
         </div>
       )}
 
+      {/* Instant Commit CHOICE Modal - Accept or Ask to Wait */}
+      {showInstantCommitChoice && pendingInstantCommit && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-yellow-500 max-w-lg w-full" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
+            {/* Modal Header */}
+            <div className="bg-gradient-to-b from-yellow-400 to-yellow-500 text-black p-4 border-b-4 border-yellow-600">
+              <div className="text-center">
+                <div className="text-xs uppercase tracking-widest text-yellow-900 mb-1">Recruiting Alert</div>
+                <h2 className="text-2xl font-black font-serif leading-tight">
+                  INSTANT COMMIT REQUEST!
+                </h2>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4">
+              {/* Recruit Info */}
+              <div className="bg-yellow-900 border-2 border-yellow-600 p-4 mb-4" style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-yellow-400 text-lg">{'⭐'.repeat(pendingInstantCommit.recruit?.stars || 3)}</div>
+                    <div className="text-white font-bold text-xl">{pendingInstantCommit.recruit?.name}</div>
+                    <div className="text-gray-400">{pendingInstantCommit.recruit?.position} • {pendingInstantCommit.recruit?.state}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-yellow-400 text-2xl font-bold">WANTS IN!</div>
+                    <div className="text-yellow-300 text-sm">Ready to commit NOW</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Why They Want to Commit */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4">
+                <div className="text-yellow-400 font-bold text-sm mb-2">⚡ WHY THEY'RE READY:</div>
+                <div className="space-y-1">
+                  {pendingInstantCommit.result?.triggers?.map((trigger, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span className="text-gray-300">{trigger.reason}</span>
+                      <span className={trigger.value >= 0 ? 'text-green-400' : 'text-red-400'}>
+                        {trigger.value >= 0 ? '+' : ''}{trigger.value}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Position Warning */}
+              {pendingInstantCommit.existingCommitsAtPosition > 0 && (
+                <div className="bg-orange-900 border-2 border-orange-600 p-3 mb-4">
+                  <div className="text-orange-400 font-bold text-sm">
+                    ⚠️ POSITION DEPTH: You already have {pendingInstantCommit.existingCommitsAtPosition} {pendingInstantCommit.recruit?.position} commit{pendingInstantCommit.existingCommitsAtPosition > 1 ? 's' : ''}
+                  </div>
+                </div>
+              )}
+
+              {/* NIL Deal Info */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300 text-sm">NIL Package (if accepted):</span>
+                  <span className="text-green-300 font-bold text-lg">
+                    ${(pendingInstantCommit.result?.nilDeal || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-gray-500 text-xs mt-1">Market value - bypasses negotiation</div>
+              </div>
+
+              {/* Choice explanation */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4 text-xs text-gray-400">
+                <p><strong className="text-white">Accept:</strong> Recruit commits immediately at market value.</p>
+                <p className="mt-1"><strong className="text-white">Ask to Wait:</strong> Recruit may drop your school or continue normal recruiting. Outcome depends on their traits and other offers.</p>
+              </div>
+            </div>
+
+            {/* Choice Buttons */}
+            <div className="p-4 bg-gray-800 border-t-2 border-gray-700 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  // Accept the commitment
+                  const recruit = pendingInstantCommit.recruit;
+                  const result = pendingInstantCommit.result;
+
+                  const cleanSchoolData = {
+                    id: selectedSchool.id,
+                    name: selectedSchool.name,
+                    nickname: selectedSchool.nickname,
+                    state: selectedSchool.state,
+                    conference: selectedSchool.conference,
+                    budget: selectedSchool.budget,
+                    tier: selectedSchool.tier,
+                    colors: selectedSchool.colors
+                  };
+
+                  setRecruits(recruits.map(r =>
+                    r.id === recruit.id ? {
+                      ...r,
+                      interest: 100,
+                      verbalCommit: true,
+                      committedSchool: cleanSchoolData,
+                      nilDeal: result.nilDeal,
+                      nilOfferAccepted: true,
+                      commitmentInterest: 100,
+                      instantCommit: true
+                    } : r
+                  ));
+
+                  // Show success modal
+                  setInstantCommitData({
+                    recruit,
+                    school: selectedSchool,
+                    narrative: result.narrative,
+                    triggers: result.triggers,
+                    chance: result.chance,
+                    nilDeal: result.nilDeal
+                  });
+
+                  setShowInstantCommitChoice(false);
+                  setPendingInstantCommit(null);
+                  setShowInstantCommitModal(true);
+                }}
+                className="bg-green-700 border-4 border-green-600 py-3 font-bold hover:bg-green-600"
+                style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+              >
+                ✓ ACCEPT
+              </button>
+              <button
+                onClick={() => {
+                  // Ask recruit to wait - run defer logic
+                  const recruit = pendingInstantCommit.recruit;
+                  const traits = recruit.traits || [];
+
+                  // Calculate chance recruit is OK waiting
+                  let waitChance = 50; // Base 50%
+
+                  // Trait modifiers
+                  if (traits.includes('Legacy')) waitChance += 30;
+                  if (traits.includes('Close to Home')) waitChance += 20;
+                  if (traits.includes('Development Focused')) waitChance += 20;
+                  if (traits.includes('Championship Focused')) waitChance += 10;
+                  if (traits.includes('NIL-Driven')) waitChance -= 20;
+                  if (traits.includes('Playing Time Focused')) waitChance -= 30;
+
+                  // Other dream schools reduce patience
+                  const otherDreamSchools = (recruit.dreamSchools || []).filter(ds => ds.id !== selectedSchool?.id).length;
+                  waitChance -= otherDreamSchools * 10;
+
+                  // Cap between 10% and 90%
+                  waitChance = Math.max(10, Math.min(90, waitChance));
+
+                  const roll = Math.random() * 100;
+                  const isOkWaiting = roll < waitChance;
+
+                  console.log(`${recruit.name} asked to wait. Chance OK: ${waitChance}%, rolled ${roll.toFixed(1)} - ${isOkWaiting ? 'OK with waiting' : 'DROPPED SCHOOL'}`);
+
+                  if (isOkWaiting) {
+                    // Recruit is OK waiting - interest drops slightly but stays on board
+                    setRecruits(recruits.map(r =>
+                      r.id === recruit.id ? {
+                        ...r,
+                        interest: Math.max(50, (r.interest || 20) - 10), // Drop 10%, floor at 50%
+                        askedToWait: true // Flag so they don't instant commit again
+                      } : r
+                    ));
+
+                    alert(`${recruit.name} understood. "I'll take some time to think about it."\n\nInterest dropped slightly, but they remain on your board.`);
+                  } else {
+                    // Recruit drops the school
+                    setRecruits(recruits.map(r =>
+                      r.id === recruit.id ? {
+                        ...r,
+                        isTargeted: false,
+                        interest: 0,
+                        droppedSchool: true, // Flag - they won't consider you again easily
+                        dreamSchools: (r.dreamSchools || []).filter(ds => ds.id !== selectedSchool?.id)
+                      } : r
+                    ));
+
+                    alert(`${recruit.name} was hurt by the hesitation. "I thought this was my dream school..."\n\n❌ They've removed ${selectedSchool?.name} from consideration.`);
+                  }
+
+                  setShowInstantCommitChoice(false);
+                  setPendingInstantCommit(null);
+                }}
+                className="bg-yellow-700 border-4 border-yellow-600 py-3 font-bold hover:bg-yellow-600"
+                style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+              >
+                ⏳ ASK TO WAIT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instant Commit Modal */}
+      {showInstantCommitModal && instantCommitData && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-green-500 max-w-lg w-full" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
+            {/* Modal Header - Newspaper Style */}
+            <div className="bg-gradient-to-b from-yellow-100 to-yellow-200 text-black p-4 border-b-4 border-yellow-600">
+              <div className="text-center">
+                <div className="text-xs uppercase tracking-widest text-gray-600 mb-1">Breaking News</div>
+                <h2 className="text-2xl font-black font-serif leading-tight">
+                  {instantCommitData.narrative?.headline || 'INSTANT COMMITMENT!'}
+                </h2>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4">
+              {/* Recruit Info */}
+              <div className="bg-green-900 border-2 border-green-600 p-4 mb-4" style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-yellow-400 text-lg">{'⭐'.repeat(instantCommitData.recruit?.stars || 3)}</div>
+                    <div className="text-white font-bold text-xl">{instantCommitData.recruit?.name}</div>
+                    <div className="text-gray-400">{instantCommitData.recruit?.position} • {instantCommitData.recruit?.state}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-green-400 text-3xl font-bold">100%</div>
+                    <div className="text-green-300 text-sm font-bold">COMMITTED</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Story */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4">
+                <p className="text-gray-300 text-sm leading-relaxed italic">
+                  "{instantCommitData.narrative?.story || `${instantCommitData.recruit?.name} has committed to ${instantCommitData.school?.name}!`}"
+                </p>
+              </div>
+
+              {/* Why They Committed */}
+              <div className="bg-gray-800 border-2 border-gray-600 p-3 mb-4">
+                <div className="text-green-400 font-bold text-sm mb-2">✓ FACTORS IN DECISION:</div>
+                <div className="space-y-1">
+                  {instantCommitData.triggers?.map((trigger, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span className="text-gray-300">{trigger.reason}</span>
+                      <span className="text-green-400">+{trigger.value}%</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 pt-2 border-t border-gray-600 flex justify-between text-sm font-bold">
+                  <span className="text-gray-200">Instant Commit Chance:</span>
+                  <span className="text-green-400">{instantCommitData.chance?.toFixed(0)}%</span>
+                </div>
+              </div>
+
+              {/* NIL Deal */}
+              <div className="bg-green-800 border-2 border-green-600 p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300 text-sm">NIL Package:</span>
+                  <span className="text-green-300 font-bold text-lg">
+                    ${(instantCommitData.nilDeal || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-gray-400 text-xs mt-1">
+                  (Bypassed NIL negotiation - committed at market value)
+                </div>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <div className="p-4 bg-gray-800 border-t-2 border-gray-700">
+              <button
+                onClick={() => {
+                  setShowInstantCommitModal(false);
+                  setInstantCommitData(null);
+                }}
+                className="w-full bg-green-700 border-4 border-green-600 py-3 font-bold hover:bg-green-600"
+                style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+              >
+                WELCOME TO THE PROGRAM!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Flip Offer Modal */}
       {showFlipOfferModal && flipOfferRecruit && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
@@ -11803,6 +12988,15 @@ const App = () => {
                         onClick={() => {
                           if (!canAfford) return;
 
+                          // Calculate flip attempt cost (deducted from recruiting points)
+                          const flipAttemptCost = { 5: 200, 4: 150, 3: 100, 2: 75 }[flipOfferRecruit.stars] || 100;
+
+                          // Check if user can afford flip attempt cost
+                          if (recruitingPoints < flipAttemptCost) {
+                            alert(`Not enough recruiting points! Need ${flipAttemptCost} pts for flip attempt.`);
+                            return;
+                          }
+
                           // Show warning for risky options
                           if (option.violationChance) {
                             const warningMsg = option.severePenalty
@@ -11811,6 +13005,17 @@ const App = () => {
 
                             if (!confirm(warningMsg)) return;
                           }
+
+                          // Deduct recruiting points for flip attempt (regardless of outcome)
+                          setRecruitingPoints(prev => prev - flipAttemptCost);
+
+                          // Mark flip attempt used this week (blocks other actions on this recruit)
+                          setRecruits(prev => prev.map(r => {
+                            if (r.id === flipOfferRecruit.id) {
+                              return { ...r, flipAttemptThisWeek: true };
+                            }
+                            return r;
+                          }));
 
                           // Roll for success
                           const roll = Math.random() * 100;
@@ -11832,7 +13037,8 @@ const App = () => {
                                   nilDeal: nilCost,
                                   nilOfferAccepted: true,
                                   interest: Math.min(100, flipOfferRecruit.interest + 20),
-                                  flipMultiplier: 0.3 // Very loyal after flip
+                                  flipMultiplier: 0.3, // Very loyal after flip
+                                  flipAttemptThisWeek: true // Keep this set
                                 };
                               }
                               return r;
@@ -12096,7 +13302,8 @@ const App = () => {
                           r.id === negotiatingRecruit.id ? {
                             ...r,
                             interest: 0,
-                            actionsUsedThisWeek: []
+                            actionsUsedThisWeek: [],
+                            flipAttemptThisWeek: false
                           } : r
                         ));
                         setShowNegotiationModal(false);
@@ -12234,7 +13441,8 @@ const App = () => {
                               r.id === negotiatingRecruit.id ? {
                                 ...r,
                                 interest: 0,
-                                actionsUsedThisWeek: []
+                                actionsUsedThisWeek: [],
+                                flipAttemptThisWeek: false
                               } : r
                             ));
                             setShowNegotiationModal(false);
@@ -12286,7 +13494,8 @@ const App = () => {
                               r.id === negotiatingRecruit.id ? {
                                 ...r,
                                 interest: 75,
-                                actionsUsedThisWeek: []
+                                actionsUsedThisWeek: [],
+                                flipAttemptThisWeek: false
                               } : r
                             ));
                             setShowNegotiationModal(false);
@@ -12318,7 +13527,8 @@ const App = () => {
                             r.id === negotiatingRecruit.id ? {
                               ...r,
                               interest: 0,
-                              actionsUsedThisWeek: []
+                              actionsUsedThisWeek: [],
+                              flipAttemptThisWeek: false
                             } : r
                           ));
                           setShowNegotiationModal(false);
@@ -13111,10 +14321,10 @@ const App = () => {
                           const nsdDecision = nsdResults.find(d => d.recruit.id === r.id);
                           if (nsdDecision) {
                             if (nsdDecision.signed) {
-                              return { ...r, signedCommit: true };
+                              return { ...r, signedCommit: true, signingDayDecision: false };
                             } else {
                               // Remove from user's recruits if they signed elsewhere
-                              return { ...r, verbalCommit: false, committedSchool: null, interest: 0 };
+                              return { ...r, verbalCommit: false, committedSchool: null, interest: 0, signingDayDecision: false };
                             }
                           }
                           return r;
@@ -13660,7 +14870,8 @@ const App = () => {
                         // Use functional update to get latest recruits state and clear actions
                         setRecruits(prev => prev.map(r => ({
                           ...r,
-                          actionsUsedThisWeek: []
+                          actionsUsedThisWeek: [],
+                          flipAttemptThisWeek: false
                         })));
 
                         // Restore recruiting points (HALF during Regular Season)
@@ -14065,6 +15276,7 @@ const App = () => {
                           return {
                             ...r,
                             signedCommit: true,
+                            signingDayDecision: false,
                             acceptedNILAmount: newTotal,
                             nilDeal: newTotal
                           };
