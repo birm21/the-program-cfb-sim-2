@@ -22,6 +22,14 @@ This document outlines the mechanics, probabilities, and systems that drive the 
 9. [In-Game Chaos Events](#in-game-chaos-events)
 10. [Coaching Chaos Events](#coaching-chaos-events)
 11. [NIL System](#nil-system)
+12. [Donor System](#donor-system)
+    - [Donor Points](#donor-points)
+    - [Courting Actions](#courting-actions)
+    - [Donor Types by Region](#donor-types-by-region)
+    - [Old Money vs New Money](#old-money-vs-new-money)
+    - [Donor Personality Traits](#donor-personality-traits)
+    - [Donor Retention](#donor-retention)
+    - [New Money Emergence](#new-money-emergence)
 
 ---
 
@@ -360,7 +368,7 @@ A committed recruit will decommit if ANY of the following conditions occur:
 
 | Condition | Trigger |
 |-----------|---------|
-| Interest Below 70% | Losing games causes interest to drop |
+| Interest Below 50% | Significant interest drop (reduced from 70% to prevent aggressive decommits) |
 | No NIL Agreement | Commit without finalized NIL deal |
 | NIL Deal is $0 | Invalid NIL contract |
 
@@ -734,6 +742,132 @@ NIL generosity affects flip resistance:
 | Blowout Loss | -12% |
 | Rivalry Loss | -15% |
 | Each Consecutive Loss | -5% additional |
+
+---
+
+## Donor System
+
+The donor system allows you to court wealthy individuals to increase your NIL budget. Donors come in two categories: **Old Money** (stable, loyal alumni) and **New Money** (volatile, demanding newcomers).
+
+### Donor Points
+
+Currency used to court donors. Earned based on school tier and achievements.
+
+**Weekly Allocation by Tier:**
+| Tier | Off-Season (Weeks 1-4) | Off-Season (Weeks 5-16) | Regular Season |
+|------|------------------------|-------------------------|----------------|
+| Blue Blood | 500/week | 250/week | From wins only |
+| Power 4 | 300/week | 150/week | From wins only |
+| Group of 5 | 150/week | 75/week | From wins only |
+
+**New Coach Starting Capital:** When starting a new game, coaches receive bonus donor points equal to one week's allocation PLUS their first week's points. This gives new coaches extra runway to court donors and get established (e.g., Blue Blood starts with 1000 points = 500 starting + 500 Week 1).
+
+**Win Bonuses:**
+| Achievement | Donor Points |
+|-------------|--------------|
+| Regular win | +25 |
+| Rivalry win | +50 |
+| 10+ win season | +100 bonus |
+| 12+ win season | +250 bonus |
+
+### Courting Actions
+
+| Action | Cost | Relationship Gain |
+|--------|------|-------------------|
+| Phone Call | 50 pts | +8-15% |
+| Meeting | 100 pts | +15-25% |
+| Game Day Invite | 200 pts | +25-40% |
+
+**Weekly Limits:** Each action can only be used **once per donor per week**. Actions reset when you advance to the next week. This prevents spamming a single donor with multiple invites.
+
+**Commitment Threshold:** Donors commit when relationship reaches 80%.
+
+**When Donor Money Applies:** Secured donor contributions are added to your **next season's budget**, not immediately. This is more realistic (pledges take time to materialize) and is shown in the new season summary.
+
+### Donor Types by Region
+
+Regional donors are available based on your school's state:
+
+| Type | States | Contribution |
+|------|--------|--------------|
+| Tech Mogul | CA, WA, TX, MA, CO, OR | $2-10M/year |
+| Oil & Energy Baron | TX, OK, LA, ND, WY, NM | $2-8M/year |
+| Finance Titan | NY, CT, NJ, IL, PA, MA | $3-10M/year |
+| Real Estate Developer | FL, AZ, NV, CA, GA, NC | $1-5M/year |
+| Agribusiness Magnate | NE, IA, KS, AR, MO, IN | $1-4M/year |
+| Auto/Manufacturing Exec | MI, OH, IN, TN, KY | $1-5M/year |
+| Entertainment Mogul | CA, TN, GA, NY, FL | $2-6M/year |
+| Healthcare CEO | NJ, NC, MA, PA, MD | $2-6M/year |
+
+**Universal Donors (all schools):**
+| Type | Contribution |
+|------|--------------|
+| Local Car Dealer | $50-200K/year |
+| Restaurant Chain Owner | $100-300K/year |
+| Successful Attorney | $50-150K/year |
+| Former NFL Player | $100-500K/year |
+| Wealthy Alumni | $200-500K/year |
+
+### Old Money vs New Money
+
+| Characteristic | Old Money | New Money |
+|----------------|-----------|-----------|
+| Connection | Lifelong alumni | Little/none |
+| Win Expectations | Moderate | High (+2 wins) |
+| Patience | Forgiving | Demands results NOW |
+| Loyalty | High (50-80) | Low (25-40) |
+| Leave Threshold | <25-40 relationship | <45-50 relationship |
+| Stability | Reliable | Volatile |
+| Contribution | Standard | Often higher |
+
+### Donor Personality Traits
+
+Each donor has 1-2 personality traits that affect their behavior:
+
+**Stabilizing Traits (Old Money):**
+| Trait | Effect |
+|-------|--------|
+| Loyal Alumni | Leave threshold 25, half relationship decay |
+| Patient Investor | Leave threshold 30, expects 2 fewer wins |
+
+**Demanding Traits (New Money):**
+| Trait | Effect |
+|-------|--------|
+| Rivalry Obsessed | +20 for rivalry win, -30 for rivalry loss |
+| Impatient | Leave threshold 50, expects 2 MORE wins |
+| Recruiting Focused | Expects top 25 class, -15 penalty if missed |
+| Spotlight Seeker | Expects team ranked, -20 if unranked |
+
+### Donor Retention
+
+At end of each season, donors evaluate your performance:
+
+**Relationship Changes:**
+| Outcome | Effect |
+|---------|--------|
+| Below expected wins | -20 (modified by traits) |
+| Exceeded wins by 3+ | +15 |
+| Rivalry win (if obsessed) | +20 per win |
+| Rivalry loss (if obsessed) | -30 per loss |
+| Missed recruiting expectation | -15 |
+| Finished unranked (if spotlight seeker) | -20 |
+
+**Departure:** Donors leave if relationship drops below their `leaveThreshold` (25-50 depending on traits).
+
+### New Money Emergence
+
+Each off-season, there's a chance (15-40% based on winning) for a wealthy new donor to appear:
+
+**New Money Types:**
+| Type | Contribution Range |
+|------|-------------------|
+| Cryptocurrency Investor | $3-15M/year |
+| Tech Startup Founder | $5-20M/year |
+| Plaintiff's Attorney | $2-8M/year |
+| Private Equity Partner | $4-12M/year |
+| Trust Fund Heir | $3-10M/year |
+
+New money donors always have demanding traits and lower loyalty, but offer significant contributions.
 
 ---
 

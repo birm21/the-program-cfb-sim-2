@@ -306,6 +306,87 @@ const SCHOOLS = {
   ]
 };
 
+// Donor types mapped to regions/states
+const DONOR_TYPES = [
+  { id: 'tech_mogul', name: 'Tech Mogul', icon: '💻', states: ['CA', 'WA', 'TX', 'MA', 'CO', 'OR'], minContribution: 2000000, maxContribution: 10000000, difficulty: 'hard' },
+  { id: 'oil_baron', name: 'Oil & Energy Baron', icon: '🛢️', states: ['TX', 'OK', 'LA', 'ND', 'WY', 'NM'], minContribution: 2000000, maxContribution: 8000000, difficulty: 'hard' },
+  { id: 'finance_titan', name: 'Finance Titan', icon: '📈', states: ['NY', 'CT', 'NJ', 'IL', 'PA', 'MA'], minContribution: 3000000, maxContribution: 10000000, difficulty: 'very_hard' },
+  { id: 'real_estate', name: 'Real Estate Developer', icon: '🏗️', states: ['FL', 'AZ', 'NV', 'CA', 'GA', 'NC'], minContribution: 1000000, maxContribution: 5000000, difficulty: 'medium' },
+  { id: 'agribusiness', name: 'Agribusiness Magnate', icon: '🌾', states: ['NE', 'IA', 'KS', 'AR', 'MO', 'IN'], minContribution: 1000000, maxContribution: 4000000, difficulty: 'medium' },
+  { id: 'auto_exec', name: 'Auto/Manufacturing Exec', icon: '🏭', states: ['MI', 'OH', 'IN', 'TN', 'KY'], minContribution: 1000000, maxContribution: 5000000, difficulty: 'medium' },
+  { id: 'entertainment', name: 'Entertainment Mogul', icon: '🎬', states: ['CA', 'TN', 'GA', 'NY', 'FL'], minContribution: 2000000, maxContribution: 6000000, difficulty: 'hard' },
+  { id: 'healthcare', name: 'Healthcare/Pharma CEO', icon: '💊', states: ['NJ', 'NC', 'MA', 'PA', 'MD'], minContribution: 2000000, maxContribution: 6000000, difficulty: 'hard' }
+];
+
+const UNIVERSAL_DONOR_TYPES = [
+  { id: 'car_dealer', name: 'Local Car Dealer', icon: '🚗', minContribution: 50000, maxContribution: 200000, difficulty: 'easy' },
+  { id: 'restaurant', name: 'Restaurant Chain Owner', icon: '🍔', minContribution: 100000, maxContribution: 300000, difficulty: 'easy' },
+  { id: 'attorney', name: 'Successful Attorney', icon: '⚖️', minContribution: 50000, maxContribution: 150000, difficulty: 'easy' },
+  { id: 'nfl_player', name: 'Former Player (NFL)', icon: '🏈', minContribution: 100000, maxContribution: 500000, difficulty: 'medium' },
+  { id: 'alumni', name: 'Wealthy Alumni', icon: '🎓', minContribution: 200000, maxContribution: 500000, difficulty: 'medium' }
+];
+
+// First names and last names for donor generation
+const DONOR_FIRST_NAMES = ['James', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Christopher', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua', 'Kenneth', 'Kevin', 'Brian', 'George', 'Timothy', 'Ronald', 'Edward', 'Jason', 'Jeffrey', 'Ryan', 'Jacob'];
+const DONOR_LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Anderson', 'Taylor', 'Thomas', 'Moore', 'Jackson', 'Martin', 'Lee', 'Thompson', 'White', 'Harris', 'Clark', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres'];
+
+// Donor personality traits - affect expectations and retention
+const DONOR_TRAITS = {
+  // Positive/Stabilizing traits (more common in old money)
+  loyalAlum: {
+    name: 'Loyal Alumni',
+    description: 'Deeply connected to the program, very forgiving',
+    leaveThreshold: 25,  // Won't leave unless relationship drops below 25
+    relationshipDecayMod: 0.5  // Half the penalty for failures
+  },
+  patient: {
+    name: 'Patient Investor',
+    description: 'Understands rebuilding takes time',
+    leaveThreshold: 30,
+    winExpectationMod: -2  // Expects 2 fewer wins
+  },
+
+  // Demanding traits (more common in new money)
+  rivalryObsessed: {
+    name: 'Rivalry Obsessed',
+    description: 'MUST beat the rival or they\'re furious',
+    rivalryWinBonus: 20,      // +20 relationship for rivalry win
+    rivalryLossPenalty: -30,  // -30 relationship for rivalry loss
+    requiresRivalryWin: true
+  },
+  impatient: {
+    name: 'Impatient',
+    description: 'Expects immediate results',
+    leaveThreshold: 50,  // Leaves at relationship < 50 (not 40)
+    winExpectationMod: +2  // Expects 2 more wins
+  },
+  recruitingFocused: {
+    name: 'Recruiting Focused',
+    description: 'Wants elite recruiting classes',
+    expectsTopRecruitingClass: 25,  // Wants top 25 class
+    recruitingFailPenalty: -15  // -15 if class outside top 25
+  },
+  spotlightSeeker: {
+    name: 'Spotlight Seeker',
+    description: 'Wants national relevance and attention',
+    expectsRanked: true,  // Wants team ranked at season end
+    unrankedPenalty: -20  // -20 if team finishes unranked
+  },
+
+  // Neutral/Mixed traits
+  handson: {
+    name: 'Hands-On',
+    description: 'Likes to be involved in decisions',
+    // Future: triggers demand events
+    demandEventChance: 0.3  // 30% chance of demand event per season
+  }
+};
+
+// Trait pools for different donor categories
+const OLD_MONEY_TRAITS = ['loyalAlum', 'patient', 'loyalAlum'];  // Weighted toward stability
+const NEW_MONEY_TRAITS = ['rivalryObsessed', 'impatient', 'recruitingFocused', 'spotlightSeeker', 'handson'];
+const UNIVERSAL_DONOR_TRAITS = ['loyalAlum', 'patient', 'rivalryObsessed'];  // Mix
+
 // Rivalry mappings - each school has 1-3 primary rivals
 const RIVALRIES = {
   // BLUE BLOODS
@@ -1286,8 +1367,19 @@ const generateRandomEvent = (roster, currentEvent, budget) => {
     }
     
     case EVENT_TYPES.INJURY_REPORT: {
-      const player = roster.filter(p => p.isStarter)[Math.floor(Math.random() * roster.filter(p => p.isStarter).length)] 
-                     || roster[Math.floor(Math.random() * roster.length)];
+      // Guard against empty roster
+      if (!roster || roster.length === 0) {
+        return {
+          title: 'No Injury Report',
+          message: 'No players available for injury event.',
+          type: 'info',
+          choices: [{ id: 'ok', label: 'OK', effect: () => {} }]
+        };
+      }
+      const starters = roster.filter(p => p.isStarter);
+      const player = starters.length > 0
+        ? starters[Math.floor(Math.random() * starters.length)]
+        : roster[Math.floor(Math.random() * roster.length)];
       
       // Define specific injury types with recovery times
       const injuryTypes = [
@@ -3455,19 +3547,8 @@ const generateAllAIRosters = () => {
   return aiRosters;
 };
 
-// Calculate team overall rating (0-100)
-const calculateTeamRating = (roster) => {
-  if (!roster || roster.length === 0) return 0;
-  
-  // Weight by stars: 5-star = 100, 4-star = 85, 3-star = 70, 2-star = 55
-  const starValues = { 5: 100, 4: 85, 3: 70, 2: 55, 1: 40 };
-  
-  const totalValue = roster.reduce((sum, player) => {
-    return sum + (starValues[player.stars] || 55);
-  }, 0);
-  
-  return Math.round(totalValue / roster.length);
-};
+// SAVE_VERSION - Increment when save schema changes
+const SAVE_VERSION = 1;
 
 const App = () => {
   const [gameState, setGameState] = useState('titleScreen');
@@ -3485,6 +3566,14 @@ const App = () => {
   const [schoolSearchFilter, setSchoolSearchFilter] = useState(''); // Search/filter schools
   const [schoolConferenceFilter, setSchoolConferenceFilter] = useState('ALL'); // Filter by conference
   const [showBudgetBreakdown, setShowBudgetBreakdown] = useState(false);
+  const [nilStatusFilter, setNilStatusFilter] = useState('all'); // NIL Management tab filter
+  const [nilSubTab, setNilSubTab] = useState('recruits'); // NIL sub-tab: 'recruits', 'roster', 'donors'
+  const [rosterNilSort, setRosterNilSort] = useState('satisfaction'); // Roster NIL sort option
+  const [rosterNilFilter, setRosterNilFilter] = useState('all'); // Roster NIL filter
+  const [showFullRoster, setShowFullRoster] = useState(false); // Expand/collapse roster browser
+  const [donors, setDonors] = useState([]); // Available and secured donors
+  const [donorPoints, setDonorPoints] = useState(0); // Current donor points
+  const [donorPointsPerWeek, setDonorPointsPerWeek] = useState(300); // Base donor points rate
   const [showRosterBreakdown, setShowRosterBreakdown] = useState(false);
   const [showRecruitingOverview, setShowRecruitingOverview] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState([]);
@@ -3557,6 +3646,10 @@ const App = () => {
   const [showDecommitModal, setShowDecommitModal] = useState(false);
   const [decommittedRecruits, setDecommittedRecruits] = useState([]);
   const [reportOthersExpanded, setReportOthersExpanded] = useState(false);
+
+  // New Money Donor Alert Modal State
+  const [showNewMoneyDonorModal, setShowNewMoneyDonorModal] = useState(false);
+  const [newMoneyDonorData, setNewMoneyDonorData] = useState(null);
 
   // Instant Commit Modal State
   const [showInstantCommitModal, setShowInstantCommitModal] = useState(false);
@@ -3667,7 +3760,15 @@ const App = () => {
     if (savedGame) {
       try {
         const gameData = JSON.parse(savedGame);
-        
+
+        // Handle save file versioning and migrations
+        const savedVersion = gameData.saveVersion || 0;
+        if (savedVersion < SAVE_VERSION) {
+          console.log(`Migrating save from v${savedVersion} to v${SAVE_VERSION}`);
+          // Migration logic for future schema changes goes here
+          // Example: if (savedVersion < 2) { migrate v1 to v2 }
+        }
+
         // Validate that we have the minimum required data
         if (gameData.selectedSchool && gameData.roster && gameData.roster.length > 0 && gameData.budget) {
           setSelectedSchool(gameData.selectedSchool);
@@ -3760,6 +3861,54 @@ const App = () => {
           });
           setPositionBoosts(gameData.positionBoosts || []);
           setRecruitingPenaltyWeeks(gameData.recruitingPenaltyWeeks || 0);
+
+          // Load donor system
+          if (gameData.donors && gameData.donors.length > 0) {
+            setDonors(gameData.donors);
+            setDonorPoints(gameData.donorPoints || 0);
+            setDonorPointsPerWeek(gameData.donorPointsPerWeek || 300);
+          } else {
+            // Old save without donors - generate them
+            const schoolState = gameData.selectedSchool.state;
+            const regionalTypes = DONOR_TYPES.filter(d => d.states.includes(schoolState));
+            const generatedDonors = [];
+            let donorId = 0;
+            const numRegional = Math.min(regionalTypes.length, 2 + Math.floor(Math.random() * 3));
+            const shuffledRegional = [...regionalTypes].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < numRegional; i++) {
+              const type = shuffledRegional[i];
+              const contribution = Math.floor(type.minContribution + Math.random() * (type.maxContribution - type.minContribution));
+              generatedDonors.push({
+                id: `donor_${donorId++}`,
+                name: `${DONOR_FIRST_NAMES[Math.floor(Math.random() * DONOR_FIRST_NAMES.length)]} ${DONOR_LAST_NAMES[Math.floor(Math.random() * DONOR_LAST_NAMES.length)]}`,
+                type: type.name, typeId: type.id, icon: type.icon,
+                annualContribution: contribution, relationship: 0, status: 'available', difficulty: type.difficulty,
+                expectations: { minWins: type.difficulty === 'very_hard' ? 8 : type.difficulty === 'hard' ? 6 : 4, minRanking: type.difficulty === 'very_hard' ? 15 : type.difficulty === 'hard' ? 25 : 50 },
+                loyalty: 40 + Math.floor(Math.random() * 40)
+              });
+            }
+            const numUniversal = 4 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < numUniversal; i++) {
+              const type = UNIVERSAL_DONOR_TYPES[i % UNIVERSAL_DONOR_TYPES.length];
+              const contribution = Math.floor(type.minContribution + Math.random() * (type.maxContribution - type.minContribution));
+              generatedDonors.push({
+                id: `donor_${donorId++}`,
+                name: `${DONOR_FIRST_NAMES[Math.floor(Math.random() * DONOR_FIRST_NAMES.length)]} ${DONOR_LAST_NAMES[Math.floor(Math.random() * DONOR_LAST_NAMES.length)]}`,
+                type: type.name, typeId: type.id, icon: type.icon,
+                annualContribution: contribution, relationship: 0, status: 'available', difficulty: type.difficulty,
+                expectations: { minWins: type.difficulty === 'medium' ? 5 : 3, minRanking: type.difficulty === 'medium' ? 40 : 80 },
+                loyalty: 50 + Math.floor(Math.random() * 30)
+              });
+            }
+            setDonors(generatedDonors);
+            let initialPoints = 300;
+            if (gameData.selectedSchool.tier === 'Blue Blood') initialPoints = 500;
+            else if (gameData.selectedSchool.tier === 'Group of 5') initialPoints = 150;
+            setDonorPoints(initialPoints);
+            setDonorPointsPerWeek(initialPoints);
+            console.log('Generated donors for old save:', generatedDonors.length);
+          }
+
           if (gameData.customNicknames) {
             setCustomNicknames(gameData.customNicknames);
           }
@@ -3818,7 +3967,7 @@ const App = () => {
         r.verbalCommit &&
         r.committedSchool?.id === selectedSchool.id && (
           // User commits MUST have:
-          r.interest < 70 || // At least 70% interest (NIL negotiation requirement)
+          r.interest < 50 || // At least 50% interest (reduced threshold to prevent aggressive decommits)
           !r.isTargeted || // Must be targeted (recruiting action taken)
           (!r.nilOfferAccepted && !r.signedCommit) || // Must have accepted NIL or be signed
           !r.nilDeal || // Must have NIL deal
@@ -3832,8 +3981,8 @@ const App = () => {
         // Capture decommit reasons for notification
         const decommitInfo = needsCleanup.map(r => {
           let reason = '';
-          if (r.interest < 70) {
-            reason = `Interest dropped to ${r.interest}% (below 70% threshold)`;
+          if (r.interest < 50) {
+            reason = `Interest dropped to ${r.interest}% (below 50% threshold)`;
           } else if (!r.isTargeted) {
             reason = 'Recruit was not properly targeted';
           } else if (!r.nilOfferAccepted && !r.signedCommit) {
@@ -3854,7 +4003,7 @@ const App = () => {
           // ONLY remove commits to USER's school that are invalid
           if (r.verbalCommit &&
               r.committedSchool?.id === selectedSchool.id && (
-                r.interest < 70 ||
+                r.interest < 50 ||
                 !r.isTargeted ||
                 (!r.nilOfferAccepted && !r.signedCommit) ||
                 !r.nilDeal ||
@@ -4098,12 +4247,23 @@ const App = () => {
   
   // Initialize off-season week when entering The Off-Season
   useEffect(() => {
+    // Guard: Only run when actually playing the game (not title screen or loading)
+    if (gameState !== 'playing') return;
+
     const currentEvent = getCurrentEvent();
-    
+
     // Only initialize off-season if we're in the event, week is null, AND we haven't completed it yet THIS CYCLE
     if (currentEvent === 'The Off-Season' && offSeasonWeek === null && offSeasonWeeksCompleted < 16) {
       setOffSeasonWeek(1);
       console.log('Entered The Off-Season - Starting Week 1 of 16');
+
+      // Auto-switch to NIL Management > DONORS tab for donor courting season
+      setActiveTab('donors');
+      setNilSubTab('donors');
+      console.log('🤝 Donor Courting Season - Switched to DONORS tab');
+
+      // Restore full donor points for the off-season
+      setDonorPoints(prev => prev + donorPointsPerWeek);
 
       // Generate next season's schedule at the start of The Off-Season
       const schedule = generateSeasonSchedule();
@@ -4111,6 +4271,70 @@ const App = () => {
       setSeasonRecord({ wins: 0, losses: 0, confWins: 0, confLosses: 0 });
       setGameResults([]);
       console.log('Next season schedule generated:', schedule.length, 'games');
+
+      // NEW MONEY EMERGENCE - chance for a new wealthy donor to appear
+      // Higher chance based on program success
+      const baseNewMoneyChance = 0.15; // 15% base chance
+      const winsBonus = (coachRecord.wins / Math.max(1, coachRecord.wins + coachRecord.losses)) * 0.15; // Up to +15% for winning
+      const tierBonus = selectedSchool?.tier === 'Blue Blood' ? 0.1 : selectedSchool?.tier === 'Power 4' ? 0.05 : 0;
+      const newMoneyChance = Math.min(0.4, baseNewMoneyChance + winsBonus + tierBonus); // Cap at 40%
+
+      if (Math.random() < newMoneyChance) {
+        // Generate a new money donor
+        const newMoneyTypes = [
+          { id: 'crypto_investor', name: 'Cryptocurrency Investor', icon: '₿', minContribution: 3000000, maxContribution: 15000000 },
+          { id: 'tech_founder', name: 'Tech Startup Founder', icon: '🚀', minContribution: 5000000, maxContribution: 20000000 },
+          { id: 'plaintiff_attorney', name: 'Plaintiff\'s Attorney', icon: '⚖️', minContribution: 2000000, maxContribution: 8000000 },
+          { id: 'private_equity', name: 'Private Equity Partner', icon: '💼', minContribution: 4000000, maxContribution: 12000000 },
+          { id: 'inheritance', name: 'Trust Fund Heir', icon: '👑', minContribution: 3000000, maxContribution: 10000000 }
+        ];
+        const type = newMoneyTypes[Math.floor(Math.random() * newMoneyTypes.length)];
+        const contribution = Math.floor(type.minContribution + Math.random() * (type.maxContribution - type.minContribution));
+
+        // New money donors always have demanding traits
+        const newMoneyTraitPool = ['rivalryObsessed', 'impatient', 'recruitingFocused', 'spotlightSeeker'];
+        const traits = [];
+        const shuffledTraits = [...newMoneyTraitPool].sort(() => Math.random() - 0.5);
+        traits.push(shuffledTraits[0]);
+        if (Math.random() < 0.5) traits.push(shuffledTraits[1]); // 50% chance of second trait
+
+        const newDonor = {
+          id: `donor_newmoney_${Date.now()}`,
+          name: `${DONOR_FIRST_NAMES[Math.floor(Math.random() * DONOR_FIRST_NAMES.length)]} ${DONOR_LAST_NAMES[Math.floor(Math.random() * DONOR_LAST_NAMES.length)]}`,
+          type: type.name,
+          typeId: type.id,
+          icon: type.icon,
+          annualContribution: contribution,
+          relationship: 10, // Starts with some interest (they reached out)
+          status: 'available',
+          difficulty: 'hard',
+          isNewMoney: true,
+          traits,
+          expectations: {
+            minWins: 8 + (traits.includes('impatient') ? 2 : 0),
+            mustBeatRival: traits.includes('rivalryObsessed'),
+            topRecruitingClass: traits.includes('recruitingFocused') ? 20 : null,
+            mustBeRanked: traits.includes('spotlightSeeker')
+          },
+          leaveThreshold: traits.includes('impatient') ? 50 : 45,
+          loyalty: 25 + Math.floor(Math.random() * 15) // Low loyalty
+        };
+
+        setDonors(prev => [...prev, newDonor]);
+        console.log(`💰 NEW MONEY ALERT: ${newDonor.name} (${type.name}) wants to meet! Potential: ${formatCurrency(contribution)}/year`);
+
+        // Show in-game modal to user
+        setTimeout(() => {
+          setNewMoneyDonorData({
+            name: newDonor.name,
+            type: type.name,
+            icon: type.icon,
+            contribution: contribution,
+            traits: traits.map(t => DONOR_TRAITS[t]?.name).filter(Boolean)
+          });
+          setShowNewMoneyDonorModal(true);
+        }, 500);
+      }
     } else if (currentEvent !== 'The Off-Season') {
       // When we leave The Off-Season, reset completion tracker for next year
       if (offSeasonWeeksCompleted === 16) {
@@ -4124,8 +4348,8 @@ const App = () => {
         console.log('Exited The Off-Season');
       }
     }
-  }, [currentDate, offSeasonWeek, offSeasonWeeksCompleted]);
-  
+  }, [gameState, currentDate, offSeasonWeek, offSeasonWeeksCompleted]);
+
   // Annual budget inflation - increase budget by 5-7% when new year starts
   useEffect(() => {
     if (currentDate.month === 0 && currentDate.day === 1 && currentDate.year > 2026) {
@@ -4211,14 +4435,135 @@ const App = () => {
 
     // Set initial coach success based on tier
     let initialSuccess = 50; // Default
+    let initialDonorPoints = 300; // Default
+    let donorPointsRate = 300; // Default
     if (pendingSchool.tier === 'Blue Blood') {
       initialSuccess = 75;
+      initialDonorPoints = 500;
+      donorPointsRate = 500;
     } else if (pendingSchool.tier === 'Power 4') {
       initialSuccess = 60;
+      initialDonorPoints = 300;
+      donorPointsRate = 300;
     } else if (pendingSchool.tier === 'Group of 5') {
       initialSuccess = 40;
+      initialDonorPoints = 150;
+      donorPointsRate = 150;
     }
     setCoachSuccess(initialSuccess);
+    // New coach starting capital - gets initial points PLUS first week allocation when off-season starts
+    // This gives new coaches extra runway to court donors and get established
+    setDonorPoints(initialDonorPoints);
+    setDonorPointsPerWeek(donorPointsRate);
+
+    // Generate donors based on school state
+    const schoolState = pendingSchool.state;
+    const regionalTypes = DONOR_TYPES.filter(d => d.states.includes(schoolState));
+    const generatedDonors = [];
+    let donorId = 0;
+
+    // Helper function to assign traits based on donor category
+    const assignTraits = (isNewMoney, isUniversal) => {
+      const traits = [];
+      const traitPool = isNewMoney ? NEW_MONEY_TRAITS : (isUniversal ? UNIVERSAL_DONOR_TRAITS : OLD_MONEY_TRAITS);
+
+      // Assign 1-2 traits
+      const numTraits = 1 + (Math.random() < 0.4 ? 1 : 0);
+      const shuffledPool = [...traitPool].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < numTraits && i < shuffledPool.length; i++) {
+        if (!traits.includes(shuffledPool[i])) {
+          traits.push(shuffledPool[i]);
+        }
+      }
+      return traits;
+    };
+
+    // Helper to calculate leave threshold based on traits
+    const calculateLeaveThreshold = (traits) => {
+      let threshold = 40; // Default
+      traits.forEach(traitId => {
+        const trait = DONOR_TRAITS[traitId];
+        if (trait?.leaveThreshold) {
+          threshold = Math.max(threshold, trait.leaveThreshold);
+        }
+      });
+      return threshold;
+    };
+
+    // Generate 2-4 regional donors (mostly old money, some new money)
+    const numRegional = Math.min(regionalTypes.length, 2 + Math.floor(Math.random() * 3));
+    const shuffledRegional = [...regionalTypes].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < numRegional; i++) {
+      const type = shuffledRegional[i];
+      const contribution = Math.floor(type.minContribution + Math.random() * (type.maxContribution - type.minContribution));
+      const isNewMoney = Math.random() < 0.25; // 25% chance of new money for regional donors
+      const traits = assignTraits(isNewMoney, false);
+
+      // New money has stricter expectations
+      const baseMinWins = type.difficulty === 'very_hard' ? 8 : type.difficulty === 'hard' ? 6 : 4;
+      const winMod = traits.reduce((mod, t) => mod + (DONOR_TRAITS[t]?.winExpectationMod || 0), 0);
+
+      generatedDonors.push({
+        id: `donor_${donorId++}`,
+        name: `${DONOR_FIRST_NAMES[Math.floor(Math.random() * DONOR_FIRST_NAMES.length)]} ${DONOR_LAST_NAMES[Math.floor(Math.random() * DONOR_LAST_NAMES.length)]}`,
+        type: type.name,
+        typeId: type.id,
+        icon: type.icon,
+        annualContribution: contribution,
+        relationship: 0,
+        status: 'available',
+        difficulty: type.difficulty,
+        isNewMoney,
+        traits,
+        expectations: {
+          minWins: Math.max(3, baseMinWins + winMod + (isNewMoney ? 2 : 0)),
+          minRanking: type.difficulty === 'very_hard' ? 15 : type.difficulty === 'hard' ? 25 : 50,
+          mustBeatRival: traits.includes('rivalryObsessed'),
+          topRecruitingClass: traits.includes('recruitingFocused') ? 25 : null,
+          mustBeRanked: traits.includes('spotlightSeeker')
+        },
+        leaveThreshold: calculateLeaveThreshold(traits),
+        loyalty: isNewMoney ? 30 + Math.floor(Math.random() * 20) : 50 + Math.floor(Math.random() * 30)
+      });
+    }
+
+    // Generate 4-6 universal donors (mix of old and new money)
+    const numUniversal = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < numUniversal; i++) {
+      const type = UNIVERSAL_DONOR_TYPES[i % UNIVERSAL_DONOR_TYPES.length];
+      const contribution = Math.floor(type.minContribution + Math.random() * (type.maxContribution - type.minContribution));
+      const isNewMoney = Math.random() < 0.15; // 15% chance for universal donors
+      const traits = assignTraits(isNewMoney, true);
+
+      const baseMinWins = type.difficulty === 'medium' ? 5 : 3;
+      const winMod = traits.reduce((mod, t) => mod + (DONOR_TRAITS[t]?.winExpectationMod || 0), 0);
+
+      generatedDonors.push({
+        id: `donor_${donorId++}`,
+        name: `${DONOR_FIRST_NAMES[Math.floor(Math.random() * DONOR_FIRST_NAMES.length)]} ${DONOR_LAST_NAMES[Math.floor(Math.random() * DONOR_LAST_NAMES.length)]}`,
+        type: type.name,
+        typeId: type.id,
+        icon: type.icon,
+        annualContribution: contribution,
+        relationship: 0,
+        status: 'available',
+        difficulty: type.difficulty,
+        isNewMoney,
+        traits,
+        expectations: {
+          minWins: Math.max(2, baseMinWins + winMod + (isNewMoney ? 1 : 0)),
+          minRanking: type.difficulty === 'medium' ? 40 : 80,
+          mustBeatRival: traits.includes('rivalryObsessed'),
+          topRecruitingClass: traits.includes('recruitingFocused') ? 40 : null,
+          mustBeRanked: traits.includes('spotlightSeeker')
+        },
+        leaveThreshold: calculateLeaveThreshold(traits),
+        loyalty: isNewMoney ? 40 + Math.floor(Math.random() * 20) : 50 + Math.floor(Math.random() * 30)
+      });
+    }
+
+    setDonors(generatedDonors);
+    console.log('Generated', generatedDonors.length, 'donors for', schoolState);
 
     // Generate season schedule immediately after school selection
     const schedule = generateSeasonSchedule(pendingSchool);
@@ -4392,6 +4737,7 @@ const App = () => {
       });
       
       const gameData = {
+        saveVersion: SAVE_VERSION, // Version control for schema migrations
         selectedSchool,
         roster,
         recruits: optimizedRecruits, // Use optimized version
@@ -4424,6 +4770,10 @@ const App = () => {
         seasonStats,
         positionBoosts,
         recruitingPenaltyWeeks,
+        // Donor system
+        donors,
+        donorPoints,
+        donorPointsPerWeek,
         // Don't save aiRosters - they're not essential and huge
         // aiRosters can be regenerated if needed
       };
@@ -4438,7 +4788,7 @@ const App = () => {
         }
       }
     }
-  }, [selectedSchool, roster, recruits, recruitingPoints, budget, budgetAllocated, incomingFreshmanBudget, transferAdditionsBudget, currentDate, currentGameWeek, dismissedAlerts, offSeasonWeek, offSeasonWeeksCompleted, aiRosters, coachName, coachRecord, coachRivalRecord, coachChampionships, coachSuccess, aiCoaches, customSchoolNames, customNicknames, customConferenceNames, seasonSchedule, seasonRecord, dynastyYear, gameResults, conferenceStandings, teamMorale, seasonStats, positionBoosts, recruitingPenaltyWeeks]);
+  }, [selectedSchool, roster, recruits, recruitingPoints, budget, budgetAllocated, incomingFreshmanBudget, transferAdditionsBudget, currentDate, currentGameWeek, dismissedAlerts, offSeasonWeek, offSeasonWeeksCompleted, aiRosters, coachName, coachRecord, coachRivalRecord, coachChampionships, coachSuccess, aiCoaches, customSchoolNames, customNicknames, customConferenceNames, seasonSchedule, seasonRecord, dynastyYear, gameResults, conferenceStandings, teamMorale, seasonStats, positionBoosts, recruitingPenaltyWeeks, donors, donorPoints, donorPointsPerWeek]);
 
   // Reusable Position Group Component for Recruiting
   const PositionGroup = ({ position, title, recruits, expandedPositions, setExpandedPositions, canRecruit, recruitingPoints, executeRecruitingAction, showSubPosition = false }) => {
@@ -7278,7 +7628,17 @@ const App = () => {
     // Increment off-season week
     setOffSeasonWeek(offSeasonWeek + 1);
     setOffSeasonWeeksCompleted(offSeasonWeek);
-    
+
+    // Restore donor points (full points weeks 1-4, half points weeks 5-16)
+    const isDonorCourtingSeason = offSeasonWeek <= 4;
+    const weeklyDonorBonus = isDonorCourtingSeason ? donorPointsPerWeek : Math.floor(donorPointsPerWeek / 2);
+    setDonorPoints(prev => prev + weeklyDonorBonus);
+    console.log(`💰 Donor points restored: +${weeklyDonorBonus} (${isDonorCourtingSeason ? 'Courting Season' : 'Off-Season'})`);
+
+    // Reset weekly donor actions (each action can only be used once per donor per week)
+    setDonors(prev => prev.map(d => ({ ...d, weeklyActionsUsed: [] })));
+    console.log('🔄 Donor weekly actions reset');
+
     // Reset recruiting actions and flip attempts
     const recruitsBeforeAI = recruits.map(r => ({
       ...r,
@@ -8159,11 +8519,140 @@ const App = () => {
     // 10. Generate new schedule
     const newSchedule = generateSeasonSchedule(selectedSchool);
 
-    // 11. Calculate new budget (slight increase for successful seasons)
+    // 11. Calculate new budget (slight increase for successful seasons + donor contributions)
     const baseIncrease = seasonRecord.wins >= 10 ? 0.1 : seasonRecord.wins >= 8 ? 0.05 : 0;
-    const newBudget = Math.round(budget * (1 + baseIncrease));
+    const baseBudget = Math.round(selectedSchool.budget * (1 + baseIncrease));
 
-    // 12. Apply all state updates
+    // Add secured donor contributions to next season's budget
+    const securedDonors = donors.filter(d => d.status === 'secured');
+    const donorContributions = securedDonors.reduce((sum, d) => sum + (d.annualContribution || 0), 0);
+    const newBudget = baseBudget + donorContributions;
+    console.log(`💰 Budget: Base ${formatCurrency(baseBudget)} + Donors ${formatCurrency(donorContributions)} = ${formatCurrency(newBudget)}`);
+
+    // 12. DONOR RETENTION - Check expectations and update relationships
+    // Calculate rivalry results for this season
+    const rivalryGames = gameResults.filter(g => g.isRivalry);
+    const rivalryWins = rivalryGames.filter(g => g.isWin).length;
+    const rivalryLosses = rivalryGames.filter(g => !g.isWin).length;
+    const beatAtLeastOneRival = rivalryWins > 0;
+
+    let donorSummary = { retained: 0, departed: 0, departedNames: [], reasons: [] };
+    const updatedDonors = donors.map(donor => {
+      // Only check secured donors
+      if (donor.status !== 'secured') return donor;
+
+      let relationshipChange = 0;
+      let unmetExpectations = [];
+      const donorTraits = donor.traits || [];
+
+      // Get trait-based modifiers
+      const decayMod = donorTraits.reduce((mod, t) => {
+        const trait = DONOR_TRAITS[t];
+        return trait?.relationshipDecayMod ? mod * trait.relationshipDecayMod : mod;
+      }, 1.0);
+
+      // Check wins expectation
+      if (donor.expectations?.minWins && seasonRecord.wins < donor.expectations.minWins) {
+        const penalty = Math.round(-20 * decayMod);
+        relationshipChange += penalty;
+        unmetExpectations.push(`Expected ${donor.expectations.minWins}+ wins, got ${seasonRecord.wins}`);
+      }
+
+      // Bonus for exceeding expectations
+      if (donor.expectations?.minWins && seasonRecord.wins >= donor.expectations.minWins + 3) {
+        relationshipChange += 15; // Exceeded by 3+ wins
+      }
+
+      // TRAIT: rivalryObsessed - check rivalry results
+      if (donorTraits.includes('rivalryObsessed')) {
+        if (rivalryWins > 0) {
+          const bonus = DONOR_TRAITS.rivalryObsessed.rivalryWinBonus * rivalryWins;
+          relationshipChange += bonus;
+          console.log(`🏆 ${donor.name} (Rivalry Obsessed): +${bonus} for ${rivalryWins} rivalry win(s)`);
+        }
+        if (rivalryLosses > 0) {
+          const penalty = DONOR_TRAITS.rivalryObsessed.rivalryLossPenalty * rivalryLosses;
+          relationshipChange += penalty;
+          unmetExpectations.push(`Lost ${rivalryLosses} rivalry game(s)`);
+        }
+        // Extra penalty if they REQUIRE a rivalry win and got none
+        if (donor.expectations?.mustBeatRival && !beatAtLeastOneRival) {
+          relationshipChange -= 15;
+          unmetExpectations.push('Failed to beat ANY rival');
+        }
+      }
+
+      // TRAIT: recruitingFocused - check recruiting class rank (simplified for now)
+      if (donorTraits.includes('recruitingFocused') && donor.expectations?.topRecruitingClass) {
+        // Count signed recruits by star rating as a proxy for class quality
+        const signedRecruits = recruits.filter(r => r.signedCommit && r.committedSchool?.id === selectedSchool?.id);
+        const classScore = signedRecruits.reduce((sum, r) => sum + (r.stars * r.stars), 0); // Weight by stars squared
+        const goodClass = classScore >= 50; // Rough threshold for "top 25" class quality
+        if (!goodClass) {
+          relationshipChange += DONOR_TRAITS.recruitingFocused.recruitingFailPenalty;
+          unmetExpectations.push('Recruiting class below expectations');
+        } else {
+          relationshipChange += 10; // Bonus for good class
+        }
+      }
+
+      // TRAIT: spotlightSeeker - would check if team was ranked (simplified)
+      if (donorTraits.includes('spotlightSeeker') && donor.expectations?.mustBeRanked) {
+        // Use wins as proxy for being ranked (8+ wins usually = ranked)
+        const likelyRanked = seasonRecord.wins >= 8;
+        if (!likelyRanked) {
+          relationshipChange += DONOR_TRAITS.spotlightSeeker.unrankedPenalty;
+          unmetExpectations.push('Team finished unranked');
+        } else {
+          relationshipChange += 10; // Bonus for being ranked
+        }
+      }
+
+      const newRelationship = Math.max(0, Math.min(100, donor.relationship + relationshipChange));
+
+      // Log relationship changes
+      if (relationshipChange !== 0) {
+        const traitNames = donorTraits.map(t => DONOR_TRAITS[t]?.name || t).join(', ');
+        console.log(`📊 Donor ${donor.name} [${traitNames || 'No traits'}]: relationship ${donor.relationship} → ${newRelationship} (${relationshipChange > 0 ? '+' : ''}${relationshipChange})`);
+        if (unmetExpectations.length > 0) {
+          console.log(`   Unmet: ${unmetExpectations.join(', ')}`);
+        }
+      }
+
+      // Donor leaves if relationship drops below their threshold (trait-based)
+      const leaveThreshold = donor.leaveThreshold || 40;
+      if (newRelationship < leaveThreshold) {
+        const reason = unmetExpectations.length > 0 ? unmetExpectations[0] : 'Low satisfaction';
+        console.log(`💔 Donor ${donor.name} has LEFT (relationship ${newRelationship} < threshold ${leaveThreshold})`);
+        donorSummary.departed++;
+        donorSummary.departedNames.push(donor.name);
+        donorSummary.reasons.push(`${donor.name}: ${reason}`);
+        return {
+          ...donor,
+          status: 'available', // Back to available pool
+          relationship: 0,
+          yearsSecured: 0
+        };
+      }
+
+      // Increment years secured for retained donors
+      donorSummary.retained++;
+      return {
+        ...donor,
+        relationship: newRelationship,
+        yearsSecured: (donor.yearsSecured || 0) + 1
+      };
+    });
+
+    // Award bonus donor points for season achievements
+    let seasonDonorBonus = 0;
+    if (seasonRecord.wins >= 10) seasonDonorBonus += 100; // Great season
+    if (seasonRecord.wins >= 12) seasonDonorBonus += 150; // Outstanding season
+    // Conference championship and playoffs would add more (checked elsewhere when those events occur)
+
+    console.log(`🎁 Season donor bonus: +${seasonDonorBonus} points`);
+
+    // 13. Apply all state updates
     setRoster(newRoster);
     setAiRosters(updatedAIRosters);
     setRecruits(freshRecruitingClass);
@@ -8174,6 +8663,10 @@ const App = () => {
     setOffSeasonWeeksCompleted(0);
     setSignedClass([]);
     setBudget(newBudget);
+
+    // Apply donor updates
+    setDonors(updatedDonors);
+    setDonorPoints(prev => prev + seasonDonorBonus);
 
     // Recalculate budget allocation based on new roster
     const newBudgetAllocated = newRoster.reduce((sum, p) => sum + (p.currentNIL || 0), 0);
@@ -8186,19 +8679,27 @@ const App = () => {
     setDynastyYear(prev => prev + 1);
 
     // Show new season summary
+    const donorContributionMsg = donorContributions > 0
+      ? `\n• Donor contributions: +${formatCurrency(donorContributions)}`
+      : '';
+    const donorRetentionMsg = donorSummary.departed > 0
+      ? `\nDONORS:\n• ${donorSummary.retained} donors retained${donorContributionMsg}\n• ${donorSummary.departed} donor(s) departed: ${donorSummary.departedNames.join(', ')}\n`
+      : (donorSummary.retained > 0 ? `\nDONORS:\n• All ${donorSummary.retained} donors retained!${donorContributionMsg}\n` : (donorContributions > 0 ? `\nDONORS:${donorContributionMsg}\n` : ''));
+
     setTimeout(() => {
       alert(`🏈 WELCOME TO THE ${newSeasonYear} SEASON!\n\n` +
             `ROSTER CHANGES:\n` +
             `• ${agedRoster.length} returning players\n` +
             `• ${newFreshmen.length} incoming freshmen\n` +
             `• ${newTransfers.length} transfer additions\n` +
-            `• ${roster.length - agedRoster.length} players graduated/departed\n\n` +
-            `NEW RECRUITING CLASS:\n` +
+            `• ${roster.length - agedRoster.length} players graduated/departed\n` +
+            donorRetentionMsg +
+            `\nNEW RECRUITING CLASS:\n` +
             `• ${freshRecruitingClass.filter(r => r.stars === 5).length} five-stars\n` +
             `• ${freshRecruitingClass.filter(r => r.stars === 4).length} four-stars\n` +
             `• ${freshRecruitingClass.filter(r => r.stars === 3).length} three-stars\n\n` +
             `Your ${newSchedule.length}-game schedule has been generated.\n` +
-            `Budget: ${formatCurrency(newBudget)}\n\n` +
+            `Budget: ${formatCurrency(newBudget)} (Base: ${formatCurrency(baseBudget)})\n\n` +
             `Good luck, Coach!`);
     }, 500);
 
@@ -9229,40 +9730,68 @@ const App = () => {
       <div className="bg-gray-900 border-b-4 border-school-primary p-2">
         <div className="max-w-7xl mx-auto flex gap-2 justify-between items-center flex-wrap">
           <div className="flex gap-2 flex-wrap">
-            {[
-              { id: 'dashboard', label: 'DASHBOARD', short: 'DASH' },
-              { id: 'team', label: 'TEAM', short: 'TEAM' },
-              { id: 'recruiting', label: 'RECRUITING', short: 'RECRUIT' },
-              { id: 'schools', label: 'SCHOOLS', short: 'SCHOOLS' },
-              { id: 'donors', label: 'NIL', short: 'NIL' }
-            ].map(tab => {
-              const isRecruiting = tab.id === 'recruiting';
-              const recruitingClosed = isRecruiting && !isRecruitingOpen();
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-2 border-2 text-xs whitespace-nowrap ${
-                    activeTab === tab.id 
-                      ? 'school-primary border-school-secondary school-accent' 
-                      : recruitingClosed
-                        ? 'bg-gray-700 border-gray-600 opacity-60'
-                        : 'bg-gray-800 border-gray-600 hover:bg-gray-700'
-                  }`}
-                  style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
-                >
-                  <span className="hidden sm:inline">
-                    {tab.label}
-                    {recruitingClosed && ' 🔒'}
-                  </span>
-                  <span className="inline sm:hidden">
-                    {tab.short}
-                    {recruitingClosed && ' 🔒'}
-                  </span>
-                </button>
-              );
-            })}
+            {(() => {
+              // Calculate pending task counts for indicators
+              // Only count tasks the user can ACTUALLY act on right now
+              const pendingNILDeals = recruits.filter(r =>
+                r.verbalCommit &&
+                r.committedSchool?.id === selectedSchool?.id &&
+                !r.nilOfferAccepted
+              ).length;
+
+              // Only count donors if user has points AND donor has actions available this week
+              const actionableDonors = donors.filter(d => {
+                if (d.status !== 'available' || d.relationship >= 80) return false;
+                const usedActions = d.weeklyActionsUsed || [];
+                const hasAvailableAction = usedActions.length < 3; // Not all 3 actions used
+                const canAffordAnyAction = donorPoints >= 50; // Minimum action cost
+                return hasAvailableAction && canAffordAnyAction;
+              }).length;
+
+              const nilTaskCount = pendingNILDeals + actionableDonors;
+              const hasUnspentPoints = recruitingPoints > 50 && isRecruitingOpen();
+
+              return [
+                { id: 'dashboard', label: 'DASHBOARD', short: 'DASH', indicator: 0 },
+                { id: 'team', label: 'TEAM', short: 'TEAM', indicator: 0 },
+                { id: 'recruiting', label: 'RECRUITING', short: 'RECRUIT', indicator: hasUnspentPoints ? 1 : 0 },
+                { id: 'schools', label: 'SCHOOLS', short: 'SCHOOLS', indicator: 0 },
+                { id: 'donors', label: 'NIL', short: 'NIL', indicator: nilTaskCount }
+              ].map(tab => {
+                const isRecruiting = tab.id === 'recruiting';
+                const recruitingClosed = isRecruiting && !isRecruitingOpen();
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-3 py-2 border-2 text-xs whitespace-nowrap relative ${
+                      activeTab === tab.id
+                        ? 'school-primary border-school-secondary school-accent'
+                        : recruitingClosed
+                          ? 'bg-gray-700 border-gray-600 opacity-60'
+                          : 'bg-gray-800 border-gray-600 hover:bg-gray-700'
+                    }`}
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    <span className="hidden sm:inline">
+                      {tab.label}
+                      {recruitingClosed && ' 🔒'}
+                    </span>
+                    <span className="inline sm:hidden">
+                      {tab.short}
+                      {recruitingClosed && ' 🔒'}
+                    </span>
+                    {/* Pending Task Indicator */}
+                    {tab.indicator > 0 && activeTab !== tab.id && (
+                      <span className="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-yellow-600">
+                        {tab.indicator > 9 ? '9+' : tab.indicator}
+                      </span>
+                    )}
+                  </button>
+                );
+              });
+            })()}
           </div>
           
           <div className="flex gap-2 items-center">
@@ -9343,6 +9872,61 @@ const App = () => {
               }
               return null;
             })()}
+
+            {/* OFF-SEASON CONTROL PANEL - Always visible during off-season, NOT collapsible */}
+            {offSeasonWeek !== null && offSeasonWeek <= 16 && (
+              <div className="mb-6 bg-blue-900 border-4 border-yellow-500 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                  <div className="text-center md:text-left">
+                    <div className="text-yellow-400 font-bold text-lg">THE OFF-SEASON</div>
+                    <div className="text-blue-200 text-sm">Week {offSeasonWeek} of 16 • {offSeasonWeek <= 4 ? 'Donor Courting Season' : 'Summer Recruiting'}</div>
+                  </div>
+
+                  <div className="flex-1 max-w-md mx-4">
+                    <div className="w-full bg-gray-700 h-3 border-2 border-gray-600 rounded">
+                      <div
+                        className="bg-yellow-500 h-full rounded transition-all"
+                        style={{ width: `${(offSeasonWeek / 16) * 100}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-blue-300 mt-1 text-center">{offSeasonWeeksCompleted} weeks completed</div>
+                  </div>
+
+                  <button
+                    onClick={advanceRecruitingWeek}
+                    disabled={offSeasonWeek > 16}
+                    className={`px-8 py-4 border-4 text-lg font-bold transition-all ${
+                      offSeasonWeek === 16
+                        ? 'bg-green-500 text-black border-green-400 hover:bg-green-400'
+                        : 'bg-yellow-500 text-black border-yellow-400 hover:bg-yellow-400'
+                    }`}
+                    style={{ boxShadow: '6px 6px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    {offSeasonWeek === 16 ? '✓ COMPLETE OFF-SEASON' : 'ADVANCE WEEK ▶'}
+                  </button>
+                </div>
+
+                {/* Pending Tasks Summary */}
+                {(() => {
+                  const pendingNIL = recruits.filter(r => r.verbalCommit && r.committedSchool?.id === selectedSchool?.id && !r.nilOfferAccepted).length;
+                  const actionableDonors = donors.filter(d => {
+                    if (d.status !== 'available' || d.relationship >= 80) return false;
+                    const usedActions = d.weeklyActionsUsed || [];
+                    return usedActions.length < 3 && donorPoints >= 50;
+                  }).length;
+                  const hasTasks = pendingNIL > 0 || actionableDonors > 0 || (recruitingPoints > 50 && isRecruitingOpen());
+
+                  return hasTasks ? (
+                    <div className="mt-3 bg-yellow-900 border-2 border-yellow-600 p-2 text-sm text-yellow-200">
+                      <span className="font-bold">📋 Before advancing:</span>
+                      {pendingNIL > 0 && <span className="ml-2">• {pendingNIL} NIL deals to finalize</span>}
+                      {actionableDonors > 0 && <span className="ml-2">• {actionableDonors} donors to court</span>}
+                      {recruitingPoints > 50 && isRecruitingOpen() && <span className="ml-2">• Recruiting points to spend</span>}
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
 
             {/* Messenger - Collapsible */}
             <div className="mb-6">
@@ -9512,44 +10096,42 @@ const App = () => {
                       <span>{getCurrentEvent()}</span>
                     </div>
                     
-                    <button
-                      onClick={() => {
-                        console.log('SIM TO NEXT EVENT clicked. offSeasonWeek:', offSeasonWeek, 'isEndOfSeason:', isEndOfSeason());
-                        if (isEndOfSeason()) {
-                          // Confirm before advancing to new season
-                          const confirmed = confirm(
-                            '🏈 ADVANCE TO NEW SEASON?\n\n' +
-                            'This will:\n' +
-                            '• Graduate seniors and 5th-year players\n' +
-                            '• Add signed recruits to your roster\n' +
-                            '• Generate a new recruiting class\n' +
-                            '• Create your new schedule\n\n' +
-                            'Are you ready to start the new season?'
-                          );
-                          if (confirmed) {
-                            advanceToNewSeason();
+                    {/* Off-Season: Reference the control panel above */}
+                    {offSeasonWeek !== null && offSeasonWeek <= 16 ? (
+                      <div className="text-blue-300 text-sm bg-blue-900 border-2 border-blue-600 p-3 rounded">
+                        Use the <span className="text-yellow-400 font-bold">OFF-SEASON CONTROL PANEL</span> above to advance weeks.
+                      </div>
+                    ) : (
+                      /* Normal: Show SIM TO NEXT EVENT or ADVANCE TO NEXT SEASON */
+                      <button
+                        onClick={() => {
+                          console.log('SIM TO NEXT EVENT clicked. offSeasonWeek:', offSeasonWeek, 'isEndOfSeason:', isEndOfSeason());
+                          if (isEndOfSeason()) {
+                            const confirmed = confirm(
+                              '🏈 ADVANCE TO NEW SEASON?\n\n' +
+                              'This will:\n' +
+                              '• Graduate seniors and 5th-year players\n' +
+                              '• Add signed recruits to your roster\n' +
+                              '• Generate a new recruiting class\n' +
+                              '• Create your new schedule\n\n' +
+                              'Are you ready to start the new season?'
+                            );
+                            if (confirmed) {
+                              advanceToNewSeason();
+                            }
+                          } else {
+                            simulateToNextEvent();
                           }
-                        } else {
-                          simulateToNextEvent();
-                        }
-                      }}
-                      disabled={offSeasonWeek !== null && offSeasonWeek <= 16}
-                      className={`px-6 py-3 border-4 text-sm font-bold transition-all ${
-                        offSeasonWeek !== null && offSeasonWeek <= 16
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50 border-gray-300'
-                          : isEndOfSeason()
+                        }}
+                        className={`px-6 py-3 border-4 text-sm font-bold transition-all ${
+                          isEndOfSeason()
                             ? 'bg-green-600 text-white hover:bg-green-500 border-green-400'
                             : 'bg-white text-black hover:bg-gray-200 border-gray-300'
-                      }`}
-                      style={{ boxShadow: '6px 6px 0px rgba(0,0,0,0.5)' }}
-                    >
-                      {isEndOfSeason() ? '🏈 ADVANCE TO NEXT SEASON' : 'SIM TO NEXT EVENT ▶'}
-                    </button>
-                    
-                    {offSeasonWeek !== null && offSeasonWeek <= 16 && (
-                      <div className="text-xs text-yellow-400 mt-2">
-                        ⚠ Complete all 16 recruiting weeks first (Week {offSeasonWeek}/16)
-                      </div>
+                        }`}
+                        style={{ boxShadow: '6px 6px 0px rgba(0,0,0,0.5)' }}
+                      >
+                        {isEndOfSeason() ? '🏈 ADVANCE TO NEXT SEASON' : 'SIM TO NEXT EVENT ▶'}
+                      </button>
                     )}
                     
                     <div className="text-xs text-gray-400 mt-4">
@@ -10690,12 +11272,796 @@ const App = () => {
           </div>
         )}
 
-        {activeTab === 'donors' && (
-          <div className="text-center py-12">
-            <h2 className="text-sm mb-4 text-yellow-400">NIL MANAGEMENT</h2>
-            <p className="text-gray-400" style={{ fontSize: '10px' }}>Coming soon...</p>
-          </div>
-        )}
+        {activeTab === 'donors' && (() => {
+          // Get all committed recruits to user's school
+          const committedRecruits = recruits.filter(r =>
+            r.verbalCommit &&
+            r.committedSchool?.id === selectedSchool?.id
+          ).sort((a, b) => {
+            // Sort by stars descending, then by rating descending
+            if (b.stars !== a.stars) return b.stars - a.stars;
+            return b.rating - a.rating;
+          });
+
+          // Filter by NIL status
+          const filteredRecruits = committedRecruits.filter(r => {
+            if (nilStatusFilter === 'all') return true;
+            if (nilStatusFilter === 'pending') return r.nilDeal && !r.nilOfferAccepted;
+            if (nilStatusFilter === 'finalized') return r.nilOfferAccepted;
+            return true;
+          });
+
+          // Get pending NIL recruits for alert
+          const pendingNilRecruits = committedRecruits.filter(r => r.nilDeal && !r.nilOfferAccepted);
+
+          // Handle finalize NIL
+          const handleFinalizeNil = (recruitId) => {
+            setRecruits(prev => prev.map(r => {
+              if (r.id === recruitId) {
+                return {
+                  ...r,
+                  nilOfferAccepted: true,
+                  acceptedNILAmount: r.nilDeal
+                };
+              }
+              return r;
+            }));
+          };
+
+          // Handle finalize ALL pending NIL deals
+          const handleFinalizeAllNil = () => {
+            setRecruits(prev => prev.map(r => {
+              if (r.verbalCommit &&
+                  r.committedSchool?.id === selectedSchool?.id &&
+                  r.nilDeal &&
+                  !r.nilOfferAccepted) {
+                return {
+                  ...r,
+                  nilOfferAccepted: true,
+                  acceptedNILAmount: r.nilDeal
+                };
+              }
+              return r;
+            }));
+          };
+
+          return (
+            <div className="p-4 space-y-4">
+              {/* Page Header with Sub-Tab Navigation */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-yellow-400">NIL MANAGEMENT</h2>
+                    <p className="text-gray-400 text-xs mt-1">Manage recruits, roster, and donors</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-gray-400 text-xs">DONOR POINTS</div>
+                    <div className="text-green-400 font-bold text-lg" style={{ fontFamily: 'monospace' }}>{donorPoints}</div>
+                    <div className="text-gray-500 text-xs">+{donorPointsPerWeek}/week</div>
+                  </div>
+                </div>
+
+                {/* Sub-Tab Navigation */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setNilSubTab('recruits')}
+                    className={`flex-1 px-4 py-3 border-2 text-sm font-bold transition-all ${
+                      nilSubTab === 'recruits'
+                        ? 'bg-purple-600 border-purple-400 text-white'
+                        : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'
+                    }`}
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    RECRUITS
+                    {pendingNilRecruits.length > 0 && (
+                      <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        {pendingNilRecruits.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setNilSubTab('roster')}
+                    className={`flex-1 px-4 py-3 border-2 text-sm font-bold transition-all ${
+                      nilSubTab === 'roster'
+                        ? 'bg-blue-600 border-blue-400 text-white'
+                        : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'
+                    }`}
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    ROSTER
+                    {roster.filter(p => p.satisfaction === 'Low').length > 0 && (
+                      <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        {roster.filter(p => p.satisfaction === 'Low').length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setNilSubTab('donors')}
+                    className={`flex-1 px-4 py-3 border-2 text-sm font-bold transition-all ${
+                      nilSubTab === 'donors'
+                        ? 'bg-green-600 border-green-400 text-white'
+                        : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'
+                    }`}
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    DONORS
+                    <span className="ml-2 text-xs opacity-75">
+                      ({donors.filter(d => d.status === 'secured').length})
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* RECRUITS Sub-Tab */}
+              {nilSubTab === 'recruits' && (
+                <>
+              {/* Budget Overview Section */}
+              <div className="bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                <h3 className="text-xs font-bold text-yellow-400 mb-4">BUDGET OVERVIEW</h3>
+
+                {/* Budget Grid */}
+                <div className="grid grid-cols-5 gap-2 mb-4">
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-center">
+                    <div className="text-gray-400 text-xs mb-1">TOTAL BUDGET</div>
+                    <div className="text-white font-bold" style={{ fontFamily: 'monospace' }}>
+                      {formatCurrency(budget)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-center">
+                    <div className="text-gray-400 text-xs mb-1">ROSTER NIL</div>
+                    <div className="text-blue-400 font-bold" style={{ fontFamily: 'monospace' }}>
+                      {formatCurrency(budgetAllocated)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-center">
+                    <div className="text-gray-400 text-xs mb-1">RECRUITS</div>
+                    <div className="text-purple-400 font-bold" style={{ fontFamily: 'monospace' }}>
+                      {formatCurrency(incomingFreshmanBudget)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-center">
+                    <div className="text-gray-400 text-xs mb-1">TRANSFERS</div>
+                    <div className="text-cyan-400 font-bold" style={{ fontFamily: 'monospace' }}>
+                      {formatCurrency(transferAdditionsBudget)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-center">
+                    <div className="text-gray-400 text-xs mb-1">REMAINING</div>
+                    <div className={`font-bold ${budgetRemaining < 0 ? 'text-red-400' : budgetRemaining < budget * 0.1 ? 'text-yellow-400' : 'text-green-400'}`} style={{ fontFamily: 'monospace' }}>
+                      {formatCurrency(budgetRemaining)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="bg-gray-900 h-6 rounded overflow-hidden border-2 border-gray-700">
+                  <div
+                    className="h-full flex items-center justify-end pr-2 transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, (totalAllocated / budget) * 100)}%`,
+                      backgroundColor: budgetRemaining / budget > 0.2 ? '#22c55e' : budgetRemaining / budget > 0.1 ? '#eab308' : '#ef4444'
+                    }}
+                  >
+                    <span className="text-xs font-bold text-black">
+                      {((totalAllocated / budget) * 100).toFixed(0)}% ALLOCATED
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alert Section - Only show if pending NIL deals exist */}
+              {pendingNilRecruits.length > 0 && (
+                <div className="bg-red-900 border-4 border-red-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-red-300 mb-2">
+                        ⚠️ {pendingNilRecruits.length} RECRUIT{pendingNilRecruits.length > 1 ? 'S' : ''} NEED NIL FINALIZATION
+                      </h3>
+                      <div className="text-red-200 text-xs mb-2">
+                        {pendingNilRecruits.map(r => `${r.name} (${r.position})`).join(', ')}
+                      </div>
+                      <p className="text-red-300 text-xs opacity-75">
+                        These recruits may decommit if their NIL deals are not finalized before the next event.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleFinalizeAllNil}
+                      className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 border-2 border-green-400 text-xs font-bold"
+                      style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      FINALIZE ALL
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Committed Recruits Section */}
+              <div className="bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xs font-bold text-yellow-400">
+                    COMMITTED RECRUITS ({committedRecruits.length})
+                  </h3>
+
+                  {/* Filter Buttons */}
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setNilStatusFilter('all')}
+                      className={`px-3 py-1 border-2 text-xs font-bold ${nilStatusFilter === 'all' ? 'bg-yellow-600 border-yellow-500 text-black' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                      style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      ALL
+                    </button>
+                    <button
+                      onClick={() => setNilStatusFilter('pending')}
+                      className={`px-3 py-1 border-2 text-xs font-bold ${nilStatusFilter === 'pending' ? 'bg-red-600 border-red-500 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                      style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      PENDING ({pendingNilRecruits.length})
+                    </button>
+                    <button
+                      onClick={() => setNilStatusFilter('finalized')}
+                      className={`px-3 py-1 border-2 text-xs font-bold ${nilStatusFilter === 'finalized' ? 'bg-green-600 border-green-500 text-white' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                      style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      FINALIZED ({committedRecruits.filter(r => r.nilOfferAccepted).length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recruits List */}
+                {filteredRecruits.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    {committedRecruits.length === 0
+                      ? 'No committed recruits yet. Visit the Recruiting tab to build your class!'
+                      : `No ${nilStatusFilter === 'pending' ? 'pending' : 'finalized'} NIL deals.`
+                    }
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredRecruits.map(recruit => {
+                      const isPending = recruit.nilDeal && !recruit.nilOfferAccepted;
+                      const nilVsMarket = recruit.nilDeal && recruit.marketValue
+                        ? ((recruit.nilDeal / recruit.marketValue) * 100).toFixed(0)
+                        : null;
+
+                      return (
+                        <div
+                          key={recruit.id}
+                          className={`bg-gray-900 border-2 p-3 ${isPending ? 'border-red-600' : 'border-green-600'}`}
+                          style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                        >
+                          <div className="flex justify-between items-start">
+                            {/* Left: Recruit Info */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-yellow-400 text-xs">{'⭐'.repeat(recruit.stars)}</span>
+                                <span className="text-white font-bold">{recruit.name}</span>
+                                <span className="text-gray-400 text-xs">{recruit.position}</span>
+                                <span className="text-gray-500 text-xs">•</span>
+                                <span className="text-gray-400 text-xs">{recruit.rating} OVR</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-gray-500">{recruit.city}, {recruit.state}</span>
+                                <span className={`px-2 py-0.5 border ${recruit.signedCommit ? 'bg-green-900 border-green-600 text-green-300' : 'bg-blue-900 border-blue-600 text-blue-300'}`}>
+                                  {recruit.signedCommit ? '✅ SIGNED' : '✓ VERBAL'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Center: NIL Info */}
+                            <div className="text-center px-4">
+                              <div className="text-gray-400 text-xs mb-1">NIL DEAL</div>
+                              <div className="text-green-400 font-bold" style={{ fontFamily: 'monospace' }}>
+                                {recruit.nilDeal ? formatCurrency(recruit.nilDeal) : 'N/A'}
+                              </div>
+                              {nilVsMarket && (
+                                <div className={`text-xs ${parseInt(nilVsMarket) >= 100 ? 'text-green-400' : parseInt(nilVsMarket) >= 80 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                  {nilVsMarket}% of market
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right: Status & Action */}
+                            <div className="text-right">
+                              {isPending ? (
+                                <>
+                                  <div className="text-red-400 text-xs font-bold mb-2">⚠️ PENDING</div>
+                                  <button
+                                    onClick={() => handleFinalizeNil(recruit.id)}
+                                    className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 border-2 border-green-400 text-xs font-bold"
+                                    style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                                  >
+                                    FINALIZE NIL
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="text-green-400 text-xs font-bold">✅ FINALIZED</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-gray-900 border-2 border-gray-700 p-3 text-xs text-gray-400">
+                <strong className="text-gray-300">About NIL Deals:</strong> Recruits with pending NIL deals may decommit if their deal is not finalized before key events.
+                Always finalize deals promptly to secure your commitments. Market value represents what the recruit expects based on their rating and star level.
+              </div>
+                </>
+              )}
+
+              {/* ROSTER Sub-Tab */}
+              {nilSubTab === 'roster' && (
+                <div className="space-y-4">
+                  {/* Critical Alerts Section */}
+                  {roster.filter(p => p.satisfaction === 'Low').length > 0 && (
+                    <div className="bg-red-900 border-4 border-red-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                      <h3 className="text-sm font-bold text-red-300 mb-3">
+                        ⚠️ {roster.filter(p => p.satisfaction === 'Low').length} PLAYERS NEED ATTENTION
+                      </h3>
+                      <div className="space-y-2">
+                        {roster.filter(p => p.satisfaction === 'Low').slice(0, 5).map(player => {
+                          const payPercent = ((player.currentNIL / player.marketValue) * 100).toFixed(0);
+                          const nilGap = player.marketValue - player.currentNIL;
+                          return (
+                            <div key={player.id} className="bg-red-950 border-2 border-red-700 p-3 flex justify-between items-center">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-yellow-400 text-xs">{'⭐'.repeat(player.stars)}</span>
+                                  <span className="text-white font-bold">{player.name}</span>
+                                  <span className="text-gray-400 text-xs">{player.position} • {player.year}</span>
+                                </div>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  NIL: {formatCurrency(player.currentNIL)} ({payPercent}% of {formatCurrency(player.marketValue)} market)
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    const raiseAmount = Math.round(player.currentNIL * 0.2);
+                                    if (budgetRemaining >= raiseAmount) {
+                                      setRoster(prev => prev.map(p => {
+                                        if (p.id === player.id) {
+                                          const newNIL = p.currentNIL + raiseAmount;
+                                          const newPayPercent = newNIL / p.marketValue;
+                                          return {
+                                            ...p,
+                                            currentNIL: newNIL,
+                                            satisfaction: newPayPercent >= 0.9 ? 'High' : newPayPercent >= 0.7 ? 'Medium' : 'Low'
+                                          };
+                                        }
+                                        return p;
+                                      }));
+                                      setBudgetAllocated(prev => prev + raiseAmount);
+                                    } else {
+                                      alert('Insufficient budget!');
+                                    }
+                                  }}
+                                  disabled={budgetRemaining < Math.round(player.currentNIL * 0.2)}
+                                  className="bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 border-2 border-green-400 disabled:border-gray-500 text-xs font-bold"
+                                  style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                                >
+                                  +20% ({formatCurrency(Math.round(player.currentNIL * 0.2))})
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (budgetRemaining >= nilGap) {
+                                      setRoster(prev => prev.map(p => {
+                                        if (p.id === player.id) {
+                                          return {
+                                            ...p,
+                                            currentNIL: p.marketValue,
+                                            satisfaction: 'High'
+                                          };
+                                        }
+                                        return p;
+                                      }));
+                                      setBudgetAllocated(prev => prev + nilGap);
+                                    } else {
+                                      alert('Insufficient budget!');
+                                    }
+                                  }}
+                                  disabled={budgetRemaining < nilGap}
+                                  className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 border-2 border-blue-400 disabled:border-gray-500 text-xs font-bold"
+                                  style={{ boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}
+                                >
+                                  MATCH MARKET ({formatCurrency(nilGap)})
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {roster.filter(p => p.satisfaction === 'Low').length > 5 && (
+                          <div className="text-red-300 text-xs text-center mt-2">
+                            +{roster.filter(p => p.satisfaction === 'Low').length - 5} more players need attention
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full Roster Browser */}
+                  <div className="bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    <button
+                      onClick={() => setShowFullRoster(!showFullRoster)}
+                      className="w-full flex justify-between items-center"
+                    >
+                      <h3 className="text-xs font-bold text-yellow-400">FULL ROSTER NIL ({roster.length} players)</h3>
+                      <span className="text-gray-400">{showFullRoster ? '▼' : '▶'}</span>
+                    </button>
+
+                    {showFullRoster && (
+                      <div className="mt-4 space-y-2">
+                        {/* Sort/Filter Controls */}
+                        <div className="flex gap-2 mb-3">
+                          <select
+                            value={rosterNilSort}
+                            onChange={(e) => setRosterNilSort(e.target.value)}
+                            className="bg-gray-700 border-2 border-gray-600 text-white text-xs px-2 py-1"
+                          >
+                            <option value="satisfaction">Sort: Satisfaction</option>
+                            <option value="nil">Sort: NIL Amount</option>
+                            <option value="market">Sort: Market Value</option>
+                            <option value="gap">Sort: Gap %</option>
+                          </select>
+                          <select
+                            value={rosterNilFilter}
+                            onChange={(e) => setRosterNilFilter(e.target.value)}
+                            className="bg-gray-700 border-2 border-gray-600 text-white text-xs px-2 py-1"
+                          >
+                            <option value="all">Filter: All</option>
+                            <option value="low">Filter: Low Satisfaction</option>
+                            <option value="medium">Filter: Medium</option>
+                            <option value="high">Filter: High</option>
+                          </select>
+                        </div>
+
+                        {/* Roster List */}
+                        {roster
+                          .filter(p => {
+                            if (rosterNilFilter === 'all') return true;
+                            return p.satisfaction.toLowerCase() === rosterNilFilter;
+                          })
+                          .sort((a, b) => {
+                            if (rosterNilSort === 'satisfaction') {
+                              const order = { 'Low': 0, 'Medium': 1, 'High': 2 };
+                              return order[a.satisfaction] - order[b.satisfaction];
+                            }
+                            if (rosterNilSort === 'nil') return b.currentNIL - a.currentNIL;
+                            if (rosterNilSort === 'market') return b.marketValue - a.marketValue;
+                            if (rosterNilSort === 'gap') {
+                              const gapA = (a.currentNIL / a.marketValue);
+                              const gapB = (b.currentNIL / b.marketValue);
+                              return gapA - gapB;
+                            }
+                            return 0;
+                          })
+                          .slice(0, 20)
+                          .map(player => {
+                            const payPercent = ((player.currentNIL / player.marketValue) * 100).toFixed(0);
+                            return (
+                              <div
+                                key={player.id}
+                                className={`bg-gray-900 border-2 p-2 flex justify-between items-center ${
+                                  player.satisfaction === 'Low' ? 'border-red-600' :
+                                  player.satisfaction === 'Medium' ? 'border-yellow-600' : 'border-green-600'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className={`text-xs px-2 py-0.5 border ${
+                                    player.satisfaction === 'Low' ? 'bg-red-900 border-red-600 text-red-300' :
+                                    player.satisfaction === 'Medium' ? 'bg-yellow-900 border-yellow-600 text-yellow-300' :
+                                    'bg-green-900 border-green-600 text-green-300'
+                                  }`}>
+                                    {player.satisfaction.toUpperCase()}
+                                  </span>
+                                  <span className="text-white text-sm">{player.name}</span>
+                                  <span className="text-gray-400 text-xs">{player.position} • {player.year}</span>
+                                </div>
+                                <div className="text-right text-xs">
+                                  <div className="text-green-400" style={{ fontFamily: 'monospace' }}>{formatCurrency(player.currentNIL)}</div>
+                                  <div className="text-gray-500">{payPercent}% of market</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        {roster.length > 20 && (
+                          <div className="text-gray-400 text-xs text-center">Showing top 20 of {roster.length} players</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-xs text-gray-400">
+                    <strong className="text-gray-300">About Roster NIL:</strong> Players with Low satisfaction (below 70% of market value) may enter the transfer portal.
+                    Keep your key players happy by matching their market value when possible.
+                  </div>
+                </div>
+              )}
+
+              {/* DONORS Sub-Tab */}
+              {nilSubTab === 'donors' && (
+                <div className="space-y-4">
+                  {/* Donor Courting Season Banner */}
+                  {offSeasonWeek !== null && offSeasonWeek <= 4 && (
+                    <div className="bg-yellow-900 border-4 border-yellow-600 p-3 text-center" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                      <div className="text-yellow-400 font-bold text-sm">DONOR COURTING SEASON - Week {offSeasonWeek} of 4</div>
+                      <div className="text-yellow-200 text-xs">Full donor points available! Best time to secure new donors.</div>
+                    </div>
+                  )}
+                  {offSeasonWeek !== null && offSeasonWeek > 4 && (
+                    <div className="bg-gray-700 border-4 border-gray-500 p-3 text-center" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                      <div className="text-gray-300 font-bold text-sm">OFF-SEASON - Week {offSeasonWeek} of 16</div>
+                      <div className="text-gray-400 text-xs">Courting season ended. Donor points reduced to half.</div>
+                    </div>
+                  )}
+                  {offSeasonWeek === null && (
+                    <div className="bg-gray-700 border-4 border-gray-500 p-3 text-center" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                      <div className="text-gray-300 font-bold text-sm">IN-SEASON</div>
+                      <div className="text-gray-400 text-xs">Donor courting opens during the Off-Season (Weeks 1-4 for full points).</div>
+                    </div>
+                  )}
+
+                  {/* Donor Points Header */}
+                  <div className="bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-xs font-bold text-yellow-400 mb-1">DONOR RELATIONS</h3>
+                        <p className="text-gray-400 text-xs">Court donors to increase your NIL budget</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-400 font-bold text-2xl" style={{ fontFamily: 'monospace' }}>{donorPoints}</div>
+                        <div className="text-gray-400 text-xs">DONOR POINTS (+{offSeasonWeek && offSeasonWeek <= 4 ? donorPointsPerWeek : Math.floor(donorPointsPerWeek / 2)}/week)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Secured Donors */}
+                  <div className="bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    <h3 className="text-xs font-bold text-green-400 mb-3">
+                      SECURED DONORS ({donors.filter(d => d.status === 'secured').length})
+                    </h3>
+                    {donors.filter(d => d.status === 'secured').length === 0 ? (
+                      <div className="text-gray-400 text-center py-4 text-sm">
+                        No donors secured yet. Court available donors below to increase your budget.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {donors.filter(d => d.status === 'secured').map(donor => (
+                          <div key={donor.id} className={`border-2 p-3 ${donor.isNewMoney ? 'bg-yellow-900 border-yellow-600' : 'bg-green-900 border-green-600'}`}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-bold">{donor.name}</span>
+                                  {donor.isNewMoney && (
+                                    <span className="bg-yellow-600 text-yellow-100 text-xs px-1 font-bold">NEW MONEY</span>
+                                  )}
+                                </div>
+                                <div className="text-green-300 text-xs">{donor.type}</div>
+                                {/* Traits */}
+                                {donor.traits && donor.traits.length > 0 && (
+                                  <div className="flex gap-1 mt-1 flex-wrap">
+                                    {donor.traits.map(traitId => {
+                                      const trait = DONOR_TRAITS[traitId];
+                                      if (!trait) return null;
+                                      const isNegative = ['impatient', 'rivalryObsessed', 'recruitingFocused', 'spotlightSeeker', 'handson'].includes(traitId);
+                                      return (
+                                        <span
+                                          key={traitId}
+                                          className={`text-xs px-1 ${isNegative ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'}`}
+                                          title={trait.description}
+                                        >
+                                          {trait.name}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {/* Relationship & Expectations */}
+                                <div className="text-green-200 text-xs mt-1">
+                                  Relationship: {donor.relationship}% | Year {donor.yearsSecured || 1}
+                                </div>
+                                <div className="text-gray-400 text-xs">
+                                  Expects: {donor.expectations?.minWins || 0}+ wins
+                                  {donor.expectations?.mustBeatRival && ' | Beat rival'}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-green-400 font-bold" style={{ fontFamily: 'monospace' }}>
+                                  +{formatCurrency(donor.annualContribution)}/year
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Available Donors */}
+                  <div className="bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    <h3 className="text-xs font-bold text-yellow-400 mb-3">
+                      AVAILABLE DONORS ({donors.filter(d => d.status === 'available' || d.status === 'courting').length})
+                    </h3>
+                    {donors.filter(d => d.status === 'available' || d.status === 'courting').length === 0 ? (
+                      <div className="text-gray-400 text-center py-8 text-sm">
+                        <p className="mb-2">No donors available yet.</p>
+                        <p className="text-xs">Donors will be generated when you start a new game or season.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {donors.filter(d => d.status === 'available' || d.status === 'courting').map(donor => (
+                          <div key={donor.id} className={`bg-gray-900 border-2 p-3 ${donor.isNewMoney ? 'border-yellow-600' : 'border-gray-700'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-bold">{donor.name}</span>
+                                  {donor.isNewMoney && (
+                                    <span className="bg-yellow-600 text-yellow-100 text-xs px-1 font-bold">NEW MONEY</span>
+                                  )}
+                                </div>
+                                <div className="text-gray-400 text-xs">{donor.type}</div>
+                                {/* Traits */}
+                                {donor.traits && donor.traits.length > 0 && (
+                                  <div className="flex gap-1 mt-1 flex-wrap">
+                                    {donor.traits.map(traitId => {
+                                      const trait = DONOR_TRAITS[traitId];
+                                      if (!trait) return null;
+                                      const isNegative = ['impatient', 'rivalryObsessed', 'recruitingFocused', 'spotlightSeeker', 'handson'].includes(traitId);
+                                      return (
+                                        <span
+                                          key={traitId}
+                                          className={`text-xs px-1 ${isNegative ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'}`}
+                                          title={trait.description}
+                                        >
+                                          {trait.name}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {/* Expectations summary */}
+                                <div className="text-gray-500 text-xs mt-1">
+                                  Expects: {donor.expectations?.minWins || 0}+ wins
+                                  {donor.expectations?.mustBeatRival && ' | Beat rival'}
+                                  {donor.expectations?.topRecruitingClass && ` | Top ${donor.expectations.topRecruitingClass} class`}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-green-400 text-sm" style={{ fontFamily: 'monospace' }}>
+                                  {formatCurrency(donor.annualContribution)}/year
+                                </div>
+                              </div>
+                            </div>
+                            {/* Relationship Bar */}
+                            <div className="mb-2">
+                              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                <span>Relationship</span>
+                                <span>{donor.relationship}%</span>
+                              </div>
+                              <div className="bg-gray-700 h-2 rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-yellow-500 transition-all"
+                                  style={{ width: `${donor.relationship}%` }}
+                                />
+                              </div>
+                            </div>
+                            {/* Actions - Each action can only be used once per donor per week */}
+                            <div className="flex gap-2 flex-wrap">
+                              {(() => {
+                                const usedThisWeek = donor.weeklyActionsUsed || [];
+                                const callUsed = usedThisWeek.includes('call');
+                                const meetingUsed = usedThisWeek.includes('meeting');
+                                const gameInviteUsed = usedThisWeek.includes('gameInvite');
+
+                                return (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (donorPoints >= 50 && !callUsed) {
+                                          setDonorPoints(prev => prev - 50);
+                                          setDonors(prev => prev.map(d => {
+                                            if (d.id === donor.id) {
+                                              const newRel = Math.min(100, d.relationship + Math.floor(Math.random() * 8) + 8);
+                                              return {
+                                                ...d,
+                                                relationship: newRel,
+                                                status: newRel >= 80 ? 'secured' : 'courting',
+                                                weeklyActionsUsed: [...(d.weeklyActionsUsed || []), 'call']
+                                              };
+                                            }
+                                            return d;
+                                          }));
+                                        }
+                                      }}
+                                      disabled={donorPoints < 50 || callUsed}
+                                      className={`px-2 py-1 border text-xs ${
+                                        callUsed
+                                          ? 'bg-gray-800 text-gray-600 border-gray-700 cursor-not-allowed'
+                                          : 'bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 text-white border-gray-600'
+                                      }`}
+                                    >
+                                      {callUsed ? '✓ Called' : 'Call (50 pts)'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (donorPoints >= 100 && !meetingUsed) {
+                                          setDonorPoints(prev => prev - 100);
+                                          setDonors(prev => prev.map(d => {
+                                            if (d.id === donor.id) {
+                                              const newRel = Math.min(100, d.relationship + Math.floor(Math.random() * 10) + 15);
+                                              return {
+                                                ...d,
+                                                relationship: newRel,
+                                                status: newRel >= 80 ? 'secured' : 'courting',
+                                                weeklyActionsUsed: [...(d.weeklyActionsUsed || []), 'meeting']
+                                              };
+                                            }
+                                            return d;
+                                          }));
+                                        }
+                                      }}
+                                      disabled={donorPoints < 100 || meetingUsed}
+                                      className={`px-2 py-1 border text-xs ${
+                                        meetingUsed
+                                          ? 'bg-gray-800 text-gray-600 border-gray-700 cursor-not-allowed'
+                                          : 'bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 text-white border-gray-600'
+                                      }`}
+                                    >
+                                      {meetingUsed ? '✓ Met' : 'Meeting (100 pts)'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (donorPoints >= 200 && !gameInviteUsed) {
+                                          setDonorPoints(prev => prev - 200);
+                                          setDonors(prev => prev.map(d => {
+                                            if (d.id === donor.id) {
+                                              const newRel = Math.min(100, d.relationship + Math.floor(Math.random() * 15) + 25);
+                                              return {
+                                                ...d,
+                                                relationship: newRel,
+                                                status: newRel >= 80 ? 'secured' : 'courting',
+                                                weeklyActionsUsed: [...(d.weeklyActionsUsed || []), 'gameInvite']
+                                              };
+                                            }
+                                            return d;
+                                          }));
+                                        }
+                                      }}
+                                      disabled={donorPoints < 200 || gameInviteUsed}
+                                      className={`px-2 py-1 border text-xs ${
+                                        gameInviteUsed
+                                          ? 'bg-gray-800 text-gray-600 border-gray-700 cursor-not-allowed'
+                                          : 'bg-yellow-700 hover:bg-yellow-600 disabled:bg-gray-800 disabled:text-gray-600 text-white border-yellow-600'
+                                      }`}
+                                    >
+                                      {gameInviteUsed ? '✓ Invited' : 'Game Invite (200 pts)'}
+                                    </button>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="bg-gray-900 border-2 border-gray-700 p-3 text-xs text-gray-400">
+                    <strong className="text-gray-300">About Donors:</strong> Build relationships with donors to secure their annual contributions.
+                    Donors commit when relationship reaches 80%. Keep them happy with wins and recruiting success, or they may leave.
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {activeTab === 'schools' && (() => {
           // Get all schools as flat array
@@ -11233,42 +12599,17 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Off-Season Week Progress (if in off-season) */}
+              {/* Off-Season Info Banner (no button - use Dashboard to advance) */}
               {offSeasonWeek !== null && (
                 <div className="mb-4 bg-blue-900 border-4 border-blue-600 p-3" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
-                  {/* Title row - same structure as info row for alignment */}
-                  <div className="flex justify-between items-center text-sm mb-2">
-                    <span className="invisible">March 1</span>
-                    <span className="invisible font-bold">Week {offSeasonWeek} of 16</span>
-                    <h3 className="text-sm text-white font-bold">THE OFF-SEASON</h3>
-                    <span className="invisible">{offSeasonWeeksCompleted} weeks completed</span>
-                    <span className="invisible">June 30</span>
+                  <div className="flex justify-between items-center text-sm text-blue-200">
+                    <span className="font-bold">THE OFF-SEASON</span>
+                    <span>Week {offSeasonWeek} of 16</span>
+                    <span className="text-yellow-400">Use DASHBOARD to advance week →</span>
                   </div>
-
-                  {/* Info row with button in center */}
-                  <div className="flex justify-between items-center text-sm text-blue-200 mb-2">
-                    <span>March 1</span>
-                    <span className="font-bold">Week {offSeasonWeek} of 16</span>
-                    <button
-                      onClick={advanceRecruitingWeek}
-                      disabled={offSeasonWeek > 16}
-                      className={`px-3 py-1 border-2 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed ${
-                        offSeasonWeek === 16
-                          ? 'bg-green-500 text-black border-green-600 hover:bg-green-400'
-                          : 'bg-yellow-500 text-black border-yellow-600 hover:bg-yellow-400'
-                      }`}
-                      style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
-                    >
-                      {offSeasonWeek === 16 ? '✓ COMPLETE OFF-SEASON' : 'ADVANCE WEEK ▶'}
-                    </button>
-                    <span>{offSeasonWeeksCompleted} weeks completed</span>
-                    <span>June 30</span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full bg-gray-700 h-2 border border-gray-900">
+                  <div className="w-full bg-gray-700 h-2 border border-gray-900 mt-2">
                     <div
-                      className="bg-red-500 h-full transition-all"
+                      className="bg-yellow-500 h-full transition-all"
                       style={{ width: `${(offSeasonWeek / 16) * 100}%` }}
                     />
                   </div>
@@ -12564,7 +13905,7 @@ const App = () => {
               <div className="mt-4 bg-gray-800 border-2 border-gray-600 p-3 text-sm">
                 <div className="text-yellow-400 font-bold mb-2">💡 What Happened?</div>
                 <div className="text-gray-300 text-xs space-y-1">
-                  <p>When a committed recruit's interest drops below 70%, they reconsider their commitment.</p>
+                  <p>When a committed recruit's interest drops below 50%, they reconsider their commitment.</p>
                   <p>Consecutive losses, bad losses, and program struggles can cause interest to plummet.</p>
                   <p><span className="text-green-400">TIP:</span> Keep winning to maintain recruit interest, or increase NIL offers during at-risk intervention.</p>
                 </div>
@@ -12582,6 +13923,78 @@ const App = () => {
                 style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
               >
                 UNDERSTOOD
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Money Donor Alert Modal */}
+      {showNewMoneyDonorModal && newMoneyDonorData && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-green-500 max-w-lg w-full" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.8)' }}>
+            {/* Modal Header */}
+            <div className="bg-green-700 text-white p-4 border-b-4 border-green-800">
+              <h2 className="text-xl font-bold text-center">💰 NEW MONEY DONOR INTERESTED!</h2>
+              <div className="text-center text-sm mt-1 opacity-90">
+                A wealthy individual wants to support your program
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4">
+              <div className="bg-gray-800 border-2 border-green-600 p-4" style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="text-4xl">{newMoneyDonorData.icon}</div>
+                  <div>
+                    <div className="text-white font-bold text-lg">{newMoneyDonorData.name}</div>
+                    <div className="text-green-400 text-sm">{newMoneyDonorData.type}</div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-700 pt-3 mt-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-400 text-sm">Potential Contribution:</span>
+                    <span className="text-green-400 font-bold text-lg">${(newMoneyDonorData.contribution / 1000000).toFixed(2)}M/year</span>
+                  </div>
+
+                  {newMoneyDonorData.traits.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-gray-400 text-sm mb-1">Personality Traits:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {newMoneyDonorData.traits.map((trait, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-red-900 border border-red-600 text-red-300 text-xs">
+                            {trait}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 bg-yellow-900 border-2 border-yellow-600 p-3 text-sm">
+                <div className="text-yellow-400 font-bold mb-2">⚠️ NEW MONEY WARNING</div>
+                <div className="text-yellow-200 text-xs space-y-1">
+                  <p>New money donors have high expectations and low patience.</p>
+                  <p>They may leave quickly if you don't meet their demands.</p>
+                  <p><span className="text-green-400">TIP:</span> Visit the DONORS tab to begin courting them!</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <div className="p-4 bg-gray-800 border-t-2 border-gray-700">
+              <button
+                onClick={() => {
+                  setShowNewMoneyDonorModal(false);
+                  setNewMoneyDonorData(null);
+                }}
+                className="w-full bg-green-700 border-4 border-green-600 py-3 font-bold hover:bg-green-600"
+                style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                aria-label="Dismiss new money donor notification"
+              >
+                GOT IT
               </button>
             </div>
           </div>
@@ -14854,6 +16267,14 @@ const App = () => {
 
                         // Update team morale
                         setTeamMorale(prev => Math.max(0, Math.min(100, prev + (currentGameSimulation.userWins ? 5 : -8))));
+
+                        // Award donor points for wins
+                        if (currentGameSimulation.userWins) {
+                          const baseWinBonus = 25;
+                          const rivalryBonus = currentGameSimulation.game.isRivalry ? 25 : 0; // +50 total for rivalry wins
+                          setDonorPoints(prev => prev + baseWinBonus + rivalryBonus);
+                          console.log(`💰 Donor points awarded: +${baseWinBonus + rivalryBonus} (${currentGameSimulation.game.isRivalry ? 'rivalry win' : 'regular win'})`);
+                        }
 
                         // Update season stats
                         updateSeasonStats(boxScoreStats);
