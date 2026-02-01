@@ -30,6 +30,27 @@ This document outlines the mechanics, probabilities, and systems that drive the 
     - [Donor Personality Traits](#donor-personality-traits)
     - [Donor Retention](#donor-retention)
     - [New Money Emergence](#new-money-emergence)
+13. [National Rankings System](#national-rankings-system)
+    - [Rankings Algorithm](#rankings-algorithm)
+    - [Strength of Schedule](#strength-of-schedule)
+    - [Quality Wins](#quality-wins)
+    - [Preseason Poll](#preseason-poll)
+    - [Weekly Updates](#weekly-updates)
+14. [Conference Championships](#conference-championships)
+15. [College Football Playoff](#college-football-playoff)
+    - [Playoff Format](#playoff-format)
+    - [Auto-Bids](#auto-bids)
+    - [At-Large Selection](#at-large-selection)
+    - [Seeding & Byes](#seeding--byes)
+    - [Bracket Structure](#bracket-structure)
+    - [Notre Dame Rule](#notre-dame-rule)
+16. [Enhanced Playoff Mode](#enhanced-playoff-mode)
+    - [Halftime Adjustments](#halftime-adjustments)
+    - [Critical Moments](#critical-moments)
+    - [Momentum System](#momentum-system)
+    - [Injury Decisions](#injury-decisions)
+    - [Timeout Strategy](#timeout-strategy)
+17. [Bowl Games](#bowl-games)
 
 ---
 
@@ -780,6 +801,8 @@ Currency used to court donors. Earned based on school tier and achievements.
 
 **Weekly Limits:** Each action can only be used **once per donor per week**. Actions reset when you advance to the next week. This prevents spamming a single donor with multiple invites.
 
+**Courting Season:** Donor courting is only available during **weeks 1-4 of the off-season**. After week 4, the courting season ends and you cannot take any more courting actions until the following off-season. Use your donor points wisely during this window!
+
 **Commitment Threshold:** Donors commit when relationship reaches 80%.
 
 **When Donor Money Applies:** Secured donor contributions are added to your **next season's budget**, not immediately. This is more realistic (pledges take time to materialize) and is shown in the new season summary.
@@ -868,6 +891,296 @@ Each off-season, there's a chance (15-40% based on winning) for a wealthy new do
 | Trust Fund Heir | $3-10M/year |
 
 New money donors always have demanding traits and lower loyalty, but offer significant contributions.
+
+---
+
+## National Rankings System
+
+The game features a weekly Top 25 poll that determines playoff seeding and postseason eligibility.
+
+### Rankings Algorithm
+
+Rankings are calculated using a weighted formula:
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Win/Loss Record | 35% | Primary factor - winning matters most |
+| Strength of Schedule | 25% | Quality of opponents faced |
+| Quality Wins Bonus | 15% | Bonus points for impressive victories |
+| Conference Record | 15% | Performance against conference opponents |
+| Team Rating (OVR) | 10% | Roster quality as tiebreaker |
+
+### Strength of Schedule
+
+Each opponent is weighted by their tier and performance:
+
+```
+Opponent Weight = Tier Factor × (0.5 + Win% × 0.5)
+
+Tier Factors:
+├── Blue Blood: 1.0
+├── Power 4: 0.8
+└── Group of 5: 0.6
+
+Your SoS = Average of all opponent weights
+```
+
+This means:
+- Beating a 10-2 Blue Blood = High SoS boost
+- Beating a 6-6 G5 = Low SoS boost
+- Blue Bloods naturally have higher SoS (play each other more)
+
+### Quality Wins
+
+Bonus points are awarded for impressive victories:
+
+| Victory Type | Bonus | Stacks? |
+|--------------|-------|---------|
+| Win vs Top 10 team | +3 pts | Yes |
+| Win vs Top 25 team | +2 pts | Yes |
+| Win vs Blue Blood | +1 pt | Yes |
+| Win vs Ranked G5 | +1 pt | Yes |
+
+Example: Beating #8 Alabama (Blue Blood) = +3 (Top 10) + +1 (Blue Blood) = +4 bonus points
+
+### Preseason Poll
+
+Rankings begin with a preseason poll based on roster rating within each tier:
+
+| Tier | Starting Range | Climb Difficulty |
+|------|----------------|------------------|
+| Blue Bloods | #1-15 | Easiest to stay high |
+| Power 4 | #10-35 | Moderate |
+| Group of 5 | #25-50 | Must prove themselves |
+
+The poll has **inertia** - teams don't jump dramatically week-to-week without major results.
+
+### Weekly Updates
+
+- Rankings update after each game week during regular season
+- Final rankings lock after Conference Championship week
+- Playoff field determined from final rankings
+
+---
+
+## Conference Championships
+
+Each conference determines its champion through a championship game.
+
+### Format
+
+- **Top 2 teams by conference record** play for the title
+- No divisions (mirrors current Power 4 trend)
+- Tiebreakers: Head-to-head, then overall record, then ranking
+
+### Conference Champion Benefits
+
+- Eligible for **auto-bid** to playoff (if ranked high enough)
+- Conference championship counts as **quality win**
+- Boosts ranking for playoff seeding
+
+---
+
+## College Football Playoff
+
+The 12-team College Football Playoff determines the national champion.
+
+### Playoff Format
+
+```
+12 TEAMS TOTAL
+├── 5 AUTO-BIDS: Highest-ranked conference champions
+├── 7 AT-LARGE: Next highest-ranked teams
+
+TIMELINE
+├── Conference Championships → Determine conf champs
+├── Selection Sunday → Playoff field announced
+├── First Round → Seeds 5-12 play (higher seed hosts)
+├── Quarterfinals → Bowl sites
+├── Semifinals → Rotating bowl sites
+└── National Championship → Neutral site
+```
+
+### Auto-Bids
+
+The 5 highest-ranked conference champions receive automatic playoff berths.
+
+| Conference Type | Auto-Bid Rule |
+|-----------------|---------------|
+| Power 4 (SEC, Big Ten, Big 12, ACC) | Champion gets auto-bid if ranked |
+| Group of 5 (American, MAC, C-USA, Sun Belt, MWC) | Highest-ranked G5 champ gets auto-bid |
+
+Typically: 4 Power 4 champions + 1 Group of 5 champion = 5 auto-bids
+
+### At-Large Selection
+
+7 at-large spots go to the highest-ranked remaining teams:
+
+- Can include conference champions ranked outside top 5 champs
+- Can include non-champions with strong records
+- Notre Dame (independent) only eligible here
+
+### Seeding & Byes
+
+| Seed | Requirement | First Round |
+|------|-------------|-------------|
+| #1-4 | Must be conference champion (or Notre Dame if ranked 1-4) | BYE |
+| #5-12 | Any qualifying team | Play first round |
+
+First-round games hosted at higher seed's campus.
+
+### Bracket Structure
+
+```
+FIRST ROUND (Campus Sites)
+├── #12 vs #5 → Winner faces #4
+├── #11 vs #6 → Winner faces #3
+├── #10 vs #7 → Winner faces #2
+└── #9 vs #8 → Winner faces #1
+
+QUARTERFINALS (Bowl Sites)
+├── Fiesta Bowl
+├── Peach Bowl
+├── Rose Bowl
+└── Sugar Bowl
+
+SEMIFINALS (Rotating Bowl Sites)
+├── 2 games
+
+NATIONAL CHAMPIONSHIP (Neutral Site)
+└── 1 game
+```
+
+### Notre Dame Rule
+
+Notre Dame is an independent (no conference affiliation for football):
+
+| Aspect | Rule |
+|--------|------|
+| Auto-Bid | NOT eligible (no conference to win) |
+| At-Large | Eligible for 1 of 7 spots based on ranking |
+| First-Round Bye | YES, if ranked #1-4 |
+| Championship Eligible | YES |
+
+Notre Dame must earn their spot through ranking alone.
+
+---
+
+## Enhanced Playoff Mode
+
+Playoff games feature enhanced interactivity compared to regular season games.
+
+### Halftime Adjustments
+
+At halftime, you can adjust your game plan based on first-half performance:
+
+| Option | Effect | Best When |
+|--------|--------|-----------|
+| Stay the Course | No change | Winning or close game |
+| Air It Out | +15% pass success, -10% run, +turnover risk | Trailing, need points fast |
+| Ground & Pound | +10% run, -10% pass, controls clock | Protecting lead |
+| Trick Plays | High variance, +25% big play chance, +20% turnover risk | Desperate or gambling |
+
+### Critical Moments
+
+2-4 critical decision points occur per playoff game:
+
+**4th Down Decisions:**
+| Situation | Options |
+|-----------|---------|
+| 4th & short, opponent territory | Go for it (65-80%), FG attempt, Punt |
+| 4th & long, own territory | Go for it (35-50%), Punt |
+
+**2-Minute Drill:**
+| Option | Effect |
+|--------|--------|
+| Aggressive | More pass attempts, faster, higher turnover risk |
+| Balanced | Normal play calling |
+| Conservative | Run clock, fewer risks |
+
+### Momentum System
+
+A visible momentum bar tracks game flow:
+
+```
+YOUR TEAM ████████░░░░░░░░ OPPONENT
+          ←  MOMENTUM  →
+```
+
+**Momentum Shifts:**
+| Event | Momentum Shift |
+|-------|----------------|
+| Touchdown | +15 toward scoring team |
+| Turnover | +25 toward gaining team |
+| 3-and-out | +10 toward defensive team |
+| Big play (25+ yards) | +10 toward offensive team |
+| Sack | +5 toward defensive team |
+| Critical moment success | +15 + bonus effects |
+
+**Momentum Effects:**
+| Your Momentum | Effect |
+|---------------|--------|
+| High (>70%) | +10% play success rate |
+| Neutral (30-70%) | Normal |
+| Low (<30%) | -10% play success rate |
+
+### Injury Decisions
+
+When a key player is injured during the game:
+
+| Option | Effect |
+|--------|--------|
+| Keep Playing | 85% effectiveness, 15% chance of worsening injury |
+| Pull from Game | Backup plays at 70% rating, starter healthy for next game |
+
+Considerations:
+- Star QB injury in semifinals → Risk for championship?
+- Backup capability (rating difference)
+- Game situation (blowout vs close)
+
+### Timeout Strategy
+
+Strategic timeout decisions appear in critical moments:
+
+| Situation | Options |
+|-----------|---------|
+| Opponent driving, 2 min left | Call timeout (stop clock, regroup) or Let play (save for your drive) |
+| Your drive stalling | Call timeout (avoid delay of game) or Rush play |
+| Opponent about to score | Call timeout (ice kicker) or Save timeout |
+
+Timeouts remaining affect late-game options.
+
+---
+
+## Bowl Games
+
+Teams that miss the playoff but achieve bowl eligibility still play a postseason game.
+
+### Bowl Eligibility
+
+| Record | Bowl Status |
+|--------|-------------|
+| 6+ wins | Bowl eligible |
+| 5 or fewer wins | Season ends (no bowl) |
+
+### Bowl Tiers
+
+Bowl assignment based on final record:
+
+| Record | Bowl Tier | Examples |
+|--------|-----------|----------|
+| 10+ wins (non-playoff) | NY6 Bowl | Cotton, Orange (non-CFP hosting) |
+| 8-9 wins | Mid-Tier | Citrus, Music City, Holiday |
+| 6-7 wins | Lower-Tier | Cure, Idaho Potato, Famous Toastery |
+
+### Bowl Game Experience
+
+Bowl games use the same **Enhanced Mode** as playoff games:
+- Halftime adjustments
+- Critical moments
+- Momentum system
+
+This gives all postseason games elevated importance and interactivity.
 
 ---
 

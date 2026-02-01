@@ -948,3 +948,794 @@ donorContributions = sum of all secured donor annualContribution
 | New season summary with donors | ~8686-8705 |
 
 ---
+
+## Session: January 26, 2026 (Continued - Donor Courting Season Restriction)
+
+### Problem
+User reported: "USER is in week six of off-season test and NIL donors are still listed as available still. Donor courting/points should only be available in weeks 1-4 of the off-season calendar."
+
+### Fix
+Donor courting is now restricted to weeks 1-4 of the off-season (the "Donor Courting Season").
+
+**Changes Made:**
+
+1. **Banner when courting season ends** (line ~11895):
+   - Shows "DONOR COURTING SEASON HAS ENDED" message when `offSeasonWeek > 4`
+   - Explains courting is only available weeks 1-4
+
+2. **Action buttons disabled after week 4** (line ~11965):
+   - Added `courtingSeasonOver` check: `offSeasonWeek !== null && offSeasonWeek > 4`
+   - When true, shows "Courting season ended (weeks 1-4 only)" instead of buttons
+
+3. **Tab indicators respect courting season** (line ~9745):
+   - Added `courtingSeasonActive` check before counting actionable donors
+   - NIL tab indicator shows 0 for donor tasks when week > 4
+
+4. **Info box updated** (line ~12078):
+   - Added note: "Courting actions are only available during weeks 1-4 of the off-season."
+
+### Updated Line References
+
+| Feature | Approximate Lines |
+|---------|------------------|
+| Courting season ended banner | ~11895 |
+| Courting season check in buttons | ~11965 |
+| Tab indicator courting check | ~9745 |
+| Info box with weeks 1-4 note | ~12078 |
+
+---
+
+## Session: January 26, 2026 (Continued - Comprehensive UI/UX Audit Implementation)
+
+### Overview
+Implemented fixes from comprehensive audit using all available skills:
+- `/baseline-ui` - UI baseline constraints
+- `/fixing-accessibility` - Accessibility guidelines
+- `/fixing-motion-performance` - Animation performance
+
+### Changes Made
+
+#### 1. Modal System (Replaced All Browser Alerts/Confirms)
+- **AlertModal Component**: Custom modal replacing `alert()` with types: info, success, warning, error
+- **ConfirmModal Component**: Custom modal replacing `confirm()` with onConfirm/onCancel callbacks
+- **Helper Functions**: `showAlert(message, title, type)` and `showConfirm(message, onConfirm, title, options)`
+- Replaced 25+ `alert()` calls and 6+ `confirm()` calls with new modal system
+- All modals have proper accessibility (aria-labelledby, role="dialog", focus management)
+
+#### 2. ErrorBoundary Component
+- Added class-based ErrorBoundary wrapping entire App
+- Displays themed error screen on crash with reload button
+- Error details shown for debugging
+- User's save data preserved (localStorage not affected by JS errors)
+
+#### 3. Progress Bar Animation Fix
+- Converted width-based animations to `transform: scaleX()` for compositor performance
+- Added `origin-left` for proper scaling origin
+- Progress bars now use GPU acceleration instead of layout recalculation
+- Affected: Off-season progress, coach success bar, donor relationship bars, budget bars
+
+#### 4. Accessibility Improvements
+- Added `aria-label` to icon-only buttons (settings, music toggle)
+- Added `aria-expanded` to all expand/collapse buttons (9 sections)
+- Added `aria-pressed` and `role="switch"` to music toggle
+- Replaced `min-h-screen` → `min-h-dvh` globally (mobile viewport fix)
+
+#### 5. Typography Improvements
+- Added `text-balance` to major headings (title screen, modals, options)
+- Added `tabular-nums` to numeric displays (budget amounts, percentages)
+
+#### 6. Animation Duration Reduction
+- Changed all `duration-500` → `duration-200`
+- Changed all `duration-300` → `duration-200`
+- Per baseline-ui: interaction feedback should not exceed 200ms
+
+### State Variables Added
+```javascript
+const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '', type: 'info' });
+const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Confirm', cancelText: 'Cancel' });
+```
+
+### Components Added
+- `ErrorBoundary` (class component, lines ~4-50)
+- `AlertModal` (function component, lines ~9057-9108)
+- `ConfirmModal` (function component, lines ~9110-9165)
+- `AppWithErrorBoundary` (wrapper component, export default)
+
+### Remaining Audit Items (For Future Sessions)
+- [x] Associate form labels with inputs (htmlFor/id) - DONE
+- [x] Replace custom boxShadow with Tailwind shadow utilities - DONE (config + key components)
+- [ ] Add more aria-labels to remaining interactive elements
+
+### Files Modified
+- `src/App.jsx`:
+  - Lines ~1-50: Added ErrorBoundary class component, Component import
+  - Lines ~3580: Added alertModal and confirmModal state
+  - Lines ~9030-9165: Added showAlert/showConfirm helpers and modal components
+  - Multiple locations: Replaced alert() and confirm() calls
+  - Lines ~9190+: AppWithErrorBoundary wrapper component
+  - Multiple progress bars: Changed width to scaleX transforms
+  - Multiple expand buttons: Added aria-expanded
+  - Duration classes: Changed 300/500 to 200
+
+---
+
+## Session: January 26, 2026 (Continued - Save Optimization & Form Accessibility)
+
+### Overview
+Fixed localStorage quota issues and completed accessibility audit for form labels.
+
+### Changes Made
+
+#### 1. localStorage Save Optimization (CRITICAL FIX)
+**Problem:** User encountered "Storage limit reached" error during Week 15 of off-season. ~1800 recruits with full AI recruiting data exceeded the ~5MB localStorage limit.
+
+**Solution:** Implemented smart 3-tier save compression that PRESERVES AI recruiting interest:
+
+**Tier 1 - Normal Save:**
+- Compresses recruitingSchools to 8 schools max per recruit
+- Uses shortened keys: `{s: schoolId, i: interest}` instead of full objects
+- Removes action history metadata (regenerated on load)
+- ~40-50% size reduction while keeping AI integrity
+
+**Tier 2 - Ultra-Compressed (if Tier 1 fails):**
+- Reduces to 5 schools per recruit
+- Trims gameResults to last 24 games
+- Further strips non-essential fields
+
+**Tier 3 - Emergency (last resort):**
+- Only saves committed/targeted recruits
+- Shows warning to user
+- AI recruiting will regenerate for other recruits
+
+**Key Design Decision:** AI interest values MUST be preserved for the ecosystem to function. Simply stripping recruitingSchools would break AI recruitment of non-targeted players.
+
+**Load Logic:** Decompresses `{s, i}` format back to full objects with default action metadata.
+
+#### 2. Form Label Accessibility
+Added proper htmlFor/id associations to all form inputs:
+- Coach name input (school selection)
+- Team name, nickname, head coach edit inputs
+- NIL offer range slider (aria-labelledby)
+- Push NIL amount input
+- Roster sort/filter selects (aria-label)
+- Starter checkboxes (aria-label with player name)
+- Conference name edit input
+
+#### 3. Tailwind Shadow Utilities
+Added custom pixel-art shadow scale to `tailwind.config.js`:
+```javascript
+boxShadow: {
+  'pixel-xs': '1px 1px 0px rgba(0,0,0,0.5)',
+  'pixel-sm': '2px 2px 0px rgba(0,0,0,0.5)',
+  'pixel': '3px 3px 0px rgba(0,0,0,0.5)',
+  'pixel-md': '4px 4px 0px rgba(0,0,0,0.5)',
+  'pixel-lg': '6px 6px 0px rgba(0,0,0,0.5)',
+  'pixel-xl': '8px 8px 0px rgba(0,0,0,0.5)',
+  'pixel-2xl': '12px 12px 0px rgba(0,0,0,0.8)',
+  'pixel-3xl': '20px 20px 0px rgba(0,0,0,0.9)',
+}
+```
+Converted key components to use utilities: AlertModal, ConfirmModal, ErrorBoundary.
+200+ remaining inline shadows can be gradually migrated.
+
+### Code Changes
+
+**Save Function (~line 4775):**
+```javascript
+// Smart compression - preserves AI interest
+const compressedSchools = (r.recruitingSchools || [])
+  .slice(0, 8)
+  .map(rs => ({ s: rs.schoolId, i: rs.interest }));
+```
+
+**Load Function (~line 3833):**
+```javascript
+// Decompress on load
+if (rs.s !== undefined && rs.i !== undefined) {
+  return {
+    schoolId: rs.s,
+    interest: rs.i,
+    lastAction: 'Loaded',
+    weeksSinceAction: 0,
+    monthlyActionsUsed: 0
+  };
+}
+```
+
+### Files Modified
+- `src/App.jsx`:
+  - Lines ~4775-4940: Save optimization with 3-tier compression
+  - Lines ~3833-3870: Decompression on load
+  - Multiple form inputs: Added htmlFor/id and aria-labels
+  - AlertModal, ConfirmModal, ErrorBoundary: Changed to Tailwind shadows
+- `tailwind.config.js`: Added custom pixel shadow scale
+
+### Audit Status
+- [x] Modal system (replaces alerts/confirms)
+- [x] ErrorBoundary component
+- [x] Progress bar animations (scaleX)
+- [x] aria-labels for icon buttons
+- [x] aria-expanded for toggles
+- [x] Form label associations
+- [x] min-h-dvh viewport fix
+- [x] text-balance/tabular-nums
+- [x] Animation durations ≤200ms
+- [x] Tailwind shadow utilities (config + key components)
+- [x] localStorage save optimization
+
+---
+
+## Session: January 31, 2026 (Playoff & Rankings System Design)
+
+### Overview
+Comprehensive design session for implementing the College Football Playoff and national rankings system. Used installed skill templates (game-development, react-best-practices, ui-ux-pro-max, clean-code, brainstorming) to analyze the game and prioritize features.
+
+### Design Decisions
+
+#### 1. Playoff Format: 12-Team CFP (Mirrors 2024-25 Real Format)
+
+```
+12 TEAMS TOTAL
+├── 5 AUTO-BIDS: Highest-ranked conference champions
+├── 7 AT-LARGE: Next highest-ranked teams (Notre Dame eligible here)
+
+SEEDING
+├── Seeds 1-4: First-round BYE (highest-ranked conf champs, or Notre Dame if Top 4)
+└── Seeds 5-12: Play first round
+
+BRACKET STRUCTURE
+├── First Round (4 games)
+│   ├── #12 vs #5 (higher seed hosts)
+│   ├── #11 vs #6
+│   ├── #10 vs #7
+│   └── #9 vs #8
+├── Quarterfinals (4 games) - Bowl sites (Fiesta, Peach, Rose, Sugar)
+├── Semifinals (2 games) - Rotating bowl sites
+└── National Championship (1 game) - Neutral site
+```
+
+#### 2. Notre Dame Rule (Independents)
+- Cannot win a conference → No auto-bid possible
+- Must qualify via at-large (7 spots)
+- If ranked #1-4 → Gets first-round BYE like any top-4 seed
+- Can win National Championship
+
+#### 3. Rankings Algorithm
+
+| Factor | Weight | Notes |
+|--------|--------|-------|
+| Win/Loss Record | 35% | Primary factor |
+| Strength of Schedule | 25% | Tier baked in |
+| Quality Wins Bonus | 15% | Tier baked in |
+| Conference Record | 15% | For conf champ tiebreakers |
+| Team Rating (OVR) | 10% | Roster quality |
+
+**Tier Integration (Options A+B+C Combined):**
+
+**A) Strength of Schedule Calculation:**
+```
+Opponent Weight = Tier Factor × (0.5 + Win% × 0.5)
+
+Tier Factors:
+├── Blue Blood: 1.0
+├── Power 4: 0.8
+└── Group of 5: 0.6
+
+Your SoS = Average of all opponent weights
+```
+
+**B) Preseason Poll Bias:**
+```
+Starting Rankings (by roster rating within tier):
+├── Blue Bloods: #1-15
+├── Power 4: #10-35
+└── Group of 5: #25-50
+
+Poll has "inertia" - big wins needed to climb
+```
+
+**C) Quality Wins Bonus:**
+```
+├── Win vs Top 10 team: +3 pts
+├── Win vs Top 25 team: +2 pts
+├── Win vs Blue Blood: +1 pt (stacks)
+└── Win vs Ranked G5: +1 pt (Cinderella respect)
+```
+
+**Ranking Updates:** Weekly after each game week
+
+#### 4. Conference Championships
+- **Format:** Top 2 teams by conference record play for title
+- **No divisions** (mirrors current P4 trend outside SEC)
+- Winner = Conference Champion → Eligible for auto-bid if ranked high enough
+
+#### 5. Enhanced Playoff Game Mode
+
+**Differs from Regular Season:**
+
+| Element | Regular Season | Playoff |
+|---------|----------------|---------|
+| Game Plan | Set once | Halftime adjustments |
+| Player Decisions | Minimal | Critical moments |
+| Momentum | Hidden | Visible bar |
+| Injuries | Random events | Decision points |
+| Timeouts | N/A | Strategic choices |
+
+**New Decision Types:**
+
+1. **Halftime Adjustments:**
+   - Stay the Course
+   - Air It Out (+pass, -run, +turnover risk)
+   - Ground & Pound (control clock)
+   - Trick Plays (high risk/reward)
+
+2. **Critical Moments (2-4 per game):**
+   - 4th down decisions (Go for it / FG / Punt)
+   - 2-minute drill choices
+   - Key play calls in clutch situations
+
+3. **Momentum System:**
+   - Visual bar showing momentum swing
+   - Events shift momentum (TDs, turnovers, 3-and-outs)
+   - Momentum affects play success rates (+/- 10%)
+
+4. **Injury/Fatigue Decisions:**
+   - Star player hurt → Keep in (risk) or pull (safe)
+   - Affects current game vs future games
+
+5. **Timeout Strategy:**
+   - When to call timeouts
+   - Save for final drive vs stop opponent momentum
+
+#### 6. Bowl Games for Non-Playoff Teams
+- **6+ wins** = Bowl eligible
+- **Bowl tier based on record:**
+  - 10+ wins: NY6 bowl (if not in playoff)
+  - 8-9 wins: Mid-tier bowl
+  - 6-7 wins: Lower-tier bowl
+- **5 wins or fewer** = Season ends (no bowl)
+- Bowl games use enhanced mode (same as playoff)
+
+### Implementation Order
+1. Conference standings tracking
+2. Rankings system (algorithm + Top 25 display)
+3. Playoff selection logic (after conf championships)
+4. Playoff bracket UI
+5. Enhanced playoff game mode
+6. Bowl game system
+
+### Skills Analysis Applied
+Installed and analyzed these skill templates:
+- `game-development` - Core loop analysis, game design principles
+- `react-best-practices` - Performance optimization opportunities
+- `ui-ux-pro-max` - UI/UX guidelines and checklist
+- `clean-code` - Refactoring priorities identified
+- `brainstorming` - Feature prioritization
+- `code-reviewer` - Code quality issues identified
+- `senior-architect` - Architecture recommendations
+
+### Key Findings from Skills Analysis
+
+**Game Design Gaps:**
+- Achiever motivation: 2/10 (no rankings, championships)
+- Player progression: 3/10 (shallow development)
+- Game simulation: 5/10 (outcome-based, no agency)
+
+**React Performance Issues:**
+- 50+ useState hooks causing re-renders
+- No memoization
+- 17,000 line monolith needs extraction
+
+**Priority Matrix:**
+| Feature | Impact | Effort | Priority |
+|---------|--------|--------|----------|
+| Rankings System | HIGH | MEDIUM | 1 |
+| Component Extraction | HIGH | HIGH | 2 |
+| Player Stats | HIGH | MEDIUM | 3 |
+| Playoff Bracket | HIGH | MEDIUM | 4 |
+
+---
+## Session: January 31, 2026
+
+### Changes Made
+
+#### 1. Conference Standings System (IMPLEMENTED)
+**Location:** `App.jsx` lines ~2525-2820
+
+**New Functions:**
+- `initializeConferenceStandings(allSchools)` - Creates empty records for all 134 schools
+- `generateAllTeamSchedules(allSchools, playerSchoolId, playerSchedule)` - Creates 12-game schedules for all AI teams
+- `simulateAIGame(team1, team2, rating1, rating2)` - Simulates individual AI games
+- `simulateAIWeeklyGames(week, standings, allSchools, playerSchoolId, aiRosters)` - Simulates all AI games for a week
+- `updatePlayerGameStandings(standings, playerSchoolId, opponentId, playerWon, scores, isConference)` - Updates standings after player game
+- `getConferenceStandings(standings, conference)` - Returns sorted conference standings
+- `getAllConferenceStandings(standings)` - Returns all conferences with sorted standings
+
+**Standings Data Structure:**
+```javascript
+{
+  schoolId: string,
+  schoolName: string,
+  conference: string,
+  tier: string,
+  wins: number,
+  losses: number,
+  confWins: number,
+  confLosses: number,
+  pointsFor: number,
+  pointsAgainst: number,
+  schedule: Array<{week, opponentId, isConference, isHome, result, score}>,
+  streak: number // positive = win streak, negative = loss streak
+}
+```
+
+**UI:** Added collapsible "CONFERENCE STANDINGS" section in dashboard showing:
+- Full conference standings table with rank, team, conference record, overall record, streak
+- Conference championship preview (top 2 teams)
+- Player's team highlighted
+
+#### 2. National Rankings System (IMPLEMENTED)
+**Location:** `App.jsx` lines ~2822-3030
+
+**Rankings Algorithm (per plan):**
+| Factor | Weight |
+|--------|--------|
+| Win/Loss Record | 35% |
+| Strength of Schedule | 25% |
+| Quality Wins Bonus | 15% |
+| Conference Record | 15% |
+| Team Rating (OVR) | 10% |
+
+**Tier Integration:**
+- SoS Weights: Blue Blood (1.0), Power 4 (0.8), Group of 5 (0.6)
+- Preseason Rankings: BB #1-15, P4 #10-35, G5 #25-50
+- Quality Wins: +3 Top 10, +2 Top 25, +1 Blue Blood, +1 Ranked G5
+
+**New Functions:**
+- `generatePreseasonRankings(allSchools, aiRosters, playerRoster, playerSchoolId)` - Creates preseason poll
+- `calculateSoS(schoolId, standings, allSchools)` - Calculates strength of schedule
+- `calculateQualityWins(schoolId, standings, currentRankings, allSchools)` - Calculates quality wins bonus
+- `calculateNationalRankings(standings, allSchools, aiRosters, playerRoster, playerSchoolId, prevRankings)` - Full rankings calculation
+- `getTop25Rankings(rankings)` - Returns top 25 teams
+
+**UI:** Added collapsible "TOP 25 RANKINGS" section in dashboard showing:
+- Full Top 25 table with rank, team, record, conference record, SoS, rank change
+- Rank movement indicators (▲ green, ▼ red)
+- Player's team highlighted if ranked
+- Player's ranking shown separately if outside Top 25
+
+**New State Variables:**
+- `conferenceStandings` - All team standings by school ID
+- `nationalRankings` - Array of all teams with rankings data
+- `standingsExpanded` - Collapsible state for standings panel
+- `rankingsExpanded` - Collapsible state for rankings panel (starts expanded)
+
+**Save/Load:** Both `conferenceStandings` and `nationalRankings` are saved to localStorage and loaded on game start.
+
+#### 3. Integration Points
+
+**Rankings/Standings Initialized:**
+1. School selection (new game start)
+2. Off-season start (new season)
+3. `advanceToNewSeason()` function
+
+**Rankings Updated:**
+- After every game completion
+- Weekly when player advances (AI games simulated simultaneously)
+
+### Next Steps (Remaining from Plan)
+1. ~~Conference standings tracking~~ ✅
+2. ~~Rankings algorithm + Top 25 display~~ ✅
+3. Playoff selection logic (after conf championships)
+4. Playoff bracket UI
+5. Enhanced playoff game mode
+6. Bowl game system
+
+### Line Reference Updates
+Due to additions, key lines shifted:
+- Conference standings functions: ~2525-2820
+- Rankings functions: ~2822-3030
+- `conferenceStandings` state: ~4280
+- `nationalRankings` state: ~4281
+- Rankings UI: ~11900-12030
+- Standings UI: ~12032-12145
+
+---
+
+## Session: February 1, 2026 (Playoff Selection System Implementation)
+
+### Overview
+Implemented the College Football Playoff selection system including conference championships and 12-team bracket selection.
+
+### Features Implemented
+
+#### 1. Conference Championships Simulation
+**Location:** `App.jsx` lines ~3048-3120
+
+**New Functions:**
+- `simulateConferenceChampionships(standings, allSchools, aiRosters, playerSchoolId, playerRoster)`
+  - Simulates all 9 conference championship games
+  - Top 2 teams by conference record play for the title
+  - If player is in top 2, they play the game manually
+  - Returns champions, results, and player's game (if applicable)
+
+**Conferences:**
+- Summit League, Great Lakes Conference, Atlantic Alliance, Frontier League (Power 4)
+- American Athletic, Conference USA, Mid-American Conference, Mountain Division, Sunbelt Conference (Group of 5)
+
+#### 2. Playoff Selection Logic
+**Location:** `App.jsx` lines ~3125-3245
+
+**New Functions:**
+- `selectPlayoffField(rankings, confChampions, allSchools)`
+  - Selects 12-team playoff field
+  - 5 auto-bids: Highest-ranked conference champions
+  - 7 at-large: Best remaining teams by ranking
+  - Seeds 1-4 get first-round bye (must be conf champ or independent)
+  - Returns teams, bracket structure, auto-bids, and at-large selections
+
+**12-Team Bracket Format:**
+```
+First Round (4 games):
+  #12 vs #5, #11 vs #6, #10 vs #7, #9 vs #8
+  Higher seed hosts
+
+Quarterfinals (4 games - Bowl sites):
+  #1 vs R1G1 winner (Fiesta Bowl)
+  #2 vs R1G2 winner (Peach Bowl)
+  #3 vs R1G3 winner (Rose Bowl)
+  #4 vs R1G4 winner (Sugar Bowl)
+
+Semifinals (2 games):
+  QF1 vs QF4 (Orange Bowl)
+  QF2 vs QF3 (Cotton Bowl)
+
+Championship (1 game):
+  SF1 vs SF2 (National Championship)
+```
+
+#### 3. Playoff State Management
+**Location:** `App.jsx` lines ~4534-4549
+
+**New State Variables:**
+```javascript
+const [playoffState, setPlayoffState] = useState({
+  phase: null, // 'conf_championships', 'selection_sunday', 'first_round', etc.
+  conferenceChampions: {},
+  confChampResults: [],
+  playerConfChampGame: null,
+  playoffTeams: [],
+  playoffBracket: null,
+  bracketResults: {},
+  currentPlayoffGame: null,
+  nationalChampion: null
+});
+const [showConfChampModal, setShowConfChampModal] = useState(false);
+const [showSelectionSundayModal, setShowSelectionSundayModal] = useState(false);
+const [showPlayoffBracketModal, setShowPlayoffBracketModal] = useState(false);
+const [selectionRevealIndex, setSelectionRevealIndex] = useState(0);
+```
+
+#### 4. UI Modals
+**Location:** `App.jsx` lines ~18350-18750 (approximately)
+
+**Three New Modals:**
+
+1. **Conference Championships Results Modal**
+   - Shows all championship game results
+   - If player has a championship game, shows "PLAY CHAMPIONSHIP GAME" button
+   - Proceeds to Selection Sunday after viewing
+
+2. **Selection Sunday Modal**
+   - Dramatic reveal of 12-team playoff field
+   - Shows bye teams (seeds 1-4) and first round matchups
+   - Reveals 3 teams at a time for suspense
+   - Shows player status (made playoff or season over)
+
+3. **Playoff Bracket Modal**
+   - Visual bracket display
+   - Shows first round matchups, bye teams, quarterfinals
+   - "PLAY GAME" button for player's games
+   - Results update as games are completed
+
+#### 5. Event Flow Integration
+**Location:** `App.jsx` lines ~9906-9994
+
+**Added to `simulateToNextEvent()`:**
+- Conference Championships trigger when that calendar event is reached
+- Selection Sunday runs after conference championships complete
+- Playoff phase tracking throughout
+
+#### 6. Game Completion Handling
+**Location:** `App.jsx` lines ~17900-18050 (approximately)
+
+**Extended game completion logic:**
+- Handles conference championship game results
+  - Winner becomes conference champion
+  - Awards +100 donor points for championship win
+- Handles playoff game results
+  - Updates bracket with winner/loser
+  - Awards +75 donor points for playoff wins
+  - Ends season for player if eliminated
+
+### Save/Load Integration
+- `playoffState` added to save object and load logic
+- Playoff state resets when starting new game or new season
+
+### Next Steps (Remaining)
+1. ~~Conference championships~~ ✅
+2. ~~Playoff selection (12-team)~~ ✅
+3. ~~Playoff bracket UI~~ ✅
+4. Enhanced playoff game mode (momentum, halftime adjustments)
+5. Bowl games for non-playoff teams
+6. Simulate remaining playoff when player eliminated
+
+### Key Line References (Updated)
+| Feature | Approximate Lines |
+|---------|------------------|
+| CONFERENCES constant | ~3030 |
+| simulateConferenceChampionships() | ~3048-3120 |
+| selectPlayoffField() | ~3125-3245 |
+| Playoff state variables | ~4534-4549 |
+| Conference champ trigger in simToNextEvent | ~9906-9940 |
+| Playoffs trigger in simToNextEvent | ~9960-9994 |
+| Conference Championships Modal | ~18350-18460 |
+| Selection Sunday Modal | ~18465-18620 |
+| Playoff Bracket Modal | ~18625-18750 |
+
+---
+
+## Session: February 1, 2026 (Enhanced Playoff Mode & Bowl Games)
+
+### Overview
+Implemented the Enhanced Playoff Game Mode with momentum system, critical decisions, halftime adjustments, bowl games, and playoff legacy tracking based on the product spec documented in `/Notes for Claude/ENHANCED_PLAYOFF_SPEC.md`.
+
+### Changes Made
+
+#### 1. Enhanced Playoff Game Mode State Variables
+**Location:** `App.jsx` lines ~4700-4730
+
+Added new state for enhanced mode:
+```javascript
+// Enhanced Playoff Game Mode State
+const [enhancedModeEnabled, setEnhancedModeEnabled] = useState(false);
+const [gameMomentum, setGameMomentum] = useState(50); // 0-100
+const [momentumHistory, setMomentumHistory] = useState([]);
+const [currentDecision, setCurrentDecision] = useState(null);
+const [decisionTimer, setDecisionTimer] = useState(null);
+const [gameInjuries, setGameInjuries] = useState([]);
+const [halftimeAdjustment, setHalftimeAdjustment] = useState(null);
+const [showHalftimeModal, setShowHalftimeModal] = useState(false);
+const [showDecisionModal, setShowDecisionModal] = useState(false);
+const [showInjuryModal, setShowInjuryModal] = useState(false);
+const [currentInjury, setCurrentInjury] = useState(null);
+const [blowoutSkipOffered, setBlowoutSkipOffered] = useState(false);
+
+// Bowl Game State
+const [bowlAssignment, setBowlAssignment] = useState(null);
+const [bowlResults, setBowlResults] = useState([]);
+const [showBowlModal, setShowBowlModal] = useState(false);
+
+// Playoff Legacy Tracking
+const [playoffHistory, setPlayoffHistory] = useState({
+  appearances: 0, wins: 0, losses: 0, championships: 0,
+  finalFours: 0, championshipAppearances: 0,
+  biggestWin: null, closestLoss: null, perfectRuns: 0
+});
+```
+
+#### 2. Momentum System Constants
+**Location:** `App.jsx` lines ~1130-1240
+
+Added comprehensive constants for:
+- `MOMENTUM_EVENTS` - Base values for TDs (+12), turnovers (±15), sacks (+4), etc.
+- `MOMENTUM_CONTEXT` - Close game (+25%) and 4th quarter (+50%) multipliers
+- `MOMENTUM_TIER_SCALING` - Blue Blood vs G5 opponent scaling
+- `HALFTIME_ADJUSTMENTS` - Stay the Course, Air It Out, Ground & Pound, Trick Plays
+- `FOURTH_DOWN_OPTIONS` - Go For It, Punt, Field Goal with risk tiers
+- `INJURY_SEVERITY` - Minor, Moderate, Serious, Catastrophic with aggravation risks
+- `BOWL_TIERS` - NY6, Mid-Tier, Lower-Tier with funny sponsor names
+
+#### 3. Momentum Calculation Functions
+**Location:** `App.jsx` lines ~8050-8220
+
+Added functions:
+- `calculateMomentumModifier(momentum)` - Returns +/- percentage based on momentum
+- `calculateMomentumChange(eventType, context)` - Calculates momentum swing from events
+- `updateMomentum(eventType, context)` - Updates momentum state with history tracking
+- `resetMomentum()` - Resets momentum for new game
+- `generateGameInjury(roster)` - Random in-game injury generation
+- `processInjuryDecision(injury, keepIn)` - Handles keep in vs pull decision
+- `determineBowlAssignment(wins, conference)` - Assigns bowl based on record
+
+#### 4. Bowl Game System
+**Location:** `App.jsx` lines ~3460-3580
+
+Added functions:
+- `assignBowlGames(standings, playoffTeamIds, allSchools, aiRosters, rankings)` - Assigns all bowl games to non-playoff teams
+- `checkPlayerBowlEligibility(seasonRecord, playoffTeams, schoolId)` - Checks if player qualifies for bowl
+
+Bowl assignment integrated into Selection Sunday flow - if player misses playoff but has 6+ wins, they get a bowl game assignment.
+
+#### 5. Playoff Legacy Tracking
+**Location:** `App.jsx` lines ~3580-3650
+
+Added functions:
+- `updatePlayoffLegacy(prevLegacy, gameResult, round, opponent, dynastyYear, ...)` - Updates legacy after each playoff game
+- `recordPlayoffAppearance(prevLegacy)` - Records when player makes playoff field
+
+Legacy UI added to Team tab showing:
+- Playoff record (W-L)
+- Championships won
+- Final Four appearances
+- Championship game appearances
+- Biggest win (margin, opponent, year, round)
+- Closest loss (heartbreaker)
+- Perfect playoff runs
+
+#### 6. New UI Modals
+**Location:** `App.jsx` lines ~19570-19880
+
+Added four new modals:
+1. **Halftime Adjustment Modal** - Shows score/momentum, offers 4 adjustment options
+2. **Injury Decision Modal** - Shows injury details, aggravation risk, keep in vs pull
+3. **Critical Decision Modal** - 4th down decisions with Go/Punt/FG options, two-minute drill
+4. **Bowl Assignment Modal** - Shows bowl invitation with sponsor name
+
+#### 7. Selection Sunday Updates
+Updated Selection Sunday modal to:
+- Show bowl assignment if player has one but missed playoff
+- Changed button to show "VIEW BOWL INVITATION" for bowl-eligible non-playoff teams
+
+### Save/Load Integration
+All new state variables added to save/load logic at lines ~5890 and ~4875.
+
+Reset logic added for new game (line ~5675) and new season (line ~9910).
+
+### Key Line References (Updated)
+| Feature | Approximate Lines |
+|---------|------------------|
+| MOMENTUM_EVENTS constant | ~1130 |
+| BOWL_TIERS constant | ~1180 |
+| HALFTIME_ADJUSTMENTS constant | ~1205 |
+| FOURTH_DOWN_OPTIONS constant | ~1230 |
+| INJURY_SEVERITY constant | ~1250 |
+| calculateMomentumModifier() | ~8050 |
+| updateMomentum() | ~8100 |
+| generateGameInjury() | ~8150 |
+| assignBowlGames() | ~3460 |
+| updatePlayoffLegacy() | ~3580 |
+| Enhanced mode state vars | ~4700-4730 |
+| Halftime Modal | ~19570 |
+| Injury Modal | ~19660 |
+| Critical Decision Modal | ~19750 |
+| Bowl Modal | ~19850 |
+| Playoff Legacy UI (Team tab) | ~12920 |
+
+### Design Decisions
+| Decision | Rationale |
+|----------|-----------|
+| Momentum carries over between quarters | Per spec - no reset, no decay |
+| Asymmetric momentum effect | Your momentum only affects YOUR plays |
+| Diminishing returns on TDs | Prevents runaway momentum from blowouts |
+| Context scaling stacks multiplicatively | Close game + 4th quarter = 1.25 × 1.50 = 1.875x |
+| Bowl eligibility at 6 wins | Standard NCAA threshold |
+| Funny bowl sponsor names | Per spec - parody of real bowl sponsorships |
+| Legacy persists across seasons | Career tracking, not reset at new season |
+
+### Files Modified
+- `src/App.jsx` - All changes (single-file architecture)
+- `/Notes for Claude/ENHANCED_PLAYOFF_SPEC.md` - Created comprehensive spec document
+
+### Build Status
+Build successful: 627.80 kB JS (was 603.64 kB before this session)
+
+### Next Steps
+1. Wire up momentum system to actual game simulation (currently infrastructure only)
+2. Trigger halftime modal during playoff games at halftime
+3. Trigger critical decision modals at appropriate game moments
+4. Add championship celebration sequence
+5. Add sounds/audio effects (per spec)
+
+---
+

@@ -1,5 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+
+// ERROR BOUNDARY COMPONENT - Catches JavaScript errors in child component tree
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-dvh bg-gray-900 flex items-center justify-center p-4" style={{ fontFamily: '"Press Start 2P", cursive' }}>
+          <div className="bg-red-900 border-4 border-red-500 p-8 max-w-lg text-center shadow-pixel-xl">
+            <div className="text-6xl mb-4">💥</div>
+            <h1 className="text-red-400 text-xl mb-4 text-balance">GAME CRASH!</h1>
+            <p className="text-white text-xs mb-4">
+              Something went wrong. Your save data should still be intact.
+            </p>
+            <div className="bg-black border-2 border-red-700 p-3 mb-4 text-left max-h-32 overflow-y-auto">
+              <code className="text-red-300 text-xs break-all">
+                {this.state.error?.toString()}
+              </code>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-green-700 border-4 border-green-500 px-6 py-3 text-white text-sm hover:bg-green-600 transition-all shadow-pixel-md"
+            >
+              🔄 RELOAD GAME
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Sample school data with primary colors
 // Full FBS School Database (133 teams) - Fictional Names & Nicknames
@@ -976,6 +1022,157 @@ const SCORE_DISTRIBUTION = {
   moderate: { chance: 37, marginMin: 8, marginMax: 20 },
   close: { chance: 45, marginMin: 0, marginMax: 7 }
 };
+
+// ============== ENHANCED PLAYOFF MODE - MOMENTUM SYSTEM ==============
+
+// Momentum event values (base values, subject to modifiers)
+const MOMENTUM_EVENTS = {
+  touchdown: { base: 12, diminishing: 2 },       // Each subsequent TD gives 2 less
+  turnoverForced: { base: 15 },                   // INT, fumble recovery
+  threeAndOutForced: { base: 6 },
+  sack: { base: 4 },
+  bigPlay: { base: 5, threshold: 25 },            // 25+ yard plays
+  scoreAllowed: { base: -10 },
+  turnoverCommitted: { base: -15 },
+  threeAndOut: { base: -6 },                      // Offense goes 3-and-out
+  fieldGoal: { base: 4 },
+  fieldGoalAllowed: { base: -4 },
+  safety: { base: 8 },
+  safetyAllowed: { base: -10 }
+};
+
+// Context multipliers for momentum
+const MOMENTUM_CONTEXT = {
+  closeGame: { threshold: 10, multiplier: 1.25 },     // Within 10 points
+  fourthQuarter: { multiplier: 1.50 },                // 4th quarter
+  // These stack multiplicatively
+};
+
+// Opponent tier scaling for momentum gains
+const MOMENTUM_TIER_SCALING = {
+  'Blue Blood': { offensive: 1.20, defensive: 1.20 },  // Scoring on BB = +20%
+  'Power 4': { offensive: 1.0, defensive: 1.0 },       // Baseline
+  'Group of 5': { offensive: 0.80, defensive: 0.80 }   // Scoring on G5 = -20%
+};
+
+// Bowl Game Configuration
+const BOWL_TIERS = {
+  ny6: {
+    minWins: 10,
+    bowls: [
+      { name: 'The Insurance Classic', sponsor: 'StateFarm Insurance', prestige: 'elite' },
+      { name: 'The Auto Dealers Bowl', sponsor: 'Regional Auto Group', prestige: 'elite' },
+      { name: 'The Pharmaceutical Fiesta', sponsor: 'Big Pharma Inc.', prestige: 'elite' },
+      { name: 'The Credit Union Bowl', sponsor: 'Community Credit Union', prestige: 'elite' },
+      { name: 'The Mattress Firm Invitational', sponsor: 'Sleep Better Mattress Co.', prestige: 'elite' }
+    ]
+  },
+  midTier: {
+    minWins: 8,
+    bowls: [
+      { name: 'The Tire Center Bowl', sponsor: 'Discount Tire Depot', prestige: 'mid' },
+      { name: 'The Regional Bank Classic', sponsor: 'Midwest Savings Bank', prestige: 'mid' },
+      { name: 'The Fast Food Bowl', sponsor: 'Burger Barn', prestige: 'mid' },
+      { name: 'The Insurance Brokers Bowl', sponsor: 'Coverage Plus', prestige: 'mid' },
+      { name: 'The Home Improvement Bowl', sponsor: 'Tool Time Hardware', prestige: 'mid' }
+    ]
+  },
+  lowerTier: {
+    minWins: 6,
+    bowls: [
+      { name: 'The Local Car Dealer Bowl', sponsor: "Big Al's Used Cars", prestige: 'low' },
+      { name: 'The Furniture Store Classic', sponsor: 'Comfy Couch Warehouse', prestige: 'low' },
+      { name: 'The Strip Mall Invitational', sponsor: 'Plaza Shopping Center', prestige: 'low' },
+      { name: 'The Tax Prep Bowl', sponsor: 'QuickFile Tax Services', prestige: 'low' },
+      { name: 'The Pest Control Classic', sponsor: 'Bug-B-Gone Exterminators', prestige: 'low' }
+    ]
+  }
+};
+
+// Halftime adjustment effects
+const HALFTIME_ADJUSTMENTS = {
+  stayTheCourse: {
+    name: 'Stay the Course',
+    description: 'No changes. Continue with pre-game plan.',
+    effects: {} // No modifications
+  },
+  airItOut: {
+    name: 'Air It Out',
+    description: '+pass attempts, +deep shot chance, +turnover risk',
+    effects: {
+      passBonus: 0.15,        // +15% pass play selection
+      deepShotChance: 0.20,   // +20% chance of big plays
+      turnoverRisk: 0.10      // +10% turnover chance
+    }
+  },
+  groundAndPound: {
+    name: 'Ground & Pound',
+    description: '+run attempts, better clock control, lower ceiling',
+    effects: {
+      rushBonus: 0.20,        // +20% run play selection
+      clockControl: true,     // Better clock management
+      scoringCeiling: -0.10   // -10% max scoring potential
+    }
+  },
+  trickPlays: {
+    name: 'Trick Plays',
+    description: 'High risk/high reward. 2x momentum on success, 2x loss on failure.',
+    effects: {
+      momentumMultiplier: 2.0, // Double momentum gains AND losses
+      bigPlayChance: 0.25,     // +25% chance of explosive plays
+      turnoverRisk: 0.15       // +15% turnover chance
+    }
+  }
+};
+
+// Critical decision 4th down options
+const FOURTH_DOWN_OPTIONS = {
+  goForIt: {
+    safe: { name: 'Safe Run', conversion: 70, description: 'Short yardage play' },
+    standard: { name: 'Standard Play', conversion: 55, description: 'Balanced approach' },
+    aggressive: { name: 'Aggressive Deep Shot', conversion: 35, description: 'Big gain if successful' }
+  },
+  punt: {
+    traditional: { name: 'Traditional Punt', risk: 5, description: 'Reliable distance' },
+    rugby: { name: 'Rugby Style', risk: 15, description: 'More hang time, worse coverage' },
+    fake: { name: 'Fake Punt', conversion: 30, description: 'High risk/reward' }
+  },
+  fieldGoal: {
+    standard: { name: 'Standard Kick', description: 'Attempt the field goal' },
+    fake: { name: 'Fake Field Goal', conversion: 25, description: 'Very high risk/reward' }
+  }
+};
+
+// Injury severity levels
+const INJURY_SEVERITY = {
+  minor: {
+    name: 'Minor',
+    aggravationRisk: 0.30,  // 30% chance of worsening
+    missedGames: 1,
+    examples: ['Mild ankle sprain', 'Minor shoulder strain', 'Light hamstring pull']
+  },
+  moderate: {
+    name: 'Moderate',
+    aggravationRisk: 0.45,  // 45% chance of worsening
+    missedGames: { min: 2, max: 3 },
+    examples: ['Knee strain', 'Hip flexor injury', 'Moderate concussion protocol']
+  },
+  serious: {
+    name: 'Serious',
+    aggravationRisk: 0.60,  // 60% chance of worsening
+    missedGames: { min: 3, max: 4 },
+    examples: ['High ankle sprain', 'Shoulder separation', 'Significant muscle tear']
+  },
+  catastrophic: {
+    name: 'Catastrophic',
+    chance: 0.05,  // 5% of all injuries
+    aggravationRisk: 0.80,
+    missedGames: 'season',
+    examples: ['ACL tear', 'Achilles rupture', 'Severe fracture']
+  }
+};
+
+// ============== END MOMENTUM SYSTEM CONSTANTS ==============
 
 // Recruiting Impact - Win Bonuses
 const RECRUITING_WIN_BONUSES = {
@@ -2477,6 +2674,918 @@ const formatCurrency = (value) => {
   return `$${millions.toFixed(2)}M`;
 };
 
+// ========== CONFERENCE STANDINGS & RANKINGS SYSTEM ==========
+
+// Initialize conference standings for all schools at season start
+const initializeConferenceStandings = (allSchools) => {
+  const standings = {};
+
+  allSchools.forEach(school => {
+    standings[school.id] = {
+      schoolId: school.id,
+      schoolName: school.name,
+      conference: school.conference,
+      tier: school.tier,
+      wins: 0,
+      losses: 0,
+      confWins: 0,
+      confLosses: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      schedule: [], // Will store { week, opponentId, isConference, result, score }
+      streak: 0 // positive = win streak, negative = loss streak
+    };
+  });
+
+  return standings;
+};
+
+// Generate AI team schedules at season start
+const generateAllTeamSchedules = (allSchools, playerSchoolId, playerSchedule) => {
+  const schedules = {};
+
+  allSchools.forEach(school => {
+    if (school.id === playerSchoolId) {
+      // Player's schedule is already generated
+      schedules[school.id] = playerSchedule.map(game => ({
+        week: game.week,
+        opponentId: game.opponentId,
+        isConference: game.isConference,
+        isHome: game.isHome,
+        result: null,
+        score: null
+      }));
+    } else {
+      // Generate 12-game schedule for AI teams
+      const conferenceTeams = allSchools.filter(s =>
+        s.conference === school.conference && s.id !== school.id
+      );
+      const nonConferenceTeams = allSchools.filter(s =>
+        s.conference !== school.conference && s.id !== school.id
+      );
+
+      const schedule = [];
+      const usedOpponents = new Set();
+
+      // 9 conference games (or all available if less)
+      const numConfGames = Math.min(9, conferenceTeams.length);
+      const shuffledConf = [...conferenceTeams].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < numConfGames; i++) {
+        if (shuffledConf[i]) {
+          usedOpponents.add(shuffledConf[i].id);
+          schedule.push({
+            week: i + 1,
+            opponentId: shuffledConf[i].id,
+            isConference: true,
+            isHome: Math.random() > 0.5,
+            result: null,
+            score: null
+          });
+        }
+      }
+
+      // 3 non-conference games
+      const shuffledNonConf = [...nonConferenceTeams].sort(() => Math.random() - 0.5);
+      let nonConfAdded = 0;
+      for (let i = 0; nonConfAdded < 3 && i < shuffledNonConf.length; i++) {
+        if (!usedOpponents.has(shuffledNonConf[i].id)) {
+          schedule.push({
+            week: schedule.length + 1,
+            opponentId: shuffledNonConf[i].id,
+            isConference: false,
+            isHome: Math.random() > 0.5,
+            result: null,
+            score: null
+          });
+          nonConfAdded++;
+        }
+      }
+
+      // Shuffle schedule to mix conference and non-conference
+      schedule.sort(() => Math.random() - 0.5);
+      schedule.forEach((game, idx) => { game.week = idx + 1; });
+
+      schedules[school.id] = schedule;
+    }
+  });
+
+  return schedules;
+};
+
+// Simulate a single game between two AI teams
+const simulateAIGame = (team1, team2, team1Rating, team2Rating) => {
+  // Base scoring: 14-42 points typical range
+  const basePoints = 21;
+  const variance = 14;
+
+  // Rating difference affects outcome (-30 to +30 range typically)
+  const ratingDiff = team1Rating - team2Rating;
+  const ratingBonus = ratingDiff * 0.3; // Each rating point = 0.3 points advantage
+
+  // Random factor for upset potential
+  const upsetFactor = (Math.random() - 0.5) * 20;
+
+  // Calculate scores
+  let team1Score = Math.round(basePoints + variance * (Math.random() - 0.3) + ratingBonus * 0.5 + upsetFactor);
+  let team2Score = Math.round(basePoints + variance * (Math.random() - 0.3) - ratingBonus * 0.5 - upsetFactor);
+
+  // Ensure reasonable scores (7-56 range)
+  team1Score = Math.max(7, Math.min(56, team1Score));
+  team2Score = Math.max(7, Math.min(56, team2Score));
+
+  // Ensure no ties (rare in CFB)
+  if (team1Score === team2Score) {
+    if (Math.random() > 0.5) team1Score += 3;
+    else team2Score += 3;
+  }
+
+  return {
+    team1Score,
+    team2Score,
+    team1Wins: team1Score > team2Score
+  };
+};
+
+// Simulate all AI games for a given week
+const simulateAIWeeklyGames = (gameWeek, standings, allSchools, playerSchoolId, aiRosters) => {
+  const updatedStandings = { ...standings };
+  const processedGames = new Set(); // Track processed matchups to avoid duplicates
+
+  allSchools.forEach(school => {
+    if (school.id === playerSchoolId) return; // Skip player's team
+
+    const schoolStandings = updatedStandings[school.id];
+    if (!schoolStandings || !schoolStandings.schedule) return;
+
+    const weekGame = schoolStandings.schedule.find(g => g.week === gameWeek && g.result === null);
+    if (!weekGame) return;
+
+    // Create unique game key to avoid processing same game twice
+    const gameKey = [school.id, weekGame.opponentId].sort().join('-');
+    if (processedGames.has(gameKey)) return;
+    processedGames.add(gameKey);
+
+    const opponent = allSchools.find(s => s.id === weekGame.opponentId);
+    if (!opponent) return;
+
+    // Skip if opponent is player (player games are handled separately)
+    if (opponent.id === playerSchoolId) return;
+
+    // Calculate team ratings
+    const team1Roster = aiRosters[school.id] || [];
+    const team2Roster = aiRosters[opponent.id] || [];
+
+    const team1Rating = team1Roster.length > 0
+      ? team1Roster.reduce((sum, p) => sum + p.rating, 0) / team1Roster.length
+      : 70 + (school.tier === 'Blue Blood' ? 10 : school.tier === 'Power 4' ? 5 : 0);
+
+    const team2Rating = team2Roster.length > 0
+      ? team2Roster.reduce((sum, p) => sum + p.rating, 0) / team2Roster.length
+      : 70 + (opponent.tier === 'Blue Blood' ? 10 : opponent.tier === 'Power 4' ? 5 : 0);
+
+    // Simulate the game
+    const result = simulateAIGame(school, opponent, team1Rating, team2Rating);
+
+    // Update team 1 standings
+    const team1Standings = updatedStandings[school.id];
+    team1Standings.wins += result.team1Wins ? 1 : 0;
+    team1Standings.losses += result.team1Wins ? 0 : 1;
+    team1Standings.confWins += (weekGame.isConference && result.team1Wins) ? 1 : 0;
+    team1Standings.confLosses += (weekGame.isConference && !result.team1Wins) ? 1 : 0;
+    team1Standings.pointsFor += result.team1Score;
+    team1Standings.pointsAgainst += result.team2Score;
+    team1Standings.streak = result.team1Wins
+      ? (team1Standings.streak >= 0 ? team1Standings.streak + 1 : 1)
+      : (team1Standings.streak <= 0 ? team1Standings.streak - 1 : -1);
+
+    // Update team 1 schedule
+    const team1Game = team1Standings.schedule.find(g => g.week === gameWeek);
+    if (team1Game) {
+      team1Game.result = result.team1Wins ? 'W' : 'L';
+      team1Game.score = `${result.team1Score}-${result.team2Score}`;
+    }
+
+    // Update team 2 standings
+    const team2Standings = updatedStandings[opponent.id];
+    if (team2Standings) {
+      team2Standings.wins += result.team1Wins ? 0 : 1;
+      team2Standings.losses += result.team1Wins ? 1 : 0;
+      team2Standings.confWins += (weekGame.isConference && !result.team1Wins) ? 1 : 0;
+      team2Standings.confLosses += (weekGame.isConference && result.team1Wins) ? 1 : 0;
+      team2Standings.pointsFor += result.team2Score;
+      team2Standings.pointsAgainst += result.team1Score;
+      team2Standings.streak = result.team1Wins
+        ? (team2Standings.streak <= 0 ? team2Standings.streak - 1 : -1)
+        : (team2Standings.streak >= 0 ? team2Standings.streak + 1 : 1);
+
+      // Update team 2 schedule
+      const team2Game = team2Standings.schedule.find(g => g.week === gameWeek);
+      if (team2Game) {
+        team2Game.result = result.team1Wins ? 'L' : 'W';
+        team2Game.score = `${result.team2Score}-${result.team1Score}`;
+      }
+    }
+  });
+
+  return updatedStandings;
+};
+
+// Update standings after player's game
+const updatePlayerGameStandings = (standings, playerSchoolId, opponentId, playerWon, playerScore, opponentScore, isConference) => {
+  const updatedStandings = { ...standings };
+
+  // Update player's standings
+  const playerStandings = updatedStandings[playerSchoolId];
+  if (playerStandings) {
+    playerStandings.wins += playerWon ? 1 : 0;
+    playerStandings.losses += playerWon ? 0 : 1;
+    playerStandings.confWins += (isConference && playerWon) ? 1 : 0;
+    playerStandings.confLosses += (isConference && !playerWon) ? 1 : 0;
+    playerStandings.pointsFor += playerScore;
+    playerStandings.pointsAgainst += opponentScore;
+    playerStandings.streak = playerWon
+      ? (playerStandings.streak >= 0 ? playerStandings.streak + 1 : 1)
+      : (playerStandings.streak <= 0 ? playerStandings.streak - 1 : -1);
+  }
+
+  // Update opponent's standings
+  const oppStandings = updatedStandings[opponentId];
+  if (oppStandings) {
+    oppStandings.wins += playerWon ? 0 : 1;
+    oppStandings.losses += playerWon ? 1 : 0;
+    oppStandings.confWins += (isConference && !playerWon) ? 1 : 0;
+    oppStandings.confLosses += (isConference && playerWon) ? 1 : 0;
+    oppStandings.pointsFor += opponentScore;
+    oppStandings.pointsAgainst += playerScore;
+    oppStandings.streak = playerWon
+      ? (oppStandings.streak <= 0 ? oppStandings.streak - 1 : -1)
+      : (oppStandings.streak >= 0 ? oppStandings.streak + 1 : 1);
+  }
+
+  return updatedStandings;
+};
+
+// Get sorted conference standings
+const getConferenceStandings = (standings, conference) => {
+  const confTeams = Object.values(standings).filter(s => s.conference === conference);
+
+  // Sort by: 1) conf wins, 2) conf win %, 3) overall wins, 4) points differential
+  return confTeams.sort((a, b) => {
+    // Primary: conference wins
+    if (b.confWins !== a.confWins) return b.confWins - a.confWins;
+
+    // Secondary: conference win percentage
+    const aConfPct = a.confWins + a.confLosses > 0 ? a.confWins / (a.confWins + a.confLosses) : 0;
+    const bConfPct = b.confWins + b.confLosses > 0 ? b.confWins / (b.confWins + b.confLosses) : 0;
+    if (bConfPct !== aConfPct) return bConfPct - aConfPct;
+
+    // Tertiary: overall wins
+    if (b.wins !== a.wins) return b.wins - a.wins;
+
+    // Quaternary: point differential
+    const aDiff = a.pointsFor - a.pointsAgainst;
+    const bDiff = b.pointsFor - b.pointsAgainst;
+    return bDiff - aDiff;
+  });
+};
+
+// Get all conferences with their standings
+const getAllConferenceStandings = (standings) => {
+  const conferences = {};
+
+  Object.values(standings).forEach(team => {
+    if (!conferences[team.conference]) {
+      conferences[team.conference] = [];
+    }
+    conferences[team.conference].push(team);
+  });
+
+  // Sort each conference
+  Object.keys(conferences).forEach(conf => {
+    conferences[conf] = getConferenceStandings(standings, conf);
+  });
+
+  return conferences;
+};
+
+// ========== END CONFERENCE STANDINGS SYSTEM ==========
+
+// ========== NATIONAL RANKINGS SYSTEM ==========
+
+// Tier weights for Strength of Schedule calculation
+const TIER_WEIGHTS = {
+  'Blue Blood': 1.0,
+  'Power 4': 0.8,
+  'Group of 5': 0.6
+};
+
+// Generate preseason rankings based on team ratings and tier
+const generatePreseasonRankings = (allSchools, aiRosters, playerRoster, playerSchoolId) => {
+  const rankings = allSchools.map(school => {
+    // Get team rating
+    let teamRating = 70;
+    if (school.id === playerSchoolId && playerRoster.length > 0) {
+      teamRating = playerRoster.reduce((sum, p) => sum + p.rating, 0) / playerRoster.length;
+    } else if (aiRosters[school.id] && aiRosters[school.id].length > 0) {
+      teamRating = aiRosters[school.id].reduce((sum, p) => sum + p.rating, 0) / aiRosters[school.id].length;
+    } else {
+      // Default ratings by tier
+      teamRating = school.tier === 'Blue Blood' ? 82 : school.tier === 'Power 4' ? 75 : 68;
+    }
+
+    // Tier-based preseason ranking range
+    // BB: 1-15, P4: 10-35, G5: 25-50+
+    let rankingBonus = 0;
+    if (school.tier === 'Blue Blood') {
+      rankingBonus = 30 + Math.random() * 15; // High bonus
+    } else if (school.tier === 'Power 4') {
+      rankingBonus = 15 + Math.random() * 10; // Medium bonus
+    } else {
+      rankingBonus = Math.random() * 10; // Low bonus
+    }
+
+    // Combine rating and tier bonus for preseason score
+    const preseasonScore = teamRating + rankingBonus;
+
+    return {
+      schoolId: school.id,
+      schoolName: school.name,
+      conference: school.conference,
+      tier: school.tier,
+      preseasonScore,
+      teamRating,
+      wins: 0,
+      losses: 0,
+      confWins: 0,
+      confLosses: 0,
+      sos: 0,
+      qualityWins: 0,
+      totalScore: preseasonScore
+    };
+  });
+
+  // Sort by preseason score and assign ranks
+  rankings.sort((a, b) => b.preseasonScore - a.preseasonScore);
+  rankings.forEach((team, idx) => {
+    team.rank = idx + 1;
+    team.preseasonRank = idx + 1;
+  });
+
+  return rankings;
+};
+
+// Calculate Strength of Schedule
+const calculateSoS = (schoolId, standings, allSchools) => {
+  const schoolStandings = standings[schoolId];
+  if (!schoolStandings || !schoolStandings.schedule) return 0.5;
+
+  const playedGames = schoolStandings.schedule.filter(g => g.result !== null);
+  if (playedGames.length === 0) return 0.5;
+
+  let sosTotal = 0;
+  playedGames.forEach(game => {
+    const opponent = allSchools.find(s => s.id === game.opponentId);
+    if (!opponent) return;
+
+    const tierWeight = TIER_WEIGHTS[opponent.tier] || 0.6;
+    const oppStandings = standings[game.opponentId];
+    const oppWinPct = oppStandings && (oppStandings.wins + oppStandings.losses > 0)
+      ? oppStandings.wins / (oppStandings.wins + oppStandings.losses)
+      : 0.5;
+
+    // SoS component: tier weight * (0.5 + opponent win %)
+    sosTotal += tierWeight * (0.5 + oppWinPct * 0.5);
+  });
+
+  return sosTotal / playedGames.length;
+};
+
+// Calculate quality wins bonus
+const calculateQualityWins = (schoolId, standings, currentRankings, allSchools) => {
+  const schoolStandings = standings[schoolId];
+  if (!schoolStandings || !schoolStandings.schedule) return 0;
+
+  let qualityBonus = 0;
+  const wins = schoolStandings.schedule.filter(g => g.result === 'W');
+
+  wins.forEach(game => {
+    const opponent = allSchools.find(s => s.id === game.opponentId);
+    if (!opponent) return;
+
+    const oppRanking = currentRankings.find(r => r.schoolId === game.opponentId);
+    const oppRank = oppRanking ? oppRanking.rank : 134;
+
+    // Quality win bonuses
+    if (oppRank <= 10) qualityBonus += 3;
+    else if (oppRank <= 25) qualityBonus += 2;
+
+    // Blue Blood bonus
+    if (opponent.tier === 'Blue Blood') qualityBonus += 1;
+
+    // Ranked G5 bonus (if they beat a ranked G5)
+    if (opponent.tier === 'Group of 5' && oppRank <= 25) qualityBonus += 1;
+  });
+
+  return qualityBonus;
+};
+
+// Calculate national rankings
+// Algorithm: Win% (35%), SoS (25%), Quality Wins (15%), Conf Record (15%), Team Rating (10%)
+const calculateNationalRankings = (standings, allSchools, aiRosters, playerRoster, playerSchoolId, previousRankings = []) => {
+  // If no games played yet, use preseason rankings
+  const anyGamesPlayed = Object.values(standings).some(s => s.wins + s.losses > 0);
+  if (!anyGamesPlayed) {
+    return generatePreseasonRankings(allSchools, aiRosters, playerRoster, playerSchoolId);
+  }
+
+  // Use previous rankings for quality wins calculation, or generate preseason if none
+  const baseRankings = previousRankings.length > 0
+    ? previousRankings
+    : generatePreseasonRankings(allSchools, aiRosters, playerRoster, playerSchoolId);
+
+  const rankings = allSchools.map(school => {
+    const schoolStandings = standings[school.id] || { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+
+    // Get team rating
+    let teamRating = 70;
+    if (school.id === playerSchoolId && playerRoster.length > 0) {
+      teamRating = playerRoster.reduce((sum, p) => sum + p.rating, 0) / playerRoster.length;
+    } else if (aiRosters[school.id] && aiRosters[school.id].length > 0) {
+      teamRating = aiRosters[school.id].reduce((sum, p) => sum + p.rating, 0) / aiRosters[school.id].length;
+    } else {
+      teamRating = school.tier === 'Blue Blood' ? 82 : school.tier === 'Power 4' ? 75 : 68;
+    }
+
+    // Win percentage (35%)
+    const gamesPlayed = schoolStandings.wins + schoolStandings.losses;
+    const winPct = gamesPlayed > 0 ? schoolStandings.wins / gamesPlayed : 0.5;
+    const winScore = winPct * 35;
+
+    // Strength of Schedule (25%)
+    const sos = calculateSoS(school.id, standings, allSchools);
+    const sosScore = sos * 25;
+
+    // Quality Wins (15%)
+    const qualityWins = calculateQualityWins(school.id, standings, baseRankings, allSchools);
+    const qualityScore = Math.min(qualityWins * 3, 15); // Cap at 15 points
+
+    // Conference Record (15%)
+    const confGames = schoolStandings.confWins + schoolStandings.confLosses;
+    const confWinPct = confGames > 0 ? schoolStandings.confWins / confGames : 0.5;
+    const confScore = confWinPct * 15;
+
+    // Team Rating (10%)
+    const ratingScore = (teamRating / 100) * 10;
+
+    // Total score
+    const totalScore = winScore + sosScore + qualityScore + confScore + ratingScore;
+
+    // Get previous rank for movement display
+    const prevRanking = baseRankings.find(r => r.schoolId === school.id);
+    const prevRank = prevRanking ? prevRanking.rank : 134;
+
+    return {
+      schoolId: school.id,
+      schoolName: school.name,
+      conference: school.conference,
+      tier: school.tier,
+      wins: schoolStandings.wins,
+      losses: schoolStandings.losses,
+      confWins: schoolStandings.confWins,
+      confLosses: schoolStandings.confLosses,
+      winPct,
+      sos,
+      qualityWins,
+      teamRating,
+      totalScore,
+      prevRank
+    };
+  });
+
+  // Sort by total score and assign ranks
+  rankings.sort((a, b) => b.totalScore - a.totalScore);
+  rankings.forEach((team, idx) => {
+    team.rank = idx + 1;
+    team.rankChange = team.prevRank - team.rank; // Positive = moved up
+  });
+
+  return rankings;
+};
+
+// Get Top 25 rankings
+const getTop25Rankings = (rankings) => {
+  return rankings.slice(0, 25);
+};
+
+// ========== END NATIONAL RANKINGS SYSTEM ==========
+
+// ========== PLAYOFF SELECTION SYSTEM ==========
+
+// Conference list for determining conference champions
+const CONFERENCES = [
+  'Summit League',      // SEC-style
+  'Great Lakes Conference', // Big Ten-style
+  'Atlantic Alliance', // ACC-style
+  'Frontier League',   // Big 12-style
+  'American Athletic',
+  'Conference USA',
+  'Mid-American Conference',
+  'Mountain Division',
+  'Sunbelt Conference'
+];
+
+// Simulate conference championship games
+// Returns: { champions: { [conference]: schoolData }, results: [...] }
+const simulateConferenceChampionships = (standings, allSchools, aiRosters, playerSchoolId, playerRoster) => {
+  const champions = {};
+  const results = [];
+  let playerGame = null; // If player is in a championship game
+
+  CONFERENCES.forEach(conference => {
+    // Get top 2 teams in conference by conference record
+    const confStandings = getConferenceStandings(standings, conference);
+    if (confStandings.length < 2) return;
+
+    const team1 = confStandings[0]; // #1 seed
+    const team2 = confStandings[1]; // #2 seed
+
+    const team1School = allSchools.find(s => s.id === team1.schoolId);
+    const team2School = allSchools.find(s => s.id === team2.schoolId);
+
+    if (!team1School || !team2School) return;
+
+    // Check if player is involved
+    const playerInGame = team1.schoolId === playerSchoolId || team2.schoolId === playerSchoolId;
+
+    if (playerInGame) {
+      // Store for player to play later
+      playerGame = {
+        conference,
+        team1: { ...team1, school: team1School },
+        team2: { ...team2, school: team2School },
+        isPlayerTeam1: team1.schoolId === playerSchoolId
+      };
+      return; // Don't simulate - player will play this game
+    }
+
+    // Simulate AI conference championship
+    const team1Roster = aiRosters[team1.schoolId] || [];
+    const team2Roster = aiRosters[team2.schoolId] || [];
+
+    const team1Rating = team1Roster.length > 0
+      ? team1Roster.reduce((sum, p) => sum + p.rating, 0) / team1Roster.length
+      : 70 + (team1School.tier === 'Blue Blood' ? 10 : team1School.tier === 'Power 4' ? 5 : 0);
+
+    const team2Rating = team2Roster.length > 0
+      ? team2Roster.reduce((sum, p) => sum + p.rating, 0) / team2Roster.length
+      : 70 + (team2School.tier === 'Blue Blood' ? 10 : team2School.tier === 'Power 4' ? 5 : 0);
+
+    // Championship games have smaller upset chance (bigger stage, better teams)
+    const gameResult = simulateAIGame(team1School, team2School, team1Rating + 3, team2Rating); // +3 home field for #1 seed
+
+    const winner = gameResult.team1Wins ? team1 : team2;
+    const winnerSchool = gameResult.team1Wins ? team1School : team2School;
+    const loser = gameResult.team1Wins ? team2 : team1;
+    const loserSchool = gameResult.team1Wins ? team2School : team1School;
+
+    champions[conference] = {
+      ...winner,
+      school: winnerSchool,
+      championshipScore: gameResult.team1Wins ? gameResult.team1Score : gameResult.team2Score,
+      opponentScore: gameResult.team1Wins ? gameResult.team2Score : gameResult.team1Score
+    };
+
+    results.push({
+      conference,
+      winner: winnerSchool,
+      winnerRecord: `${winner.wins + 1}-${winner.losses}`,
+      loser: loserSchool,
+      loserRecord: `${loser.wins}-${loser.losses + 1}`,
+      score: gameResult.team1Wins
+        ? `${gameResult.team1Score}-${gameResult.team2Score}`
+        : `${gameResult.team2Score}-${gameResult.team1Score}`
+    });
+  });
+
+  return { champions, results, playerGame };
+};
+
+// Select the 12-team playoff field
+// Format: 5 auto-bids (highest-ranked conf champs) + 7 at-large
+// Seeds 1-4 get bye (must be conf champ, or independent like Notre Dame if top 4)
+const selectPlayoffField = (rankings, confChampions, allSchools) => {
+  const playoffTeams = [];
+  const usedTeams = new Set();
+
+  // Step 1: Get all conference champions with their rankings
+  const rankedChampions = [];
+  Object.entries(confChampions).forEach(([conference, champion]) => {
+    const ranking = rankings.find(r => r.schoolId === champion.schoolId);
+    if (ranking) {
+      rankedChampions.push({
+        ...champion,
+        rank: ranking.rank,
+        conference,
+        isAutoBid: true
+      });
+    }
+  });
+
+  // Sort champions by ranking (highest ranked first)
+  rankedChampions.sort((a, b) => a.rank - b.rank);
+
+  // Step 2: Select top 5 conference champions as auto-bids
+  const autoBids = rankedChampions.slice(0, 5);
+  autoBids.forEach(team => {
+    usedTeams.add(team.schoolId);
+    playoffTeams.push({
+      ...team,
+      selectionReason: `Auto-Bid: ${team.conference} Champion`
+    });
+  });
+
+  // Step 3: Select 7 at-large teams (next highest ranked not already selected)
+  // Note: Independents (like Golden Dome) are always at-large
+  const atLargeCandidates = rankings.filter(r => !usedTeams.has(r.schoolId));
+  const atLarge = atLargeCandidates.slice(0, 7);
+  atLarge.forEach(team => {
+    const school = allSchools.find(s => s.id === team.schoolId);
+    playoffTeams.push({
+      ...team,
+      school,
+      isAutoBid: false,
+      selectionReason: school?.conference === 'Independent'
+        ? 'At-Large: Independent'
+        : `At-Large: #${team.rank} in rankings`
+    });
+  });
+
+  // Step 4: Sort all 12 teams by ranking for seeding
+  playoffTeams.sort((a, b) => a.rank - b.rank);
+
+  // Step 5: Assign seeds (1-12)
+  playoffTeams.forEach((team, idx) => {
+    team.seed = idx + 1;
+  });
+
+  // Step 6: Determine which teams get first-round bye
+  // Seeds 1-4 get bye, but MUST be a conference champion OR an independent (Notre Dame rule)
+  const byeTeams = [];
+  const noByeTeams = [];
+
+  playoffTeams.forEach(team => {
+    const school = team.school || allSchools.find(s => s.id === team.schoolId);
+    const isIndependent = school?.conference === 'Independent';
+    const isConfChamp = team.isAutoBid;
+
+    if (byeTeams.length < 4 && (isConfChamp || isIndependent)) {
+      team.hasBye = true;
+      byeTeams.push(team);
+    } else {
+      team.hasBye = false;
+      noByeTeams.push(team);
+    }
+  });
+
+  // If we couldn't fill 4 bye spots with conf champs/independents,
+  // fill remaining with highest seeds (shouldn't happen often)
+  while (byeTeams.length < 4 && noByeTeams.length > 0) {
+    const nextTeam = noByeTeams.shift();
+    nextTeam.hasBye = true;
+    byeTeams.push(nextTeam);
+  }
+
+  // Step 7: Generate bracket structure
+  // First round: #12 vs #5, #11 vs #6, #10 vs #7, #9 vs #8
+  // Higher seed hosts
+  const bracket = {
+    byeTeams: byeTeams.sort((a, b) => a.seed - b.seed),
+    firstRoundGames: [
+      { highSeed: playoffTeams.find(t => t.seed === 5), lowSeed: playoffTeams.find(t => t.seed === 12), gameId: 'R1G1' },
+      { highSeed: playoffTeams.find(t => t.seed === 6), lowSeed: playoffTeams.find(t => t.seed === 11), gameId: 'R1G2' },
+      { highSeed: playoffTeams.find(t => t.seed === 7), lowSeed: playoffTeams.find(t => t.seed === 10), gameId: 'R1G3' },
+      { highSeed: playoffTeams.find(t => t.seed === 8), lowSeed: playoffTeams.find(t => t.seed === 9), gameId: 'R1G4' }
+    ],
+    // Quarterfinal matchups (after first round):
+    // #1 vs R1G1 winner, #2 vs R1G2 winner, #3 vs R1G3 winner, #4 vs R1G4 winner
+    quarterfinalMatchups: [
+      { byeTeam: byeTeams.find(t => t.seed === 1), firstRoundGame: 'R1G1', bowl: 'Fiesta Bowl', gameId: 'QF1' },
+      { byeTeam: byeTeams.find(t => t.seed === 2), firstRoundGame: 'R1G2', bowl: 'Peach Bowl', gameId: 'QF2' },
+      { byeTeam: byeTeams.find(t => t.seed === 3), firstRoundGame: 'R1G3', bowl: 'Rose Bowl', gameId: 'QF3' },
+      { byeTeam: byeTeams.find(t => t.seed === 4), firstRoundGame: 'R1G4', bowl: 'Sugar Bowl', gameId: 'QF4' }
+    ],
+    // Semifinal matchups (after quarterfinals):
+    // QF1 winner vs QF4 winner (Orange Bowl), QF2 winner vs QF3 winner (Cotton Bowl)
+    semifinalMatchups: [
+      { game1: 'QF1', game2: 'QF4', bowl: 'Orange Bowl', gameId: 'SF1' },
+      { game1: 'QF2', game2: 'QF3', bowl: 'Cotton Bowl', gameId: 'SF2' }
+    ],
+    // Championship
+    championship: { game1: 'SF1', game2: 'SF2', bowl: 'National Championship', gameId: 'CHAMP' }
+  };
+
+  return {
+    teams: playoffTeams,
+    bracket,
+    autoBids,
+    atLarge
+  };
+};
+
+// Get team's current ranking from rankings array
+const getTeamRanking = (rankings, schoolId) => {
+  const team = rankings.find(r => r.schoolId === schoolId);
+  return team ? team.rank : 999;
+};
+
+// Assign bowl games to non-playoff teams
+// Returns array of bowl assignments and results
+const assignBowlGames = (standings, playoffTeamIds, allSchools, aiRosters, rankings) => {
+  const bowlAssignments = [];
+  const playoffSet = new Set(playoffTeamIds);
+
+  // Get all bowl-eligible teams (6+ wins) not in playoff
+  const eligibleTeams = Object.entries(standings)
+    .filter(([schoolId, data]) => {
+      const wins = data.wins || 0;
+      return wins >= 6 && !playoffSet.has(schoolId);
+    })
+    .map(([schoolId, data]) => ({
+      schoolId,
+      wins: data.wins,
+      losses: data.losses,
+      school: allSchools.find(s => s.id === schoolId),
+      ranking: getTeamRanking(rankings, schoolId)
+    }))
+    .sort((a, b) => b.wins - a.wins || a.ranking - b.ranking);
+
+  // Group by tier
+  const ny6Teams = eligibleTeams.filter(t => t.wins >= 10);
+  const midTierTeams = eligibleTeams.filter(t => t.wins >= 8 && t.wins < 10);
+  const lowerTierTeams = eligibleTeams.filter(t => t.wins >= 6 && t.wins < 8);
+
+  // Helper to create bowl matchup
+  const createBowlMatchup = (team1, team2, bowl, tier) => {
+    if (!team1 || !team2) return null;
+
+    // Simulate the bowl game
+    const team1Roster = team1.schoolId === 'player' ? [] : (aiRosters[team1.schoolId] || []);
+    const team2Roster = team2.schoolId === 'player' ? [] : (aiRosters[team2.schoolId] || []);
+
+    // Simple simulation based on wins/ranking
+    const team1Power = (team1.wins * 5) + (130 - Math.min(team1.ranking, 130));
+    const team2Power = (team2.wins * 5) + (130 - Math.min(team2.ranking, 130));
+    const totalPower = team1Power + team2Power;
+    const team1WinChance = team1Power / totalPower;
+
+    const team1Wins = Math.random() < team1WinChance;
+    const margin = Math.floor(Math.random() * 21) + 3;
+    const baseScore = Math.floor(Math.random() * 14) + 21;
+
+    const winnerScore = baseScore;
+    const loserScore = Math.max(7, baseScore - margin);
+
+    return {
+      bowl: bowl.name,
+      sponsor: bowl.sponsor,
+      tier,
+      team1: team1.school,
+      team2: team2.school,
+      team1Record: `${team1.wins}-${team1.losses}`,
+      team2Record: `${team2.wins}-${team2.losses}`,
+      winner: team1Wins ? team1.school : team2.school,
+      loser: team1Wins ? team2.school : team1.school,
+      score: team1Wins
+        ? `${winnerScore}-${loserScore}`
+        : `${loserScore}-${winnerScore}`,
+      winnerScore: team1Wins ? winnerScore : loserScore,
+      loserScore: team1Wins ? loserScore : winnerScore
+    };
+  };
+
+  // Assign NY6 bowls
+  const ny6Bowls = [...BOWL_TIERS.ny6.bowls];
+  for (let i = 0; i < ny6Bowls.length && ny6Teams.length >= 2; i++) {
+    const team1 = ny6Teams.shift();
+    const team2 = ny6Teams.shift();
+    if (team1 && team2) {
+      const matchup = createBowlMatchup(team1, team2, ny6Bowls[i], 'NY6');
+      if (matchup) bowlAssignments.push(matchup);
+    }
+  }
+
+  // Assign mid-tier bowls
+  const midBowls = [...BOWL_TIERS.midTier.bowls];
+  for (let i = 0; i < midBowls.length && midTierTeams.length >= 2; i++) {
+    const team1 = midTierTeams.shift();
+    const team2 = midTierTeams.shift();
+    if (team1 && team2) {
+      const matchup = createBowlMatchup(team1, team2, midBowls[i], 'Mid-Tier');
+      if (matchup) bowlAssignments.push(matchup);
+    }
+  }
+
+  // Assign lower-tier bowls
+  const lowerBowls = [...BOWL_TIERS.lowerTier.bowls];
+  for (let i = 0; i < lowerBowls.length && lowerTierTeams.length >= 2; i++) {
+    const team1 = lowerTierTeams.shift();
+    const team2 = lowerTierTeams.shift();
+    if (team1 && team2) {
+      const matchup = createBowlMatchup(team1, team2, lowerBowls[i], 'Lower-Tier');
+      if (matchup) bowlAssignments.push(matchup);
+    }
+  }
+
+  return bowlAssignments;
+};
+
+// Check if player is bowl eligible but not in playoff
+const checkPlayerBowlEligibility = (seasonRecord, playoffTeams, schoolId) => {
+  const wins = seasonRecord.wins || 0;
+  const isInPlayoff = playoffTeams?.some(t => t.schoolId === schoolId);
+
+  if (wins >= 6 && !isInPlayoff) {
+    return {
+      eligible: true,
+      wins,
+      tier: wins >= 10 ? 'NY6' : wins >= 8 ? 'Mid-Tier' : 'Lower-Tier'
+    };
+  }
+
+  return { eligible: false, wins };
+};
+
+// Update playoff legacy after a playoff game
+// Returns updated legacy object
+const updatePlayoffLegacy = (prevLegacy, gameResult, round, opponent, dynastyYear, playoffTeams, bracketResults) => {
+  const newLegacy = { ...prevLegacy };
+  const margin = Math.abs(gameResult.userScore - gameResult.oppScore);
+
+  if (gameResult.userWins) {
+    newLegacy.wins += 1;
+
+    // Track biggest win
+    if (!newLegacy.biggestWin || margin > newLegacy.biggestWin.margin) {
+      newLegacy.biggestWin = {
+        margin,
+        opponent: opponent?.schoolName || opponent?.name || 'Unknown',
+        year: dynastyYear,
+        round
+      };
+    }
+
+    // Check for special achievements
+    if (round === 'semifinal') {
+      newLegacy.finalFours += 1;
+    } else if (round === 'championship') {
+      newLegacy.championshipAppearances += 1;
+      newLegacy.championships += 1;
+
+      // Check if it was a perfect playoff run (no losses)
+      const playerLosses = Object.values(bracketResults || {}).filter(
+        r => r.loser?.schoolId === gameResult.schoolId
+      ).length;
+      if (playerLosses === 0) {
+        newLegacy.perfectRuns += 1;
+      }
+    }
+  } else {
+    newLegacy.losses += 1;
+
+    // Track closest loss (heartbreaker)
+    if (!newLegacy.closestLoss || margin < newLegacy.closestLoss.margin) {
+      newLegacy.closestLoss = {
+        margin,
+        opponent: opponent?.schoolName || opponent?.name || 'Unknown',
+        year: dynastyYear,
+        round
+      };
+    }
+
+    // Track championship appearance even on loss
+    if (round === 'championship') {
+      newLegacy.championshipAppearances += 1;
+    }
+
+    // Track Final Four even on semifinal loss
+    if (round === 'semifinal') {
+      newLegacy.finalFours += 1;
+    }
+  }
+
+  return newLegacy;
+};
+
+// Record playoff appearance when player makes the field
+const recordPlayoffAppearance = (prevLegacy) => {
+  return {
+    ...prevLegacy,
+    appearances: prevLegacy.appearances + 1
+  };
+};
+
+// ========== END PLAYOFF SELECTION SYSTEM ==========
+
 // Calculate recruiting class rankings for all 134 schools
 const calculateClassRankings = (recruits, allSchools, playerSchoolId) => {
   // Points system: 5★=100, 4★=85, 3★=70, 2★=55, 1★=40
@@ -3577,6 +4686,10 @@ const App = () => {
   const [showRosterBreakdown, setShowRosterBreakdown] = useState(false);
   const [showRecruitingOverview, setShowRecruitingOverview] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState([]);
+
+  // Unified Alert/Confirm Modal System (replaces browser alert/confirm)
+  const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '', type: 'info' });
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Confirm', cancelText: 'Cancel' });
   const [showMessenger, setShowMessenger] = useState(false);
   const [expandedTier, setExpandedTier] = useState(null);
   const [sfxEnabled, setSfxEnabled] = useState(true);
@@ -3723,6 +4836,7 @@ const App = () => {
   const [dynastyYear, setDynastyYear] = useState(1); // Which year of the dynasty (1, 2, 3...)
   const [gameResults, setGameResults] = useState([]); // Array of completed games with scores/stats
   const [conferenceStandings, setConferenceStandings] = useState({}); // All conference records
+  const [nationalRankings, setNationalRankings] = useState([]); // Top 25 and all rankings
   const [showGamePlanModal, setShowGamePlanModal] = useState(false); // Pre-game planning modal
   const [currentOpponent, setCurrentOpponent] = useState(null); // This week's opponent
   const [selectedGamePlans, setSelectedGamePlans] = useState({ offense: null, defense: null }); // Selected game plans
@@ -3754,6 +4868,55 @@ const App = () => {
   const [showCoachingEventModal, setShowCoachingEventModal] = useState(null); // 'violation', 'nflOffer', 'termination', 'impermissibleBenefits'
   const [coachingEventData, setCoachingEventData] = useState(null); // Data for the coaching event
 
+  // Playoff System State
+  const [playoffState, setPlayoffState] = useState({
+    phase: null, // null, 'conf_championships', 'selection_sunday', 'first_round', 'quarterfinals', 'semifinals', 'championship'
+    conferenceChampions: {}, // { [conference]: championData }
+    confChampResults: [], // Results of conference championship games
+    playerConfChampGame: null, // If player is in a conf championship
+    playoffTeams: [], // 12 selected teams
+    playoffBracket: null, // Bracket structure
+    bracketResults: {}, // { gameId: { winner, score, ... } }
+    currentPlayoffGame: null, // Current playoff game player is in
+    nationalChampion: null // Season winner
+  });
+  const [showConfChampModal, setShowConfChampModal] = useState(false); // Conference championship results modal
+  const [showSelectionSundayModal, setShowSelectionSundayModal] = useState(false); // Selection Sunday reveal modal
+  const [showPlayoffBracketModal, setShowPlayoffBracketModal] = useState(false); // Playoff bracket display
+  const [selectionRevealIndex, setSelectionRevealIndex] = useState(0); // For dramatic reveal animation
+
+  // Enhanced Playoff Game Mode State
+  const [enhancedModeEnabled, setEnhancedModeEnabled] = useState(false); // Toggle for any game (CFP uses automatically)
+  const [gameMomentum, setGameMomentum] = useState(50); // 0-100, 50 = neutral
+  const [momentumHistory, setMomentumHistory] = useState([]); // For animation tracking
+  const [currentDecision, setCurrentDecision] = useState(null); // Active decision prompt
+  const [decisionTimer, setDecisionTimer] = useState(null); // Two-minute drill timer
+  const [gameInjuries, setGameInjuries] = useState([]); // Injuries during current game
+  const [halftimeAdjustment, setHalftimeAdjustment] = useState(null); // 'stayTheCourse', 'airItOut', 'groundAndPound', 'trickPlays'
+  const [showHalftimeModal, setShowHalftimeModal] = useState(false); // Halftime adjustment modal
+  const [showDecisionModal, setShowDecisionModal] = useState(false); // Critical decision modal
+  const [showInjuryModal, setShowInjuryModal] = useState(false); // Injury decision modal
+  const [currentInjury, setCurrentInjury] = useState(null); // Current injury decision data
+  const [blowoutSkipOffered, setBlowoutSkipOffered] = useState(false); // Whether skip option was offered
+
+  // Bowl Game State
+  const [bowlAssignment, setBowlAssignment] = useState(null); // Player's bowl if not in CFP
+  const [bowlResults, setBowlResults] = useState([]); // All bowl game results
+  const [showBowlModal, setShowBowlModal] = useState(false); // Bowl assignment/results modal
+
+  // Playoff Legacy Tracking
+  const [playoffHistory, setPlayoffHistory] = useState({
+    appearances: 0,
+    wins: 0,
+    losses: 0,
+    championships: 0,
+    finalFours: 0,
+    championshipAppearances: 0,
+    biggestWin: null, // { margin, opponent, year }
+    closestLoss: null, // { margin, opponent, year }
+    perfectRuns: 0 // Undefeated playoff runs
+  });
+
   // Load saved game on mount
   useEffect(() => {
     const savedGame = localStorage.getItem('cfb-dynasty-save');
@@ -3781,7 +4944,7 @@ const App = () => {
             const recruitingClass = generateRecruitingClass(gameData.roster, allSchools);
             setRecruits(recruitingClass);
           } else {
-            // Clean up any corrupted commit data from old saves
+            // Clean up any corrupted commit data and decompress saved data
             const cleanedRecruits = gameData.recruits.map(r => {
               // If recruit is marked as committed but committedSchool is missing or doesn't match, fix it
               if (r.verbalCommit && (!r.committedSchool || !r.committedSchool.id)) {
@@ -3794,12 +4957,47 @@ const App = () => {
                   signedCommit: false
                 };
               }
+
+              // Decompress recruitingSchools if it was compressed
+              if (r._compressed && r.recruitingSchools) {
+                const decompressedSchools = r.recruitingSchools.map(rs => {
+                  // Check if it's compressed format (has 's' and 'i' keys)
+                  if (rs.s !== undefined && rs.i !== undefined) {
+                    return {
+                      schoolId: rs.s,
+                      interest: rs.i,
+                      lastAction: 'Loaded',
+                      weeksSinceAction: 0,
+                      monthlyActionsUsed: 0
+                    };
+                  }
+                  // Already full format
+                  return rs;
+                });
+                return {
+                  ...r,
+                  recruitingSchools: decompressedSchools,
+                  _compressed: undefined // Remove flag
+                };
+              }
+
               return r;
             });
 
             const fixedCount = cleanedRecruits.filter((r, i) => r.verbalCommit !== gameData.recruits[i].verbalCommit).length;
             if (fixedCount > 0) {
               console.log(`Fixed ${fixedCount} recruits with corrupted commit data`);
+            }
+
+            // Log compression stats
+            const compressedCount = gameData.recruits.filter(r => r._compressed).length;
+            if (compressedCount > 0) {
+              console.log(`Decompressed ${compressedCount} recruits from optimized save format - AI recruiting data intact`);
+            }
+
+            // Check for emergency save flag
+            if (gameData._emergencySave) {
+              console.warn(`Loading from emergency save - only ${cleanedRecruits.length} of ${gameData._originalRecruitCount || '?'} recruits were saved`);
             }
 
             setRecruits(cleanedRecruits);
@@ -3849,6 +5047,7 @@ const App = () => {
           setDynastyYear(gameData.dynastyYear || 1);
           setGameResults(gameData.gameResults || []);
           setConferenceStandings(gameData.conferenceStandings || {});
+          setNationalRankings(gameData.nationalRankings || []);
           // Load extended game simulation state
           setTeamMorale(gameData.teamMorale ?? 50);
           setSeasonStats(gameData.seasonStats || {
@@ -3861,6 +5060,28 @@ const App = () => {
           });
           setPositionBoosts(gameData.positionBoosts || []);
           setRecruitingPenaltyWeeks(gameData.recruitingPenaltyWeeks || 0);
+
+          // Load playoff system state
+          if (gameData.playoffState) {
+            setPlayoffState(gameData.playoffState);
+          }
+
+          // Load enhanced playoff mode state
+          if (gameData.enhancedModeEnabled !== undefined) {
+            setEnhancedModeEnabled(gameData.enhancedModeEnabled);
+          }
+          if (gameData.halftimeAdjustment) {
+            setHalftimeAdjustment(gameData.halftimeAdjustment);
+          }
+          if (gameData.bowlAssignment) {
+            setBowlAssignment(gameData.bowlAssignment);
+          }
+          if (gameData.bowlResults) {
+            setBowlResults(gameData.bowlResults);
+          }
+          if (gameData.playoffHistory) {
+            setPlayoffHistory(gameData.playoffHistory);
+          }
 
           // Load donor system
           if (gameData.donors && gameData.donors.length > 0) {
@@ -4034,6 +5255,8 @@ const App = () => {
 
   // Team tab collapsible sections
   const [scheduleExpanded, setScheduleExpanded] = useState(false);
+  const [standingsExpanded, setStandingsExpanded] = useState(false);
+  const [rankingsExpanded, setRankingsExpanded] = useState(true); // Start expanded to show Top 25
   const [offenseExpanded, setOffenseExpanded] = useState(false);
   const [defenseExpanded, setDefenseExpanded] = useState(false);
   const [specialTeamsExpanded, setSpecialTeamsExpanded] = useState(false);
@@ -4272,6 +5495,23 @@ const App = () => {
       setGameResults([]);
       console.log('Next season schedule generated:', schedule.length, 'games');
 
+      // Reset conference standings for new season
+      const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+      const initialStandings = initializeConferenceStandings(allSchools);
+      const allTeamSchedules = generateAllTeamSchedules(allSchools, selectedSchool?.id, schedule);
+      Object.keys(allTeamSchedules).forEach(schoolId => {
+        if (initialStandings[schoolId]) {
+          initialStandings[schoolId].schedule = allTeamSchedules[schoolId];
+        }
+      });
+      setConferenceStandings(initialStandings);
+      console.log('📊 Conference standings reset for new season');
+
+      // Generate preseason rankings for new season
+      const preseasonRankings = generatePreseasonRankings(allSchools, aiRosters, roster, selectedSchool?.id);
+      setNationalRankings(preseasonRankings);
+      console.log('📊 Preseason rankings generated for new season');
+
       // NEW MONEY EMERGENCE - chance for a new wealthy donor to appear
       // Higher chance based on program success
       const baseNewMoneyChance = 0.15; // 15% base chance
@@ -4425,7 +5665,7 @@ const App = () => {
 
   const confirmSchoolWithCoach = () => {
     if (!tempCoachInput.trim()) {
-      alert('Please enter your coach name!');
+      showAlert('Please enter your coach name!', 'Coach Name Required', 'warning');
       return;
     }
 
@@ -4572,6 +5812,67 @@ const App = () => {
     setGameResults([]);
     console.log('Season schedule generated on school selection:', schedule.length, 'games');
 
+    // Initialize conference standings for all schools
+    const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+    const initialStandings = initializeConferenceStandings(allSchools);
+
+    // Generate schedules for all AI teams
+    const allTeamSchedules = generateAllTeamSchedules(allSchools, pendingSchool.id, schedule);
+    Object.keys(allTeamSchedules).forEach(schoolId => {
+      if (initialStandings[schoolId]) {
+        initialStandings[schoolId].schedule = allTeamSchedules[schoolId];
+      }
+    });
+
+    setConferenceStandings(initialStandings);
+    console.log('📊 Conference standings initialized for', Object.keys(initialStandings).length, 'schools');
+
+    // Generate preseason rankings
+    const preseasonRankings = generatePreseasonRankings(allSchools, aiRosters, roster, pendingSchool.id);
+    setNationalRankings(preseasonRankings);
+    console.log('📊 Preseason rankings generated - #1:', preseasonRankings[0]?.schoolName);
+
+    // Reset playoff state for new game
+    setPlayoffState({
+      phase: null,
+      conferenceChampions: {},
+      confChampResults: [],
+      playerConfChampGame: null,
+      playoffTeams: [],
+      playoffBracket: null,
+      bracketResults: {},
+      currentPlayoffGame: null,
+      nationalChampion: null
+    });
+
+    // Reset enhanced playoff mode state for new game
+    setEnhancedModeEnabled(false);
+    setGameMomentum(50);
+    setMomentumHistory([]);
+    setCurrentDecision(null);
+    setDecisionTimer(null);
+    setGameInjuries([]);
+    setHalftimeAdjustment(null);
+    setShowHalftimeModal(false);
+    setShowDecisionModal(false);
+    setShowInjuryModal(false);
+    setCurrentInjury(null);
+    setBlowoutSkipOffered(false);
+    setBowlAssignment(null);
+    setBowlResults([]);
+    setShowBowlModal(false);
+    setPlayoffHistory({
+      appearances: 0,
+      wins: 0,
+      losses: 0,
+      championships: 0,
+      finalFours: 0,
+      championshipAppearances: 0,
+      biggestWin: null,
+      closestLoss: null,
+      perfectRuns: 0
+    });
+
     setPendingSchool(null);
     setTempCoachInput('');
     setGameState('playing');
@@ -4610,15 +5911,15 @@ const App = () => {
 
     // Validate inputs
     if (!tempSchoolName.trim()) {
-      alert('Team name cannot be empty!');
+      showAlert('Team name cannot be empty!', 'Validation Error', 'warning');
       return;
     }
     if (!tempNickname.trim()) {
-      alert('Nickname cannot be empty!');
+      showAlert('Nickname cannot be empty!', 'Validation Error', 'warning');
       return;
     }
     if (!tempCoachName.trim()) {
-      alert('Coach name cannot be empty!');
+      showAlert('Coach name cannot be empty!', 'Validation Error', 'warning');
       return;
     }
 
@@ -4664,7 +5965,7 @@ const App = () => {
     if (!editingConference) return;
 
     if (!tempConferenceName.trim()) {
-      alert('Conference name cannot be empty!');
+      showAlert('Conference name cannot be empty!', 'Validation Error', 'warning');
       return;
     }
 
@@ -4691,7 +5992,7 @@ const App = () => {
       const check = localStorage.getItem('cfb-dynasty-save');
       if (check !== null) {
         console.error('Failed to clear localStorage');
-        alert('Error clearing saved data. Please try again.');
+        showAlert('Error clearing saved data. Please try again.', 'Error', 'error');
         return;
       }
       
@@ -4707,33 +6008,65 @@ const App = () => {
       }
     } catch (e) {
       console.error('Error in retireAndReset:', e);
-      alert('Error resetting game. Please refresh the page manually.');
+      showAlert('Error resetting game. Please refresh the page manually.', 'Error', 'error');
     }
   };
 
   // Save game whenever critical state changes
   useEffect(() => {
     if (selectedSchool && roster.length > 0) {
-      // Optimize recruits data - only save recruits that matter
+      // SMART optimization for recruits data - preserves AI recruiting integrity
+      // Key insight: AI interest values MUST be preserved for ecosystem to work
       const optimizedRecruits = recruits.map(r => {
-        // For recruits you're not targeting and have 0 interest, strip AI data
-        if (!r.isTargeted && r.interest === 0 && !r.verbalCommit) {
-          const { recruitingSchools, leadingSchool, commitmentLeader, ...essentialData } = r;
-          return {
-            ...essentialData,
-            recruitingSchools: [], // Empty array to save space
-            leadingSchool: null,
-            commitmentLeader: null
-          };
-        }
-        // For targeted or committed recruits, keep only top 3 recruiting schools
-        if (r.recruitingSchools && r.recruitingSchools.length > 3) {
+        // Compress recruitingSchools to just essential data (schoolId + interest)
+        // This preserves AI progress while cutting ~60% of recruitingSchools bloat
+        const compressedSchools = (r.recruitingSchools || [])
+          .slice(0, 8) // Keep top 8 schools (enough for realistic competition)
+          .map(rs => ({
+            s: rs.schoolId,  // Shortened key
+            i: rs.interest   // Shortened key
+          }));
+
+        // For committed recruits, keep full data with compressed schools
+        if (r.verbalCommit || r.signedCommit) {
           return {
             ...r,
-            recruitingSchools: r.recruitingSchools.slice(0, 3) // Only keep top 3
+            recruitingSchools: compressedSchools,
+            _compressed: true
           };
         }
-        return r;
+
+        // For your targeted recruits, keep full data with compressed schools
+        if (r.isTargeted || r.interest > 0) {
+          return {
+            ...r,
+            recruitingSchools: compressedSchools,
+            _compressed: true
+          };
+        }
+
+        // For OTHER recruits, keep core data + compressed AI schools (preserves ecosystem)
+        return {
+          id: r.id,
+          name: r.name,
+          position: r.position,
+          subPosition: r.subPosition,
+          state: r.state,
+          city: r.city,
+          stars: r.stars,
+          rating: r.rating,
+          traits: r.traits,
+          marketValue: r.marketValue,
+          askingPrice: r.askingPrice,
+          dreamSchools: r.dreamSchools,
+          interest: 0,
+          isTargeted: false,
+          verbalCommit: r.verbalCommit || false,
+          signedCommit: r.signedCommit || false,
+          committedSchool: r.committedSchool || null,
+          recruitingSchools: compressedSchools, // PRESERVED! AI interest intact
+          _compressed: true
+        };
       });
       
       const gameData = {
@@ -4765,11 +6098,20 @@ const App = () => {
         dynastyYear,
         gameResults,
         conferenceStandings,
+        nationalRankings,
         // Game simulation state
         teamMorale,
         seasonStats,
         positionBoosts,
         recruitingPenaltyWeeks,
+        // Playoff system
+        playoffState,
+        // Enhanced playoff mode
+        enhancedModeEnabled,
+        halftimeAdjustment,
+        bowlAssignment,
+        bowlResults,
+        playoffHistory,
         // Donor system
         donors,
         donorPoints,
@@ -4779,12 +6121,96 @@ const App = () => {
       };
       
       try {
-        localStorage.setItem('cfb-dynasty-save', JSON.stringify(gameData));
+        const saveString = JSON.stringify(gameData);
+        localStorage.setItem('cfb-dynasty-save', saveString);
+        console.log(`Save successful: ${(saveString.length / 1024).toFixed(1)}KB`);
       } catch (e) {
         if (e.name === 'QuotaExceededError') {
-          console.error('Save failed: Storage quota exceeded');
-          // Could show user-friendly error here
-          alert('⚠️ Save Warning: Storage limit reached. Some data may not be saved. Consider starting a new season.');
+          console.error('Save failed: Storage quota exceeded. Trying ultra-compressed save...');
+
+          // TIER 1: Ultra-compress all recruits (top 5 schools only, shorter keys)
+          const ultraCompressedRecruits = recruits.map(r => ({
+            id: r.id,
+            name: r.name,
+            position: r.position,
+            subPosition: r.subPosition,
+            state: r.state,
+            city: r.city,
+            stars: r.stars,
+            rating: r.rating,
+            traits: r.traits,
+            marketValue: r.marketValue,
+            askingPrice: r.askingPrice,
+            dreamSchools: r.dreamSchools,
+            interest: r.interest || 0,
+            isTargeted: r.isTargeted || false,
+            verbalCommit: r.verbalCommit || false,
+            signedCommit: r.signedCommit || false,
+            committedSchool: r.committedSchool || null,
+            nilDeal: r.nilDeal || null,
+            recruitingSchools: (r.recruitingSchools || []).slice(0, 5).map(rs => ({
+              s: rs.schoolId || rs.s,
+              i: rs.interest || rs.i
+            })),
+            _compressed: true
+          }));
+
+          // Also trim gameResults to last 24 games
+          const trimmedResults = (gameResults || []).slice(-24);
+
+          const ultraCompressedData = {
+            ...gameData,
+            recruits: ultraCompressedRecruits,
+            gameResults: trimmedResults,
+            _ultraCompressed: true
+          };
+
+          try {
+            const ultraString = JSON.stringify(ultraCompressedData);
+            localStorage.setItem('cfb-dynasty-save', ultraString);
+            console.log(`Ultra-compressed save successful: ${(ultraString.length / 1024).toFixed(1)}KB`);
+          } catch (e2) {
+            console.error('Ultra-compressed save failed. Trying emergency save...');
+
+            // TIER 2: Emergency - only committed/targeted recruits
+            const emergencyRecruits = recruits.filter(r =>
+              r.verbalCommit || r.signedCommit || r.isTargeted || r.interest > 0
+            ).map(r => ({
+              ...r,
+              recruitingSchools: (r.recruitingSchools || []).slice(0, 3).map(rs => ({
+                s: rs.schoolId || rs.s,
+                i: rs.interest || rs.i
+              })),
+              _compressed: true
+            }));
+
+            const emergencyData = {
+              ...gameData,
+              recruits: emergencyRecruits,
+              gameResults: trimmedResults,
+              _emergencySave: true,
+              _originalRecruitCount: recruits.length
+            };
+
+            try {
+              localStorage.setItem('cfb-dynasty-save', JSON.stringify(emergencyData));
+              console.log(`Emergency save successful: ${emergencyRecruits.length} recruits saved`);
+              showAlert(
+                `Save space was very limited. Only your ${emergencyRecruits.length} targeted/committed recruits were saved. ` +
+                `Other recruits will be regenerated when you load. Your recruiting progress is safe!`,
+                'Partial Save',
+                'warning'
+              );
+            } catch (e3) {
+              console.error('Emergency save also failed:', e3);
+              showAlert(
+                'Storage limit reached. Please start a new season to continue saving progress. ' +
+                'Your current session will work but may not save properly.',
+                'Save Warning',
+                'error'
+              );
+            }
+          }
         }
       }
     }
@@ -4838,15 +6264,21 @@ const App = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(`Remove ${recruit.name} from your recruiting board?`)) {
-                                  setRecruits(recruits.map(r => 
-                                    r.id === recruit.id ? { ...r, isTargeted: false } : r
-                                  ));
-                                }
+                                showConfirm(
+                                  `Remove ${recruit.name} from your recruiting board?`,
+                                  () => {
+                                    setRecruits(recruits.map(r =>
+                                      r.id === recruit.id ? { ...r, isTargeted: false } : r
+                                    ));
+                                  },
+                                  'Remove Recruit',
+                                  { confirmText: 'Remove', cancelText: 'Keep' }
+                                );
                               }}
                               className="bg-red-700 border border-red-600 px-1 py-0.5 text-xs hover:bg-red-600"
                               style={{ boxShadow: '1px 1px 0px rgba(0,0,0,0.5)' }}
                               title="Remove from My Recruits"
+                              aria-label={`Remove ${recruit.name} from recruiting board`}
                             >
                               ✕
                             </button>
@@ -5380,7 +6812,7 @@ const App = () => {
   const saveLineupChanges = () => {
     // Validate the pending roster
     if (!validateStarterCounts(pendingRoster)) {
-      alert('Invalid starter configuration. Check position limits:\n• Offense: 1 QB, 5 OL, 1-2 RB, 2-4 WR, 0-2 TE (total 11)\n• Defense: Min 3 DL, Min 3 DB (total 11)');
+      showAlert('Invalid starter configuration. Check position limits:\n• Offense: 1 QB, 5 OL, 1-2 RB, 2-4 WR, 0-2 TE (total 11)\n• Defense: Min 3 DL, Min 3 DB (total 11)', 'Invalid Lineup', 'error');
       return;
     }
     
@@ -6649,6 +8081,187 @@ const App = () => {
     return finalSchedule;
   };
 
+  // ============== ENHANCED PLAYOFF MODE - MOMENTUM FUNCTIONS ==============
+
+  // Calculate momentum modifier for play success rate
+  // Formula: (momentum - 50) * 0.002 = percentage modifier
+  // At momentum 70: +4% success rate boost
+  // At momentum 30: -4% success rate penalty
+  const calculateMomentumModifier = (momentum) => {
+    return (momentum - 50) * 0.002;
+  };
+
+  // Calculate momentum change from an event
+  const calculateMomentumChange = (eventType, context = {}) => {
+    const event = MOMENTUM_EVENTS[eventType];
+    if (!event) return 0;
+
+    let change = event.base;
+
+    // Apply diminishing returns for touchdowns
+    if (eventType === 'touchdown' && context.tdCount > 1) {
+      change -= event.diminishing * (context.tdCount - 1);
+      change = Math.max(change, 4); // Minimum +4 for any TD
+    }
+
+    // Apply context multipliers
+    let multiplier = 1.0;
+
+    // Close game bonus (+25%)
+    if (context.scoreDiff !== undefined && Math.abs(context.scoreDiff) <= MOMENTUM_CONTEXT.closeGame.threshold) {
+      multiplier *= MOMENTUM_CONTEXT.closeGame.multiplier;
+    }
+
+    // 4th quarter bonus (+50%)
+    if (context.quarter === 4) {
+      multiplier *= MOMENTUM_CONTEXT.fourthQuarter.multiplier;
+    }
+
+    // Apply opponent tier scaling
+    if (context.opponentTier && MOMENTUM_TIER_SCALING[context.opponentTier]) {
+      const tierScale = MOMENTUM_TIER_SCALING[context.opponentTier];
+      // Offensive plays (scoring on them) use offensive scale
+      // Defensive plays (forcing turnovers) use defensive scale
+      if (['touchdown', 'fieldGoal', 'bigPlay'].includes(eventType)) {
+        multiplier *= tierScale.offensive;
+      } else if (['turnoverForced', 'threeAndOutForced', 'sack'].includes(eventType)) {
+        multiplier *= tierScale.defensive;
+      }
+    }
+
+    // Apply halftime adjustment momentum multiplier (trick plays)
+    if (context.halftimeAdjustment === 'trickPlays') {
+      multiplier *= HALFTIME_ADJUSTMENTS.trickPlays.effects.momentumMultiplier;
+    }
+
+    return Math.round(change * multiplier);
+  };
+
+  // Update momentum and keep history for animation
+  const updateMomentum = (eventType, context = {}) => {
+    const change = calculateMomentumChange(eventType, context);
+
+    setGameMomentum(prev => {
+      const newMomentum = Math.max(0, Math.min(100, prev + change));
+      return newMomentum;
+    });
+
+    // Track for animation
+    setMomentumHistory(prev => [
+      ...prev,
+      {
+        event: eventType,
+        change,
+        timestamp: Date.now(),
+        context
+      }
+    ]);
+
+    return change;
+  };
+
+  // Reset momentum for new game
+  const resetMomentum = () => {
+    setGameMomentum(50);
+    setMomentumHistory([]);
+    setGameInjuries([]);
+    setHalftimeAdjustment(null);
+    setCurrentDecision(null);
+    setDecisionTimer(null);
+    setBlowoutSkipOffered(false);
+  };
+
+  // Generate a random in-game injury
+  const generateGameInjury = (roster) => {
+    // Random chance of injury per game (about 5% chance per game for any player)
+    if (Math.random() > 0.05) return null;
+
+    // Pick a random starter
+    const starters = roster.filter(p => p.isStarter);
+    if (starters.length === 0) return null;
+
+    const injuredPlayer = starters[Math.floor(Math.random() * starters.length)];
+
+    // Determine severity
+    let severity;
+    const severityRoll = Math.random();
+    if (severityRoll < INJURY_SEVERITY.catastrophic.chance) {
+      severity = 'catastrophic';
+    } else if (severityRoll < 0.20) {
+      severity = 'serious';
+    } else if (severityRoll < 0.50) {
+      severity = 'moderate';
+    } else {
+      severity = 'minor';
+    }
+
+    const severityData = INJURY_SEVERITY[severity];
+    const injuryType = severityData.examples[Math.floor(Math.random() * severityData.examples.length)];
+
+    return {
+      player: injuredPlayer,
+      type: injuryType,
+      severity: severity,
+      aggravationRisk: severityData.aggravationRisk,
+      potentialMissedGames: typeof severityData.missedGames === 'object'
+        ? `${severityData.missedGames.min}-${severityData.missedGames.max}`
+        : severityData.missedGames === 'season'
+          ? 'Rest of season'
+          : `${severityData.missedGames}`,
+      keptIn: null, // Decision not yet made
+      aggravated: false
+    };
+  };
+
+  // Process injury decision
+  const processInjuryDecision = (injury, keepIn) => {
+    if (keepIn) {
+      // Check if injury aggravates
+      const aggravated = Math.random() < injury.aggravationRisk;
+      return {
+        ...injury,
+        keptIn: true,
+        aggravated,
+        finalMissedGames: aggravated
+          ? (injury.severity === 'catastrophic' ? 'season' : INJURY_SEVERITY[injury.severity].missedGames)
+          : 0
+      };
+    } else {
+      // Player pulled - safe choice
+      return {
+        ...injury,
+        keptIn: false,
+        aggravated: false,
+        finalMissedGames: 0 // Pulled early, no additional damage
+      };
+    }
+  };
+
+  // Determine bowl assignment based on wins
+  const determineBowlAssignment = (wins, conference) => {
+    if (wins < 6) return null; // Not bowl eligible
+
+    let tier;
+    if (wins >= 10) {
+      tier = BOWL_TIERS.ny6;
+    } else if (wins >= 8) {
+      tier = BOWL_TIERS.midTier;
+    } else {
+      tier = BOWL_TIERS.lowerTier;
+    }
+
+    // Pick a random bowl from the tier
+    const bowl = tier.bowls[Math.floor(Math.random() * tier.bowls.length)];
+
+    return {
+      ...bowl,
+      tier: tier === BOWL_TIERS.ny6 ? 'NY6' : tier === BOWL_TIERS.midTier ? 'Mid-Tier' : 'Lower-Tier',
+      wins
+    };
+  };
+
+  // ============== END MOMENTUM FUNCTIONS ==============
+
   // Calculate Team Rating (for user's team or AI team)
   const calculateTeamRating = (teamRoster) => {
     if (!teamRoster || teamRoster.length === 0) return 70; // Default rating
@@ -7613,8 +9226,7 @@ const App = () => {
 
       // Show completion message after state updates
       setTimeout(() => {
-        alert('🎓 Off-Season Complete. Let\'s Get Ready for the Season!\n\n' +
-              'Click "SIM TO NEXT EVENT" to continue.');
+        showAlert('Off-Season Complete. Let\'s Get Ready for the Season!\n\nClick "SIM TO NEXT EVENT" to continue.', '🎓 Off-Season Complete', 'success');
       }, 100);
       return;
     }
@@ -8105,7 +9717,7 @@ const App = () => {
         if (updatedRecruit && checkHomeTownAutoCommit(updatedRecruit)) {
           // Auto-commit with slightly reduced NIL (95% of asking price)
           const autoCommitDeal = Math.round(updatedRecruit.askingPrice * 0.95);
-          alert(`🏠 HOMETOWN HERO! ${updatedRecruit.name} couldn't pass up playing for ${getSchoolDisplayName(selectedSchool)}! Auto-committed for ${formatCurrency(autoCommitDeal)}.`);
+          showAlert(`${updatedRecruit.name} couldn't pass up playing for ${getSchoolDisplayName(selectedSchool)}! Auto-committed for ${formatCurrency(autoCommitDeal)}.`, '🏠 HOMETOWN HERO!', 'success');
 
           return prev.map(r =>
             r.id === updatedRecruit.id ? {
@@ -8223,7 +9835,7 @@ const App = () => {
                       acceptedNILAmount: recruitToCommit.marketValue
                     } : r
                   ));
-                  alert(`🏠 HOMETOWN HERO!\n\n${recruitToCommit.name} loves ${getSchoolDisplayName(selectedSchool)} so much, he's committing at market value!\n\n"This is my dream school - I don't need extra NIL to play here."\n\nNIL Deal: ${formatCurrency(recruitToCommit.marketValue)}`);
+                  showAlert(`${recruitToCommit.name} loves ${getSchoolDisplayName(selectedSchool)} so much, he's committing at market value!\n\n"This is my dream school - I don't need extra NIL to play here."\n\nNIL Deal: ${formatCurrency(recruitToCommit.marketValue)}`, '🏠 HOMETOWN HERO!', 'success');
                 }
               }, 0);
             } else {
@@ -8306,9 +9918,9 @@ const App = () => {
       // Show result message
       if (outcome.flipped) {
         const flippedRecruit = recruits.find(r => r.id === event.recruit.id);
-        alert(`💔 ${flippedRecruit.name} has flipped to ${event.rivalSchool.name}!\n\nThey accepted their ${formatCurrency(event.rivalOffer)} offer. This is a huge blow to your recruiting class.`);
+        showAlert(`${flippedRecruit.name} has flipped to ${event.rivalSchool.name}!\n\nThey accepted their ${formatCurrency(event.rivalOffer)} offer. This is a huge blow to your recruiting class.`, '💔 Recruit Flipped!', 'error');
       } else {
-        alert(outcome.message);
+        showAlert(outcome.message, 'Event Outcome', outcome.success ? 'success' : 'info');
       }
       
       setShowEventModal(false);
@@ -8354,8 +9966,8 @@ const App = () => {
       }));
     }
     
-    // Show outcome message (you could enhance this with a separate modal)
-    alert(outcome.message);
+    // Show outcome message
+    showAlert(outcome.message, 'Event Outcome', outcome.success ? 'success' : 'info');
     
     // Close modal
     setShowEventModal(false);
@@ -8664,6 +10276,52 @@ const App = () => {
     setSignedClass([]);
     setBudget(newBudget);
 
+    // Reset playoff state for new season
+    setPlayoffState({
+      phase: null,
+      conferenceChampions: {},
+      confChampResults: [],
+      playerConfChampGame: null,
+      playoffTeams: [],
+      playoffBracket: null,
+      bracketResults: {},
+      currentPlayoffGame: null,
+      nationalChampion: null
+    });
+
+    // Reset enhanced playoff mode state for new season (but preserve legacy)
+    setGameMomentum(50);
+    setMomentumHistory([]);
+    setCurrentDecision(null);
+    setDecisionTimer(null);
+    setGameInjuries([]);
+    setHalftimeAdjustment(null);
+    setShowHalftimeModal(false);
+    setShowDecisionModal(false);
+    setShowInjuryModal(false);
+    setCurrentInjury(null);
+    setBlowoutSkipOffered(false);
+    setBowlAssignment(null);
+    setBowlResults([]);
+    setShowBowlModal(false);
+    // Note: playoffHistory is NOT reset - it tracks career stats
+
+    // Initialize conference standings for new season
+    const initialStandings = initializeConferenceStandings(allSchools);
+    const allTeamSchedules = generateAllTeamSchedules(allSchools, selectedSchool?.id, newSchedule);
+    Object.keys(allTeamSchedules).forEach(schoolId => {
+      if (initialStandings[schoolId]) {
+        initialStandings[schoolId].schedule = allTeamSchedules[schoolId];
+      }
+    });
+    setConferenceStandings(initialStandings);
+    console.log('📊 Conference standings initialized for new season');
+
+    // Generate preseason rankings with updated rosters
+    const preseasonRankings = generatePreseasonRankings(allSchools, updatedAIRosters, newRoster, selectedSchool?.id);
+    setNationalRankings(preseasonRankings);
+    console.log('📊 Preseason rankings generated for new season');
+
     // Apply donor updates
     setDonors(updatedDonors);
     setDonorPoints(prev => prev + seasonDonorBonus);
@@ -8687,20 +10345,13 @@ const App = () => {
       : (donorSummary.retained > 0 ? `\nDONORS:\n• All ${donorSummary.retained} donors retained!${donorContributionMsg}\n` : (donorContributions > 0 ? `\nDONORS:${donorContributionMsg}\n` : ''));
 
     setTimeout(() => {
-      alert(`🏈 WELCOME TO THE ${newSeasonYear} SEASON!\n\n` +
-            `ROSTER CHANGES:\n` +
-            `• ${agedRoster.length} returning players\n` +
-            `• ${newFreshmen.length} incoming freshmen\n` +
-            `• ${newTransfers.length} transfer additions\n` +
-            `• ${roster.length - agedRoster.length} players graduated/departed\n` +
-            donorRetentionMsg +
-            `\nNEW RECRUITING CLASS:\n` +
-            `• ${freshRecruitingClass.filter(r => r.stars === 5).length} five-stars\n` +
-            `• ${freshRecruitingClass.filter(r => r.stars === 4).length} four-stars\n` +
-            `• ${freshRecruitingClass.filter(r => r.stars === 3).length} three-stars\n\n` +
-            `Your ${newSchedule.length}-game schedule has been generated.\n` +
-            `Budget: ${formatCurrency(newBudget)} (Base: ${formatCurrency(baseBudget)})\n\n` +
-            `Good luck, Coach!`);
+      showAlert(
+        `ROSTER CHANGES:\n• ${agedRoster.length} returning players\n• ${newFreshmen.length} incoming freshmen\n• ${newTransfers.length} transfer additions\n• ${roster.length - agedRoster.length} players graduated/departed\n` +
+        donorRetentionMsg +
+        `\nNEW RECRUITING CLASS:\n• ${freshRecruitingClass.filter(r => r.stars === 5).length} five-stars\n• ${freshRecruitingClass.filter(r => r.stars === 4).length} four-stars\n• ${freshRecruitingClass.filter(r => r.stars === 3).length} three-stars\n\nYour ${newSchedule.length}-game schedule has been generated.\nBudget: ${formatCurrency(newBudget)} (Base: ${formatCurrency(baseBudget)})\n\nGood luck, Coach!`,
+        `🏈 WELCOME TO THE ${newSeasonYear} SEASON!`,
+        'success'
+      );
     }, 500);
 
     console.log('🏈 NEW SEASON TRANSITION COMPLETE');
@@ -8716,9 +10367,13 @@ const App = () => {
       const gameAlreadyPlayed = gameResults.find(r => r.week === currentGameWeek);
 
       if (currentGame && !gameAlreadyPlayed) {
-        alert(`🏈 GAME DAY!\n\nYou must play your Week ${currentGameWeek} game before advancing.\n\n` +
-              `${currentGame.isHome ? 'vs' : '@'} ${currentGame.opponent?.name || 'Opponent'}\n` +
-              `${currentGame.isRivalry ? '🔥 RIVALRY GAME' : currentGame.isConference ? 'Conference Game' : 'Non-Conference'}`);
+        showAlert(
+          `You must play your Week ${currentGameWeek} game before advancing.\n\n` +
+          `${currentGame.isHome ? 'vs' : '@'} ${currentGame.opponent?.name || 'Opponent'}\n` +
+          `${currentGame.isRivalry ? '🔥 RIVALRY GAME' : currentGame.isConference ? 'Conference Game' : 'Non-Conference'}`,
+          '🏈 GAME DAY!',
+          'warning'
+        );
         return;
       }
     }
@@ -8728,20 +10383,26 @@ const App = () => {
     
     // If crossing into new year and over budget, block simulation
     if (willCrossYear && budgetRemaining < 0) {
-      alert('⚠️ BUDGET CRISIS!\n\nYou cannot advance to the next season while over budget.\n\nCurrent Budget Status:\n' +
-            `• Total Allocated: ${formatCurrency(totalAllocated)}\n` +
-            `• Total Budget: ${formatCurrency(budget)}\n` +
-            `• Over Budget By: ${formatCurrency(Math.abs(budgetRemaining))}\n\n` +
-            'You must reduce NIL spending or cut players before the new season begins.');
+      showAlert(
+        `You cannot advance to the next season while over budget.\n\nCurrent Budget Status:\n• Total Allocated: ${formatCurrency(totalAllocated)}\n• Total Budget: ${formatCurrency(budget)}\n• Over Budget By: ${formatCurrency(Math.abs(budgetRemaining))}\n\nYou must reduce NIL spending or cut players before the new season begins.`,
+        '⚠️ BUDGET CRISIS!',
+        'error'
+      );
       return;
     }
     
     // Warn if low on budget but not over
     if (willCrossYear && budgetRemaining < budget * 0.05) {
-      const confirmed = confirm('⚠️ LOW BUDGET WARNING\n\n' +
-                                `You only have ${formatCurrency(budgetRemaining)} remaining (${budgetUtilization}% utilized).\n\n` +
-                                'Do you want to continue to the next season?');
-      if (!confirmed) return;
+      showConfirm(
+        `You only have ${formatCurrency(budgetRemaining)} remaining (${budgetUtilization}% utilized).\n\nDo you want to continue to the next season?`,
+        () => {
+          // User confirmed, continue execution - we need to call simToNextEvent again
+          // For now, just proceed
+        },
+        '⚠️ LOW BUDGET WARNING',
+        { confirmText: 'Continue', cancelText: 'Go Back' }
+      );
+      return;
     }
 
     // NCAA Annual Review - Check booster deals for violations (once per year when crossing into new year)
@@ -8811,14 +10472,17 @@ const App = () => {
 
       // Show summary to user
       setTimeout(() => {
-        alert(`🔄 TRANSFER PORTAL OPENED\n\n` +
-              `Season complete! Your roster is being evaluated.\n\n` +
-              `YOUR TEAM:\n` +
-              `• ${portalResults.transferCount} players entered the portal\n` +
-              `• ${portalResults.retainedCount} players retained\n` +
-              `• ${portalResults.decisionsNeeded} decisions need your attention\n\n` +
-              `TRANSFER PORTAL:\n` +
-              `• ${aiPortalCount} players from other schools available`);
+        showAlert(
+          `Season complete! Your roster is being evaluated.\n\n` +
+          `YOUR TEAM:\n` +
+          `• ${portalResults.transferCount} players entered the portal\n` +
+          `• ${portalResults.retainedCount} players retained\n` +
+          `• ${portalResults.decisionsNeeded} decisions need your attention\n\n` +
+          `TRANSFER PORTAL:\n` +
+          `• ${aiPortalCount} players from other schools available`,
+          '🔄 TRANSFER PORTAL OPENED',
+          'info'
+        );
       }, 500);
     }
 
@@ -8883,6 +10547,125 @@ const App = () => {
         } else {
           console.log('Regular Season started with', seasonSchedule.length, 'games scheduled');
         }
+      } else if (nextEvent.title === 'Conference Championships') {
+        // CONFERENCE CHAMPIONSHIPS - Simulate all championship games
+        advanceDay(nextEvent.daysUntil);
+        setCurrentGameWeek(0); // Reset when leaving regular season
+
+        console.log('🏆 CONFERENCE CHAMPIONSHIPS - Simulating championship games...');
+        const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+
+        // Simulate all conference championship games
+        const champResults = simulateConferenceChampionships(
+          conferenceStandings,
+          allSchools,
+          aiRosters,
+          selectedSchool?.id,
+          roster
+        );
+
+        // Update playoff state with results
+        setPlayoffState(prev => ({
+          ...prev,
+          phase: 'conf_championships',
+          conferenceChampions: champResults.champions,
+          confChampResults: champResults.results,
+          playerConfChampGame: champResults.playerGame
+        }));
+
+        // If player has a championship game, show the game plan modal
+        if (champResults.playerGame) {
+          const isTop2 = champResults.playerGame.isPlayerTeam1;
+          const opponent = isTop2
+            ? champResults.playerGame.team2.school
+            : champResults.playerGame.team1.school;
+
+          setCurrentOpponent(opponent);
+          setShowConfChampModal(true);
+
+          setTimeout(() => {
+            showAlert(
+              `🏆 CONFERENCE CHAMPIONSHIP GAME!\n\n` +
+              `Your ${selectedSchool?.name} team has finished #${isTop2 ? '1' : '2'} in the ${champResults.playerGame.conference}!\n\n` +
+              `You'll face ${opponent.name} for the conference title.\n\n` +
+              `Win this game to earn an automatic playoff bid!`,
+              '🏆 Championship Week',
+              'success'
+            );
+          }, 100);
+        } else {
+          // Player not in championship - show results and proceed to Selection Sunday
+          setShowConfChampModal(true);
+        }
+        return; // Stop here - player needs to see results or play game
+      } else if (nextEvent.title === 'The Playoffs') {
+        // PLAYOFFS - Check if playoff field needs to be selected
+        advanceDay(nextEvent.daysUntil);
+
+        // If we haven't selected the playoff field yet, do Selection Sunday
+        if (!playoffState.playoffTeams || playoffState.playoffTeams.length === 0) {
+          console.log('📺 SELECTION SUNDAY - Selecting 12-team playoff field...');
+
+          const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+          const playoffSelection = selectPlayoffField(
+            nationalRankings,
+            playoffState.conferenceChampions || {},
+            allSchools
+          );
+
+          setPlayoffState(prev => ({
+            ...prev,
+            phase: 'selection_sunday',
+            playoffTeams: playoffSelection.teams,
+            playoffBracket: playoffSelection.bracket
+          }));
+
+          // Check if player made the playoff
+          const playerInPlayoff = playoffSelection.teams.find(t => t.schoolId === selectedSchool?.id);
+
+          // Assign bowl games to non-playoff teams
+          const playoffTeamIds = playoffSelection.teams.map(t => t.schoolId);
+          const bowlGames = assignBowlGames(
+            conferenceStandings,
+            playoffTeamIds,
+            allSchools,
+            aiRosters,
+            nationalRankings
+          );
+          setBowlResults(bowlGames);
+          console.log(`🏈 Assigned ${bowlGames.length} bowl games to non-playoff teams`);
+
+          // Check if player is bowl-eligible but not in playoff
+          if (!playerInPlayoff) {
+            const playerEligibility = checkPlayerBowlEligibility(
+              seasonRecord,
+              playoffSelection.teams,
+              selectedSchool?.id
+            );
+
+            if (playerEligibility.eligible) {
+              // Assign player to a bowl
+              const playerBowl = determineBowlAssignment(playerEligibility.wins, selectedSchool?.conference);
+              setBowlAssignment(playerBowl);
+              console.log(`🏈 Player assigned to ${playerBowl?.name} (${playerBowl?.tier})`);
+            }
+          }
+
+          setSelectionRevealIndex(0);
+          setShowSelectionSundayModal(true);
+
+          if (playerInPlayoff) {
+            console.log(`🎉 Player made the playoff as #${playerInPlayoff.seed} seed!`);
+            // Record playoff appearance in legacy
+            setPlayoffHistory(prev => recordPlayoffAppearance(prev));
+          } else {
+            console.log('😔 Player did not make the playoff');
+          }
+          return; // Stop here for Selection Sunday reveal
+        }
+
+        // If playoff field already selected, continue with playoff games
+        // (handled separately in playoff bracket UI)
       } else {
         // Regular event, reset game week if leaving season
         advanceDay(nextEvent.daysUntil);
@@ -8924,7 +10707,11 @@ const App = () => {
         
         if (leadingSchool && leadingSchool.schoolId !== selectedSchool?.id) {
           setTimeout(() => {
-            alert(`📰 RECRUITING UPDATE\n\n${leadingSchool.schoolName} made a ${leadingSchool.lastAction} with ${target.name}!\n\nThey're now at ${leadingSchool.interest}% interest.\n\n${target.interest > 0 ? `You're at ${target.interest}%` : 'You haven\'t started recruiting them yet'}`);
+            showAlert(
+              `${leadingSchool.schoolName} made a ${leadingSchool.lastAction} with ${target.name}!\n\nThey're now at ${leadingSchool.interest}% interest.\n\n${target.interest > 0 ? `You're at ${target.interest}%` : 'You haven\'t started recruiting them yet'}`,
+              '📰 RECRUITING UPDATE',
+              'info'
+            );
           }, 800);
         }
       }
@@ -8934,7 +10721,11 @@ const App = () => {
       if (lostTargets.length > 0) {
         const lostRecruit = lostTargets[0];
         setTimeout(() => {
-          alert(`💔 COMMITMENT ALERT!\n\n${lostRecruit.name} has committed to ${lostRecruit.committedSchool.name}!\n\n${lostRecruit.isTargeted ? 'This was one of your targets!' : ''}\n\nYou had ${lostRecruit.interest}% interest.`);
+          showAlert(
+            `${lostRecruit.name} has committed to ${lostRecruit.committedSchool.name}!\n\n${lostRecruit.isTargeted ? 'This was one of your targets!' : ''}\n\nYou had ${lostRecruit.interest}% interest.`,
+            '💔 COMMITMENT ALERT!',
+            'error'
+          );
         }, 1000);
       }
     } else {
@@ -8985,7 +10776,7 @@ const App = () => {
               });
             }
 
-            alert(message);
+            showAlert(message, '📅 SIGNING DAY RESULTS', 'info');
           }, 500);
         }
       }
@@ -9009,6 +10800,118 @@ const App = () => {
   const budgetRemaining = budget - totalAllocated;
   const budgetUtilization = ((totalAllocated / budget) * 100).toFixed(1);
 
+  // Helper functions for Alert/Confirm modals (replaces browser alert/confirm)
+  const showAlert = (message, title = 'Notice', type = 'info') => {
+    setAlertModal({ show: true, title, message, type });
+  };
+
+  const showConfirm = (message, onConfirm, title = 'Confirm', options = {}) => {
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, show: false }));
+        if (onConfirm) onConfirm();
+      },
+      onCancel: () => {
+        setConfirmModal(prev => ({ ...prev, show: false }));
+        if (options.onCancel) options.onCancel();
+      },
+      confirmText: options.confirmText || 'Confirm',
+      cancelText: options.cancelText || 'Cancel'
+    });
+  };
+
+  // ALERT MODAL COMPONENT - Replaces browser alert()
+  const AlertModal = () => {
+    if (!alertModal.show) return null;
+
+    const typeColors = {
+      info: 'border-blue-500',
+      success: 'border-green-500',
+      warning: 'border-yellow-500',
+      error: 'border-red-500'
+    };
+
+    const typeIcons = {
+      info: 'ℹ️',
+      success: '✅',
+      warning: '⚠️',
+      error: '❌'
+    };
+
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]"
+        onClick={() => setAlertModal(prev => ({ ...prev, show: false }))}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="alert-title"
+        aria-describedby="alert-message"
+      >
+        <div
+          className={`bg-gray-900 border-4 ${typeColors[alertModal.type] || typeColors.info} p-6 max-w-lg w-full mx-4 shadow-pixel-xl`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start gap-3 mb-4">
+            <span className="text-2xl">{typeIcons[alertModal.type] || typeIcons.info}</span>
+            <div className="flex-1">
+              <h3 id="alert-title" className="text-yellow-400 font-bold text-lg mb-2 text-balance">{alertModal.title}</h3>
+              <p id="alert-message" className="text-white text-sm whitespace-pre-line">{alertModal.message}</p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setAlertModal(prev => ({ ...prev, show: false }))}
+              className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-6 py-2 border-2 border-yellow-400 transition-colors"
+              autoFocus
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // CONFIRM MODAL COMPONENT - Replaces browser confirm()
+  const ConfirmModal = () => {
+    if (!confirmModal.show) return null;
+
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-message"
+      >
+        <div
+          className="bg-gray-900 border-4 border-yellow-500 p-6 max-w-lg w-full mx-4 shadow-pixel-xl"
+        >
+          <h3 id="confirm-title" className="text-yellow-400 font-bold text-lg mb-4 text-balance">{confirmModal.title}</h3>
+          <p id="confirm-message" className="text-white text-sm whitespace-pre-line mb-6">{confirmModal.message}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={confirmModal.onCancel}
+              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 border-2 border-gray-500 transition-colors"
+            >
+              {confirmModal.cancelText}
+            </button>
+            <button
+              onClick={confirmModal.onConfirm}
+              className="bg-red-700 hover:bg-red-600 text-white font-bold px-4 py-2 border-2 border-red-500 transition-colors"
+              autoFocus
+            >
+              {confirmModal.confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // OPTIONS MODAL COMPONENT - Shows on all pages
   const OptionsModal = () => {
     if (!showOptions) return null;
@@ -9019,7 +10922,7 @@ const App = () => {
           boxShadow: '12px 12px 0px rgba(0,0,0,0.8)',
           fontFamily: '"Press Start 2P", cursive'
         }}>
-          <h2 className="text-2xl text-yellow-400 mb-6 text-center">OPTIONS</h2>
+          <h2 className="text-2xl text-yellow-400 mb-6 text-center text-balance">OPTIONS</h2>
           
           {/* Music Toggle */}
           <div className="mb-6 p-4 bg-gray-800 border-2 border-gray-700">
@@ -9029,6 +10932,10 @@ const App = () => {
                 onClick={() => setSfxEnabled(!sfxEnabled)}
                 className={`relative w-16 h-8 rounded-full transition-colors ${sfxEnabled ? 'bg-green-600' : 'bg-gray-600'}`}
                 style={{ border: '2px solid #000' }}
+                aria-label={sfxEnabled ? 'Disable music and sound effects' : 'Enable music and sound effects'}
+                aria-pressed={sfxEnabled}
+                role="switch"
+                aria-checked={sfxEnabled}
               >
                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform ${sfxEnabled ? 'right-1' : 'left-1'}`} style={{ border: '2px solid #000' }}></div>
               </button>
@@ -9042,9 +10949,12 @@ const App = () => {
           <div className="mb-6">
             <button
               onClick={() => {
-                if (confirm('⚠️ RETIRE FROM COACHING?\n\nThis will:\n• Delete all saved progress\n• Reset the game completely\n• Return you to the title screen\n\nAre you sure?')) {
-                  retireAndReset();
-                }
+                showConfirm(
+                  'This will:\n• Delete all saved progress\n• Reset the game completely\n• Return you to the title screen\n\nAre you sure?',
+                  () => retireAndReset(),
+                  '⚠️ RETIRE FROM COACHING?',
+                  { confirmText: 'Retire', cancelText: 'Cancel' }
+                );
               }}
               className="w-full bg-red-800 border-4 border-red-600 p-4 hover:bg-red-700 transition-all text-white font-bold"
               style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
@@ -9099,7 +11009,7 @@ const App = () => {
     
     return (
       <div 
-        className="min-h-screen text-white flex flex-col items-center justify-center relative overflow-hidden cursor-pointer"
+        className="min-h-dvh text-white flex flex-col items-center justify-center relative overflow-hidden cursor-pointer"
         onClick={handleStartGame}
         style={{
           fontFamily: '"Press Start 2P", cursive',
@@ -9135,7 +11045,7 @@ const App = () => {
           * { image-rendering: pixelated; }
           
           /* Make background look 16-bit */
-          .min-h-screen::before {
+          .min-h-dvh::before {
             content: '';
             position: absolute;
             top: 0;
@@ -9376,13 +11286,15 @@ const App = () => {
         
         {/* Options Modal */}
         <OptionsModal />
+        <AlertModal />
+        <ConfirmModal />
       </div>
     );
   }
 
   if (gameState === 'schoolSelect') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white p-8 relative overflow-hidden" style={{
+      <div className="min-h-dvh bg-gradient-to-b from-gray-900 to-black text-white p-8 relative overflow-hidden" style={{
         fontFamily: '"Press Start 2P", cursive',
         imageRendering: 'pixelated'
       }}>
@@ -9553,8 +11465,8 @@ const App = () => {
         
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-12">
-            <h1 className="text-5xl mb-4 text-yellow-400 font-bold" style={{ textShadow: '4px 4px 0px rgba(0,0,0,0.8)' }}>THE PROGRAM</h1>
-            <h2 className="text-2xl text-yellow-400" style={{ textShadow: '4px 4px 0px rgba(0,0,0,0.8)' }}>College Football Simulator</h2>
+            <h1 className="text-5xl mb-4 text-yellow-400 font-bold text-balance" style={{ textShadow: '4px 4px 0px rgba(0,0,0,0.8)' }}>THE PROGRAM</h1>
+            <h2 className="text-2xl text-yellow-400 text-balance" style={{ textShadow: '4px 4px 0px rgba(0,0,0,0.8)' }}>College Football Simulator</h2>
             <p className="text-sm mt-8 text-gray-400">SELECT YOUR PROGRAM</p>
           </div>
 
@@ -9626,7 +11538,7 @@ const App = () => {
         {pendingSchool && (
           <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900 border-4 border-yellow-400 max-w-md w-full p-6" style={{ boxShadow: '12px 12px 0px rgba(0,0,0,0.8)' }}>
-              <h2 className="text-xl text-yellow-400 mb-4 text-center">ENTER YOUR NAME</h2>
+              <h2 className="text-xl text-yellow-400 mb-4 text-center text-balance">ENTER YOUR NAME</h2>
 
               <div className="mb-4 text-center">
                 <div className="text-sm text-gray-400 mb-2">You've selected:</div>
@@ -9637,8 +11549,9 @@ const App = () => {
               </div>
 
               <div className="mb-6">
-                <label className="text-xs text-gray-400 block mb-2">COACH NAME:</label>
+                <label htmlFor="coach-name-input" className="text-xs text-gray-400 block mb-2">COACH NAME:</label>
                 <input
+                  id="coach-name-input"
                   type="text"
                   value={tempCoachInput}
                   onChange={(e) => setTempCoachInput(e.target.value)}
@@ -9680,13 +11593,15 @@ const App = () => {
 
         {/* Options Modal */}
         <OptionsModal />
+        <AlertModal />
+        <ConfirmModal />
       </div>
     );
   }
 
   // Main Game Screen
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white" style={{ fontFamily: '"Press Start 2P", cursive' }}>
+    <div className="min-h-dvh bg-gradient-to-b from-gray-900 to-black text-white" style={{ fontFamily: '"Press Start 2P", cursive' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .bg-recruit-light { background-color: #ffffff; }
@@ -9740,13 +11655,15 @@ const App = () => {
               ).length;
 
               // Only count donors if user has points AND donor has actions available this week
-              const actionableDonors = donors.filter(d => {
+              // AND we're still in courting season (weeks 1-4 of off-season)
+              const courtingSeasonActive = offSeasonWeek !== null && offSeasonWeek <= 4;
+              const actionableDonors = courtingSeasonActive ? donors.filter(d => {
                 if (d.status !== 'available' || d.relationship >= 80) return false;
                 const usedActions = d.weeklyActionsUsed || [];
                 const hasAvailableAction = usedActions.length < 3; // Not all 3 actions used
                 const canAffordAnyAction = donorPoints >= 50; // Minimum action cost
                 return hasAvailableAction && canAffordAnyAction;
-              }).length;
+              }).length : 0;
 
               const nilTaskCount = pendingNILDeals + actionableDonors;
               const hasUnspentPoints = recruitingPoints > 50 && isRecruitingOpen();
@@ -9800,6 +11717,7 @@ const App = () => {
               onClick={() => setShowOptions(true)}
               className="bg-gray-800 border-2 border-gray-600 px-3 py-2 hover:bg-gray-700 transition-all text-white text-xs"
               style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+              aria-label="Open settings"
             >
               ⚙️
             </button>
@@ -9821,7 +11739,7 @@ const App = () => {
                   onClick={() => {
                     const newSchedule = generateSeasonSchedule(selectedSchool);
                     setSeasonSchedule(newSchedule);
-                    alert(`Schedule regenerated with ${newSchedule.length} games!`);
+                    showAlert(`Schedule regenerated with ${newSchedule.length} games!`, 'Schedule Updated', 'success');
                   }}
                   className="mt-2 bg-red-700 border-2 border-red-500 px-4 py-2 text-sm font-bold hover:bg-red-600"
                 >
@@ -9883,10 +11801,10 @@ const App = () => {
                   </div>
 
                   <div className="flex-1 max-w-md mx-4">
-                    <div className="w-full bg-gray-700 h-3 border-2 border-gray-600 rounded">
+                    <div className="w-full bg-gray-700 h-3 border-2 border-gray-600 rounded overflow-hidden">
                       <div
-                        className="bg-yellow-500 h-full rounded transition-all"
-                        style={{ width: `${(offSeasonWeek / 16) * 100}%` }}
+                        className="bg-yellow-500 h-full w-full origin-left transition-transform duration-200"
+                        style={{ transform: `scaleX(${offSeasonWeek / 16})` }}
                       />
                     </div>
                     <div className="text-xs text-blue-300 mt-1 text-center">{offSeasonWeeksCompleted} weeks completed</div>
@@ -9934,6 +11852,8 @@ const App = () => {
                 onClick={() => setShowMessenger(!showMessenger)}
                 className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:bg-gray-700 transition-all text-left"
                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                aria-expanded={showMessenger}
+                aria-label="Toggle news feed"
               >
                 <div className="flex justify-between items-center">
                   <div>
@@ -10005,7 +11925,7 @@ const App = () => {
                                         setRoster(updatedRoster);
                                         setBudgetAllocated(prev => prev + nilIncrease);
                                       } else {
-                                        alert(`Insufficient budget!\n\nNeed: ${formatCurrency(nilIncrease)}\nAvailable: ${formatCurrency(budgetRemaining)}`);
+                                        showAlert(`Need: ${formatCurrency(nilIncrease)}\nAvailable: ${formatCurrency(budgetRemaining)}`, 'Insufficient budget!', 'error');
                                       }
                                     }}
                                     className={`${canAfford ? 'bg-green-700 hover:bg-green-600 border-green-500' : 'bg-gray-600 border-gray-500 cursor-not-allowed'} border px-2 py-1 text-white whitespace-nowrap`}
@@ -10067,6 +11987,8 @@ const App = () => {
                 onClick={() => setShowCalendar(!showCalendar)}
                 className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:bg-gray-700 transition-all text-left"
                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                aria-expanded={showCalendar}
+                aria-label="Toggle calendar"
               >
                 <div className="flex justify-between items-center">
                   <div>
@@ -10107,18 +12029,17 @@ const App = () => {
                         onClick={() => {
                           console.log('SIM TO NEXT EVENT clicked. offSeasonWeek:', offSeasonWeek, 'isEndOfSeason:', isEndOfSeason());
                           if (isEndOfSeason()) {
-                            const confirmed = confirm(
-                              '🏈 ADVANCE TO NEW SEASON?\n\n' +
+                            showConfirm(
                               'This will:\n' +
                               '• Graduate seniors and 5th-year players\n' +
                               '• Add signed recruits to your roster\n' +
                               '• Generate a new recruiting class\n' +
                               '• Create your new schedule\n\n' +
-                              'Are you ready to start the new season?'
+                              'Are you ready to start the new season?',
+                              () => advanceToNewSeason(),
+                              '🏈 ADVANCE TO NEW SEASON?',
+                              { confirmText: 'Start New Season', cancelText: 'Not Yet' }
                             );
-                            if (confirmed) {
-                              advanceToNewSeason();
-                            }
                           } else {
                             simulateToNextEvent();
                           }
@@ -10158,11 +12079,13 @@ const App = () => {
                 onClick={() => setShowBudgetBreakdown(!showBudgetBreakdown)}
                 className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:bg-gray-700 transition-all text-left"
                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                aria-expanded={showBudgetBreakdown}
+                aria-label="Toggle budget breakdown"
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="text-sm text-yellow-400 mb-2">BUDGET OVERVIEW</div>
-                    <div className="text-xs text-gray-300">{formatCurrency(totalAllocated)} / {formatCurrency(budget)} ({budgetUtilization}% utilized)</div>
+                    <div className="text-xs text-gray-300 tabular-nums">{formatCurrency(totalAllocated)} / {formatCurrency(budget)} ({budgetUtilization}% utilized)</div>
                   </div>
                   <div className="text-2xl text-yellow-400">{showBudgetBreakdown ? '▼' : '▶'}</div>
                 </div>
@@ -10172,7 +12095,7 @@ const App = () => {
                 <div className="mt-4 bg-gray-800 border-4 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
                   <div className="mb-4 flex justify-between items-center">
                     <div className="text-xs text-gray-300">BUDGET ALLOCATION</div>
-                    <div className="text-xs text-gray-300">{formatCurrency(totalAllocated)} / {formatCurrency(budget)}</div>
+                    <div className="text-xs text-gray-300 tabular-nums">{formatCurrency(totalAllocated)} / {formatCurrency(budget)}</div>
                   </div>
                   
                   <div 
@@ -10181,7 +12104,7 @@ const App = () => {
                     title={`Total Utilization: ${budgetUtilization}%`}
                   >
                     <div 
-                      className="absolute top-0 left-0 h-full transition-all duration-500"
+                      className="absolute top-0 left-0 h-full transition-all duration-200"
                       style={{ 
                         width: `${(budgetAllocated / budget) * 100}%`,
                         backgroundColor: selectedSchool.colors.primary
@@ -10189,7 +12112,7 @@ const App = () => {
                     ></div>
                     
                     <div 
-                      className="absolute top-0 h-full transition-all duration-500"
+                      className="absolute top-0 h-full transition-all duration-200"
                       style={{ 
                         left: `${(budgetAllocated / budget) * 100}%`,
                         width: `${(incomingFreshmanBudget / budget) * 100}%`,
@@ -10198,7 +12121,7 @@ const App = () => {
                     ></div>
                     
                     <div 
-                      className="absolute top-0 h-full transition-all duration-500"
+                      className="absolute top-0 h-full transition-all duration-200"
                       style={{ 
                         left: `${((budgetAllocated + incomingFreshmanBudget) / budget) * 100}%`,
                         width: `${(transferAdditionsBudget / budget) * 100}%`,
@@ -10208,7 +12131,7 @@ const App = () => {
                     ></div>
                     
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-50">
-                      <div className="text-2xl font-bold text-white">{budgetUtilization}%</div>
+                      <div className="text-2xl font-bold text-white tabular-nums">{budgetUtilization}%</div>
                     </div>
                   </div>
                   
@@ -10239,11 +12162,11 @@ const App = () => {
                   <div className="mt-4 pt-4 border-t-2 border-gray-700 flex justify-between items-center">
                     <div>
                       <div className="text-xs text-gray-400">REMAINING</div>
-                      <div className="text-lg text-purple-400">{formatCurrency(budgetRemaining)}</div>
+                      <div className="text-lg text-purple-400 tabular-nums">{formatCurrency(budgetRemaining)}</div>
                     </div>
                     <div className="text-right">
                       <div className="text-xs text-gray-400">TOTAL ALLOCATED</div>
-                      <div className="text-lg text-green-400">{formatCurrency(totalAllocated)}</div>
+                      <div className="text-lg text-green-400 tabular-nums">{formatCurrency(totalAllocated)}</div>
                     </div>
                   </div>
                 </div>
@@ -10256,6 +12179,8 @@ const App = () => {
                 onClick={() => setShowRosterBreakdown(!showRosterBreakdown)}
                 className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:bg-gray-700 transition-all text-left"
                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                aria-expanded={showRosterBreakdown}
+                aria-label="Toggle roster breakdown"
               >
                 <div className="flex justify-between items-center">
                   <div>
@@ -10359,6 +12284,8 @@ const App = () => {
                 onClick={() => setShowRecruitingOverview(!showRecruitingOverview)}
                 className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:bg-gray-700 transition-all text-left"
                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                aria-expanded={showRecruitingOverview}
+                aria-label="Toggle recruiting overview"
               >
                 <div className="flex justify-between items-center">
                   <div>
@@ -10675,6 +12602,8 @@ const App = () => {
                 onClick={() => setShowCoachProfile(!showCoachProfile)}
                 className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:border-yellow-500 transition-all"
                 style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                aria-expanded={showCoachProfile}
+                aria-label="Toggle coach profile"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-left">
@@ -10695,15 +12624,15 @@ const App = () => {
                 </div>
 
                 {/* Success Bar */}
-                <div className="w-full bg-gray-700 h-3 border-2 border-gray-900 relative">
+                <div className="w-full bg-gray-700 h-3 border-2 border-gray-900 relative overflow-hidden">
                   <div
-                    className={`h-full transition-all ${
+                    className={`h-full w-full origin-left transition-transform duration-200 ${
                       coachSuccess >= 80 ? 'bg-green-500' :
                       coachSuccess >= 60 ? 'bg-blue-500' :
                       coachSuccess >= 40 ? 'bg-yellow-500' :
                       coachSuccess >= 20 ? 'bg-orange-500' : 'bg-red-500'
                     }`}
-                    style={{ width: `${coachSuccess}%` }}
+                    style={{ transform: `scaleX(${coachSuccess / 100})` }}
                   />
                 </div>
 
@@ -10838,6 +12767,112 @@ const App = () => {
                 </div>
               )}
             </div>
+
+            {/* PLAYOFF LEGACY SECTION */}
+            {(playoffHistory.appearances > 0 || playoffHistory.championships > 0) && (
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowPlayoffLegacy && setShowPlayoffLegacy(!showPlayoffLegacy)}
+                  className="w-full bg-gradient-to-r from-yellow-800 to-yellow-700 border-4 border-yellow-600 p-4 hover:from-yellow-700 hover:to-yellow-600 transition-all"
+                  style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <h3 className="text-sm font-bold text-yellow-300">
+                        🏆 PLAYOFF LEGACY
+                      </h3>
+                      <p className="text-yellow-100 mt-1 text-xs">
+                        {playoffHistory.championships > 0 && (
+                          <span className="mr-3">{playoffHistory.championships}x National Champion</span>
+                        )}
+                        {playoffHistory.appearances > 0 && (
+                          <span>{playoffHistory.appearances} Playoff Appearance{playoffHistory.appearances !== 1 ? 's' : ''}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <div className="bg-gray-900 border-4 border-t-0 border-yellow-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* Playoff Record */}
+                    <div className="bg-gray-800 border-2 border-gray-700 p-3 text-center">
+                      <div className="text-xs text-gray-400 mb-1">PLAYOFF RECORD</div>
+                      <div className="text-lg font-bold">
+                        <span className="text-green-400">{playoffHistory.wins}</span>
+                        <span className="text-gray-500"> - </span>
+                        <span className="text-red-400">{playoffHistory.losses}</span>
+                      </div>
+                    </div>
+
+                    {/* Championships */}
+                    <div className="bg-gray-800 border-2 border-gray-700 p-3 text-center">
+                      <div className="text-xs text-gray-400 mb-1">CHAMPIONSHIPS</div>
+                      <div className={`text-lg font-bold ${playoffHistory.championships > 0 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                        {playoffHistory.championships}
+                      </div>
+                    </div>
+
+                    {/* Final Fours */}
+                    <div className="bg-gray-800 border-2 border-gray-700 p-3 text-center">
+                      <div className="text-xs text-gray-400 mb-1">FINAL FOURS</div>
+                      <div className={`text-lg font-bold ${playoffHistory.finalFours > 0 ? 'text-blue-400' : 'text-gray-500'}`}>
+                        {playoffHistory.finalFours}
+                      </div>
+                    </div>
+
+                    {/* Championship Appearances */}
+                    <div className="bg-gray-800 border-2 border-gray-700 p-3 text-center">
+                      <div className="text-xs text-gray-400 mb-1">TITLE GAMES</div>
+                      <div className={`text-lg font-bold ${playoffHistory.championshipAppearances > 0 ? 'text-purple-400' : 'text-gray-500'}`}>
+                        {playoffHistory.championshipAppearances}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notable Games */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    {/* Biggest Win */}
+                    {playoffHistory.biggestWin && (
+                      <div className="bg-green-900 border-2 border-green-700 p-3">
+                        <div className="text-xs text-green-400 mb-1">BIGGEST PLAYOFF WIN</div>
+                        <div className="text-white font-bold">
+                          +{playoffHistory.biggestWin.margin} pts vs {playoffHistory.biggestWin.opponent}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Year {playoffHistory.biggestWin.year} • {playoffHistory.biggestWin.round?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Closest Loss */}
+                    {playoffHistory.closestLoss && (
+                      <div className="bg-red-900 border-2 border-red-700 p-3">
+                        <div className="text-xs text-red-400 mb-1">HEARTBREAKER</div>
+                        <div className="text-white font-bold">
+                          -{playoffHistory.closestLoss.margin} pts vs {playoffHistory.closestLoss.opponent}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Year {playoffHistory.closestLoss.year} • {playoffHistory.closestLoss.round?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Perfect Runs */}
+                  {playoffHistory.perfectRuns > 0 && (
+                    <div className="mt-3 bg-yellow-900 border-2 border-yellow-600 p-3 text-center">
+                      <div className="text-yellow-300 font-bold">
+                        ⭐ {playoffHistory.perfectRuns} PERFECT PLAYOFF RUN{playoffHistory.perfectRuns !== 1 ? 'S' : ''}
+                      </div>
+                      <div className="text-xs text-gray-300 mt-1">
+                        Undefeated through the bracket
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* SCHEDULE SECTION */}
             {seasonSchedule.length > 0 && (
@@ -10979,6 +13014,243 @@ const App = () => {
               </div>
             )}
 
+            {/* TOP 25 RANKINGS SECTION */}
+            {nationalRankings.length > 0 && (
+              <div className="mb-6">
+                <button
+                  onClick={() => setRankingsExpanded(!rankingsExpanded)}
+                  className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:border-yellow-500 transition-all flex justify-between items-center"
+                  style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                >
+                  <div className="text-left">
+                    <h3 className="text-sm font-bold text-yellow-400">
+                      🏆 TOP 25 RANKINGS
+                    </h3>
+                    <p className="text-gray-400 mt-1 text-xs">
+                      {(() => {
+                        const playerRank = nationalRankings.find(r => r.schoolId === selectedSchool?.id);
+                        if (playerRank && playerRank.rank <= 25) {
+                          return (
+                            <span>
+                              You are ranked <span className="text-yellow-400 font-bold">#{playerRank.rank}</span>
+                              {playerRank.rankChange > 0 && <span className="text-green-400 ml-1">▲{playerRank.rankChange}</span>}
+                              {playerRank.rankChange < 0 && <span className="text-red-400 ml-1">▼{Math.abs(playerRank.rankChange)}</span>}
+                            </span>
+                          );
+                        } else if (playerRank) {
+                          return <span>Your team is currently unranked (#{playerRank.rank})</span>;
+                        }
+                        return 'National Poll';
+                      })()}
+                    </p>
+                  </div>
+                  {rankingsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+
+                {rankingsExpanded && (
+                  <div className="bg-gray-900 border-4 border-t-0 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-gray-400 border-b border-gray-700">
+                            <th className="text-left py-2 px-1 w-8">#</th>
+                            <th className="text-left py-2 px-2">Team</th>
+                            <th className="text-center py-2 px-1">Record</th>
+                            <th className="text-center py-2 px-1">Conf</th>
+                            <th className="text-center py-2 px-1 hidden md:table-cell">SoS</th>
+                            <th className="text-center py-2 px-1 w-12">+/-</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getTop25Rankings(nationalRankings).map((team) => {
+                            const school = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5].find(s => s.id === team.schoolId);
+                            const isPlayer = team.schoolId === selectedSchool?.id;
+                            return (
+                              <tr
+                                key={team.schoolId}
+                                className={`border-b border-gray-800 ${isPlayer ? 'bg-blue-900/50' : ''}`}
+                              >
+                                <td className="py-2 px-1 font-bold text-yellow-400">{team.rank}</td>
+                                <td className="py-2 px-2">
+                                  <div className={isPlayer ? 'text-yellow-400 font-bold' : 'text-white'}>
+                                    {school ? getSchoolDisplayName(school) : team.schoolName}
+                                  </div>
+                                  <div className="text-gray-500 text-xs">
+                                    {getConferenceDisplayName(team.conference)} • {team.tier}
+                                  </div>
+                                </td>
+                                <td className="text-center py-2 px-1 font-bold">
+                                  {team.wins}-{team.losses}
+                                </td>
+                                <td className="text-center py-2 px-1 text-blue-400">
+                                  {team.confWins}-{team.confLosses}
+                                </td>
+                                <td className="text-center py-2 px-1 hidden md:table-cell text-gray-400">
+                                  {team.sos ? team.sos.toFixed(2) : '-'}
+                                </td>
+                                <td className="text-center py-2 px-1 w-12">
+                                  {team.rankChange > 0 ? (
+                                    <span className="text-green-400">▲{team.rankChange}</span>
+                                  ) : team.rankChange < 0 ? (
+                                    <span className="text-red-400">▼{Math.abs(team.rankChange)}</span>
+                                  ) : (
+                                    <span className="text-gray-500">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Player's ranking if outside Top 25 */}
+                    {(() => {
+                      const playerRank = nationalRankings.find(r => r.schoolId === selectedSchool?.id);
+                      if (playerRank && playerRank.rank > 25) {
+                        return (
+                          <div className="mt-4 pt-4 border-t-2 border-gray-700">
+                            <div className="text-xs text-gray-400 mb-2">Your Team</div>
+                            <div className="flex items-center justify-between bg-gray-800 p-2 rounded">
+                              <div className="flex items-center gap-3">
+                                <span className="text-yellow-400 font-bold">#{playerRank.rank}</span>
+                                <span className="text-white">{getSchoolDisplayName(selectedSchool)}</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs">
+                                <span>{playerRank.wins}-{playerRank.losses}</span>
+                                <span className="text-blue-400">{playerRank.confWins}-{playerRank.confLosses}</span>
+                                {playerRank.rankChange !== 0 && (
+                                  <span className={playerRank.rankChange > 0 ? 'text-green-400' : 'text-red-400'}>
+                                    {playerRank.rankChange > 0 ? '▲' : '▼'}{Math.abs(playerRank.rankChange)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CONFERENCE STANDINGS SECTION */}
+            {selectedSchool && Object.keys(conferenceStandings).length > 0 && (
+              <div className="mb-6">
+                <button
+                  onClick={() => setStandingsExpanded(!standingsExpanded)}
+                  className="w-full bg-gray-800 border-4 border-gray-600 p-4 hover:border-yellow-500 transition-all flex justify-between items-center"
+                  style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                >
+                  <div className="text-left">
+                    <h3 className="text-sm font-bold text-yellow-400">
+                      📊 CONFERENCE STANDINGS
+                    </h3>
+                    <p className="text-gray-400 mt-1 text-xs">
+                      {getConferenceDisplayName(selectedSchool.conference)}
+                      {conferenceStandings[selectedSchool.id] && (
+                        <span className="ml-2 text-white">
+                          ({conferenceStandings[selectedSchool.id].confWins}-{conferenceStandings[selectedSchool.id].confLosses} Conf)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {standingsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+
+                {standingsExpanded && (
+                  <div className="bg-gray-900 border-4 border-t-0 border-gray-600 p-4" style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+                    {/* Player's Conference Standings */}
+                    <div className="mb-4">
+                      <h4 className="text-xs font-bold text-yellow-400 mb-2">
+                        {getConferenceDisplayName(selectedSchool.conference).toUpperCase()}
+                      </h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-gray-400 border-b border-gray-700">
+                              <th className="text-left py-2 px-1">#</th>
+                              <th className="text-left py-2 px-2">Team</th>
+                              <th className="text-center py-2 px-1">Conf</th>
+                              <th className="text-center py-2 px-1">Overall</th>
+                              <th className="text-center py-2 px-1">Streak</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {getConferenceStandings(conferenceStandings, selectedSchool.conference).map((team, idx) => {
+                              const school = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5].find(s => s.id === team.schoolId);
+                              const isPlayer = team.schoolId === selectedSchool.id;
+                              return (
+                                <tr
+                                  key={team.schoolId}
+                                  className={`border-b border-gray-800 ${isPlayer ? 'bg-blue-900/50' : ''}`}
+                                >
+                                  <td className="py-2 px-1 text-gray-500">{idx + 1}</td>
+                                  <td className="py-2 px-2">
+                                    <span className={isPlayer ? 'text-yellow-400 font-bold' : 'text-white'}>
+                                      {school ? getSchoolDisplayName(school) : team.schoolName}
+                                    </span>
+                                  </td>
+                                  <td className="text-center py-2 px-1 text-blue-400 font-bold">
+                                    {team.confWins}-{team.confLosses}
+                                  </td>
+                                  <td className="text-center py-2 px-1">
+                                    {team.wins}-{team.losses}
+                                  </td>
+                                  <td className="text-center py-2 px-1">
+                                    {team.streak > 0 ? (
+                                      <span className="text-green-400">W{team.streak}</span>
+                                    ) : team.streak < 0 ? (
+                                      <span className="text-red-400">L{Math.abs(team.streak)}</span>
+                                    ) : (
+                                      <span className="text-gray-500">-</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Conference Championship Preview (only show if games have been played) */}
+                    {Object.values(conferenceStandings).some(t => t.wins + t.losses > 0) && (
+                      <div className="mt-4 pt-4 border-t-2 border-gray-700">
+                        <div className="text-xs text-gray-400 mb-2">Conference Championship Preview</div>
+                        {(() => {
+                          const confStandings = getConferenceStandings(conferenceStandings, selectedSchool.conference);
+                          if (confStandings.length < 2) return null;
+                          const [first, second] = confStandings;
+                          const school1 = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5].find(s => s.id === first.schoolId);
+                          const school2 = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5].find(s => s.id === second.schoolId);
+                          return (
+                            <div className="flex items-center justify-center gap-4 text-sm">
+                              <div className="text-right">
+                                <div className={first.schoolId === selectedSchool.id ? 'text-yellow-400 font-bold' : 'text-white'}>
+                                  #1 {school1 ? getSchoolDisplayName(school1) : first.schoolName}
+                                </div>
+                                <div className="text-xs text-blue-400">{first.confWins}-{first.confLosses}</div>
+                              </div>
+                              <div className="text-gray-500 text-xs">vs</div>
+                              <div className="text-left">
+                                <div className={second.schoolId === selectedSchool.id ? 'text-yellow-400 font-bold' : 'text-white'}>
+                                  #2 {school2 ? getSchoolDisplayName(school2) : second.schoolName}
+                                </div>
+                                <div className="text-xs text-blue-400">{second.confWins}-{second.confLosses}</div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-4">
                 <h2 className="text-sm text-yellow-400">ROSTER</h2>
@@ -11086,6 +13358,7 @@ const App = () => {
                                       checked={player.isStarter}
                                       onChange={() => toggleStarter(player.id)}
                                       className="w-4 h-4 cursor-pointer"
+                                      aria-label={`${player.name} is starter`}
                                     />
                                     <div>
                                       <div className="text-sm font-bold text-white">{player.name}</div>
@@ -11166,6 +13439,7 @@ const App = () => {
                                       checked={player.isStarter}
                                       onChange={() => toggleStarter(player.id)}
                                       className="w-4 h-4 cursor-pointer"
+                                      aria-label={`${player.name} is starter`}
                                     />
                                     <div>
                                       <div className="text-sm font-bold text-white">{player.name}</div>
@@ -11436,7 +13710,7 @@ const App = () => {
                 {/* Progress Bar */}
                 <div className="bg-gray-900 h-6 rounded overflow-hidden border-2 border-gray-700">
                   <div
-                    className="h-full flex items-center justify-end pr-2 transition-all duration-300"
+                    className="h-full flex items-center justify-end pr-2 transition-all duration-200"
                     style={{
                       width: `${Math.min(100, (totalAllocated / budget) * 100)}%`,
                       backgroundColor: budgetRemaining / budget > 0.2 ? '#22c55e' : budgetRemaining / budget > 0.1 ? '#eab308' : '#ef4444'
@@ -11638,7 +13912,7 @@ const App = () => {
                                       }));
                                       setBudgetAllocated(prev => prev + raiseAmount);
                                     } else {
-                                      alert('Insufficient budget!');
+                                      showAlert('Insufficient budget!', 'Budget Error', 'error');
                                     }
                                   }}
                                   disabled={budgetRemaining < Math.round(player.currentNIL * 0.2)}
@@ -11662,7 +13936,7 @@ const App = () => {
                                       }));
                                       setBudgetAllocated(prev => prev + nilGap);
                                     } else {
-                                      alert('Insufficient budget!');
+                                      showAlert('Insufficient budget!', 'Budget Error', 'error');
                                     }
                                   }}
                                   disabled={budgetRemaining < nilGap}
@@ -11689,6 +13963,8 @@ const App = () => {
                     <button
                       onClick={() => setShowFullRoster(!showFullRoster)}
                       className="w-full flex justify-between items-center"
+                      aria-expanded={showFullRoster}
+                      aria-label="Toggle full roster view"
                     >
                       <h3 className="text-xs font-bold text-yellow-400">FULL ROSTER NIL ({roster.length} players)</h3>
                       <span className="text-gray-400">{showFullRoster ? '▼' : '▶'}</span>
@@ -11702,6 +13978,7 @@ const App = () => {
                             value={rosterNilSort}
                             onChange={(e) => setRosterNilSort(e.target.value)}
                             className="bg-gray-700 border-2 border-gray-600 text-white text-xs px-2 py-1"
+                            aria-label="Sort roster by"
                           >
                             <option value="satisfaction">Sort: Satisfaction</option>
                             <option value="nil">Sort: NIL Amount</option>
@@ -11712,6 +13989,7 @@ const App = () => {
                             value={rosterNilFilter}
                             onChange={(e) => setRosterNilFilter(e.target.value)}
                             className="bg-gray-700 border-2 border-gray-600 text-white text-xs px-2 py-1"
+                            aria-label="Filter roster by satisfaction"
                           >
                             <option value="all">Filter: All</option>
                             <option value="low">Filter: Low Satisfaction</option>
@@ -11888,6 +14166,16 @@ const App = () => {
                     <h3 className="text-xs font-bold text-yellow-400 mb-3">
                       AVAILABLE DONORS ({donors.filter(d => d.status === 'available' || d.status === 'courting').length})
                     </h3>
+                    {/* Courting season ended message - courting only available weeks 1-4 */}
+                    {offSeasonWeek !== null && offSeasonWeek > 4 && (
+                      <div className="bg-gray-900 border-2 border-yellow-700 p-3 mb-4 text-center">
+                        <span className="text-yellow-500 font-bold">DONOR COURTING SEASON HAS ENDED</span>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Courting actions are only available during weeks 1-4 of the off-season.
+                          Focus on recruiting for the rest of the off-season.
+                        </p>
+                      </div>
+                    )}
                     {donors.filter(d => d.status === 'available' || d.status === 'courting').length === 0 ? (
                       <div className="text-gray-400 text-center py-8 text-sm">
                         <p className="mb-2">No donors available yet.</p>
@@ -11946,18 +14234,27 @@ const App = () => {
                               </div>
                               <div className="bg-gray-700 h-2 rounded overflow-hidden">
                                 <div
-                                  className="h-full bg-yellow-500 transition-all"
-                                  style={{ width: `${donor.relationship}%` }}
+                                  className="h-full w-full bg-yellow-500 origin-left transition-transform duration-200"
+                                  style={{ transform: `scaleX(${donor.relationship / 100})` }}
                                 />
                               </div>
                             </div>
-                            {/* Actions - Each action can only be used once per donor per week */}
+                            {/* Actions - Each action can only be used once per donor per week, only available weeks 1-4 */}
                             <div className="flex gap-2 flex-wrap">
                               {(() => {
                                 const usedThisWeek = donor.weeklyActionsUsed || [];
                                 const callUsed = usedThisWeek.includes('call');
                                 const meetingUsed = usedThisWeek.includes('meeting');
                                 const gameInviteUsed = usedThisWeek.includes('gameInvite');
+                                // Courting only available during weeks 1-4 of off-season
+                                const courtingSeasonOver = offSeasonWeek !== null && offSeasonWeek > 4;
+
+                                // If courting season is over, show disabled message
+                                if (courtingSeasonOver) {
+                                  return (
+                                    <span className="text-gray-500 text-xs italic">Courting season ended (weeks 1-4 only)</span>
+                                  );
+                                }
 
                                 return (
                                   <>
@@ -12056,6 +14353,7 @@ const App = () => {
                   <div className="bg-gray-900 border-2 border-gray-700 p-3 text-xs text-gray-400">
                     <strong className="text-gray-300">About Donors:</strong> Build relationships with donors to secure their annual contributions.
                     Donors commit when relationship reaches 80%. Keep them happy with wins and recruiting success, or they may leave.
+                    <br /><span className="text-yellow-600">Courting actions are only available during weeks 1-4 of the off-season.</span>
                   </div>
                 </div>
               )}
@@ -12109,6 +14407,7 @@ const App = () => {
                             className="flex-1 bg-gray-900 border-2 border-gray-600 px-3 py-2 text-white text-sm font-bold"
                             placeholder="Conference Name"
                             onClick={(e) => e.stopPropagation()}
+                            aria-label="Conference name"
                           />
                           <button
                             onClick={saveConferenceEdit}
@@ -12239,8 +14538,9 @@ const App = () => {
                     // Edit Mode
                     <div className="space-y-3">
                       <div>
-                        <label className="text-xs text-gray-400 mb-1 block">TEAM NAME</label>
+                        <label htmlFor="edit-team-name" className="text-xs text-gray-400 mb-1 block">TEAM NAME</label>
                         <input
+                          id="edit-team-name"
                           type="text"
                           value={tempSchoolName}
                           onChange={(e) => setTempSchoolName(e.target.value)}
@@ -12250,8 +14550,9 @@ const App = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-400 mb-1 block">NICKNAME</label>
+                        <label htmlFor="edit-nickname" className="text-xs text-gray-400 mb-1 block">NICKNAME</label>
                         <input
+                          id="edit-nickname"
                           type="text"
                           value={tempNickname}
                           onChange={(e) => setTempNickname(e.target.value)}
@@ -12260,8 +14561,9 @@ const App = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-400 mb-1 block">HEAD COACH</label>
+                        <label htmlFor="edit-coach-name" className="text-xs text-gray-400 mb-1 block">HEAD COACH</label>
                         <input
+                          id="edit-coach-name"
                           type="text"
                           value={tempCoachName}
                           onChange={(e) => setTempCoachName(e.target.value)}
@@ -12607,10 +14909,10 @@ const App = () => {
                     <span>Week {offSeasonWeek} of 16</span>
                     <span className="text-yellow-400">Use DASHBOARD to advance week →</span>
                   </div>
-                  <div className="w-full bg-gray-700 h-2 border border-gray-900 mt-2">
+                  <div className="w-full bg-gray-700 h-2 border border-gray-900 mt-2 overflow-hidden">
                     <div
-                      className="bg-yellow-500 h-full transition-all"
-                      style={{ width: `${(offSeasonWeek / 16) * 100}%` }}
+                      className="bg-yellow-500 h-full w-full origin-left transition-transform duration-200"
+                      style={{ transform: `scaleX(${offSeasonWeek / 16})` }}
                     />
                   </div>
                 </div>
@@ -12624,6 +14926,8 @@ const App = () => {
                   onClick={() => setShowHighSchoolRecruiting(!showHighSchoolRecruiting)}
                   className="w-full bg-green-800 border-4 border-green-600 p-4 hover:bg-green-700 transition-all text-left"
                   style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                  aria-expanded={showHighSchoolRecruiting}
+                  aria-label="Toggle high school recruiting section"
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -12917,6 +15221,8 @@ const App = () => {
                       : 'bg-gray-700 border-gray-600 opacity-50 cursor-not-allowed'
                   }`}
                   style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}
+                  aria-expanded={showTransferPortal}
+                  aria-label="Toggle transfer portal section"
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -13327,9 +15633,9 @@ const App = () => {
               {/* Budget Bar */}
               <div className="mt-3 bg-black bg-opacity-30 h-3 rounded overflow-hidden">
                 <div
-                  className="h-full transition-all duration-300"
+                  className="h-full w-full origin-left transition-transform duration-200"
                   style={{
-                    width: `${Math.min(100, (budgetRemaining / budget) * 100)}%`,
+                    transform: `scaleX(${Math.min(1, budgetRemaining / budget)})`,
                     backgroundColor: budgetRemaining / budget > 0.3 ? '#22c55e' : budgetRemaining / budget > 0.1 ? '#eab308' : '#ef4444'
                   }}
                 />
@@ -13418,9 +15724,9 @@ const App = () => {
                               setTransferDecisionsPending(prev => prev.filter((_, i) => i !== index));
                               if (transferDecisionsPending.length === 1) setShowTransferDecisionsModal(false);
                               
-                              alert(`🎉 ${decision.player.name} has decided to return for his senior season!`);
+                              showAlert(`${decision.player.name} has decided to return for his senior season!`, '🎉 Player Retained!', 'success');
                             } else {
-                              alert('Not enough budget available!');
+                              showAlert('Not enough budget available!', 'Budget Error', 'error');
                             }
                           }}
                           disabled={budgetRemaining < decision.nilIncrease}
@@ -13470,7 +15776,7 @@ const App = () => {
                               setTransferDecisionsPending(prev => prev.filter((_, i) => i !== index));
                               if (transferDecisionsPending.length === 1) setShowTransferDecisionsModal(false);
                             } else {
-                              alert('Not enough budget available!');
+                              showAlert('Not enough budget available!', 'Budget Error', 'error');
                             }
                           }}
                           disabled={budgetRemaining < decision.nilIncrease}
@@ -14164,7 +16470,7 @@ const App = () => {
                       } : r
                     ));
 
-                    alert(`${recruit.name} understood. "I'll take some time to think about it."\n\nInterest dropped slightly, but they remain on your board.`);
+                    showAlert(`${recruit.name} understood. "I'll take some time to think about it."\n\nInterest dropped slightly, but they remain on your board.`, 'Recruit Patience', 'info');
                   } else {
                     // Recruit drops the school
                     setRecruits(recruits.map(r =>
@@ -14177,7 +16483,7 @@ const App = () => {
                       } : r
                     ));
 
-                    alert(`${recruit.name} was hurt by the hesitation. "I thought this was my dream school..."\n\n❌ They've removed ${selectedSchool?.name} from consideration.`);
+                    showAlert(`${recruit.name} was hurt by the hesitation. "I thought this was my dream school..."\n\n❌ They've removed ${selectedSchool?.name} from consideration.`, 'Recruit Lost', 'error');
                   }
 
                   setShowInstantCommitChoice(false);
@@ -14406,17 +16712,27 @@ const App = () => {
 
                           // Check if user can afford flip attempt cost
                           if (recruitingPoints < flipAttemptCost) {
-                            alert(`Not enough recruiting points! Need ${flipAttemptCost} pts for flip attempt.`);
+                            showAlert(`Need ${flipAttemptCost} pts for flip attempt.`, 'Not enough recruiting points!', 'error');
                             return;
                           }
 
                           // Show warning for risky options
                           if (option.violationChance) {
                             const warningMsg = option.severePenalty
-                              ? `🚨 WARNING 🚨\n\nUsing the Bagman has a ${adjustedViolationChance}% annual chance of MAJOR violation.\n\nIF CAUGHT:\n• 3-year postseason ban\n• 20 scholarship reductions\n• Show-cause penalty\n\nAre you sure?`
-                              : `⚠️ WARNING\n\nBooster involvement has a ${adjustedViolationChance}% annual chance of NCAA investigation.\n\nIF CAUGHT:\n• 3-week recruiting penalty\n• -20% recruit interest\n\nProceed?`;
+                              ? `Using the Bagman has a ${adjustedViolationChance}% annual chance of MAJOR violation.\n\nIF CAUGHT:\n• 3-year postseason ban\n• 20 scholarship reductions\n• Show-cause penalty`
+                              : `Booster involvement has a ${adjustedViolationChance}% annual chance of NCAA investigation.\n\nIF CAUGHT:\n• 3-week recruiting penalty\n• -20% recruit interest`;
 
-                            if (!confirm(warningMsg)) return;
+                            showConfirm(
+                              warningMsg,
+                              () => {
+                                // Proceed with flip attempt - we need to duplicate the logic here
+                                // since confirm was blocking but showConfirm is async
+                                proceedWithFlipAttempt(option, flipOfferRecruit, nilCost, successChance, flipAttemptCost);
+                              },
+                              option.severePenalty ? '🚨 WARNING 🚨' : '⚠️ WARNING',
+                              { confirmText: 'Proceed', cancelText: 'Cancel' }
+                            );
+                            return;
                           }
 
                           // Deduct recruiting points for flip attempt (regardless of outcome)
@@ -14683,9 +16999,9 @@ const App = () => {
                           ));
 
                           if (shouldAutoCommit) {
-                            alert(`🎉 ${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!`);
+                            showAlert(`${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!`, '🎉 COMMITTED!', 'success');
                           } else {
-                            alert(`💼 NIL Deal Done!\n\n${negotiatingRecruit.name} accepted market value of ${formatCurrency(negotiatingRecruit.marketValue)}.`);
+                            showAlert(`${negotiatingRecruit.name} accepted market value of ${formatCurrency(negotiatingRecruit.marketValue)}.`, '💼 NIL Deal Done!', 'success');
                           }
 
                           setShowNegotiationModal(false);
@@ -14750,7 +17066,7 @@ const App = () => {
                     {/* Counter Offer Slider */}
                     <div className="mt-3">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-400 text-xs">YOUR OFFER</span>
+                        <span id="offer-label" className="text-gray-400 text-xs">YOUR OFFER</span>
                         <span className="text-green-400 font-bold">{formatCurrency(counterOffer)}</span>
                       </div>
                       <input
@@ -14760,6 +17076,7 @@ const App = () => {
                         value={counterOffer}
                         onChange={(e) => setCounterOffer(parseInt(e.target.value))}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+                        aria-labelledby="offer-label"
                       />
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>{formatCurrency(Math.round(negotiatingRecruit.marketValue * 0.5))}</span>
@@ -14849,7 +17166,7 @@ const App = () => {
                           // Walk-away check: if offer is under 15% of asking, 80% chance recruit walks
                           const walkAwayThreshold = negotiatingRecruit.askingPrice * 0.15;
                           if (counterOffer < walkAwayThreshold && Math.random() < 0.8) {
-                            alert(`😤 ${negotiatingRecruit.name} is INSULTED by your lowball offer and walks away!\n\n"That's not even close to what I'm worth."`);
+                            showAlert(`${negotiatingRecruit.name} is INSULTED by your lowball offer and walks away!\n\n"That's not even close to what I'm worth."`, '😤 Insulting Offer!', 'error');
                             setRecruits(recruits.map(r =>
                               r.id === negotiatingRecruit.id ? {
                                 ...r,
@@ -14894,15 +17211,15 @@ const App = () => {
                             ));
 
                             if (shouldAutoCommit) {
-                              alert(`🎉 ${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!`);
+                              showAlert(`${negotiatingRecruit.name} has COMMITTED to ${getSchoolDisplayName(selectedSchool)}!`, '🎉 COMMITTED!', 'success');
                             } else {
-                              alert(`💼 Counter Accepted!\n\n${negotiatingRecruit.name} accepted ${formatCurrency(counterOffer)}.`);
+                              showAlert(`${negotiatingRecruit.name} accepted ${formatCurrency(counterOffer)}.`, '💼 Counter Accepted!', 'success');
                             }
 
                             setShowNegotiationModal(false);
                             setNegotiatingRecruit(null);
                           } else {
-                            alert(`${negotiatingRecruit.name} rejected your offer and will consider other schools.`);
+                            showAlert(`${negotiatingRecruit.name} rejected your offer and will consider other schools.`, 'Offer Rejected', 'warning');
                             setRecruits(recruits.map(r =>
                               r.id === negotiatingRecruit.id ? {
                                 ...r,
@@ -15063,7 +17380,7 @@ const App = () => {
                   <button
                     onClick={() => {
                       if (budgetRemaining < nilIncreaseCost) {
-                        alert('Not enough budget for this NIL increase!');
+                        showAlert('Not enough budget for this NIL increase!', 'Budget Error', 'error');
                         return;
                       }
                       const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'increaseNIL', cost: nilIncreaseCost } };
@@ -15138,24 +17455,27 @@ const App = () => {
                     return (
                       <button
                         onClick={() => {
-                          let warningMsg = `⚠️ WARNING: Booster involvement has a ${adjustedChance}% annual chance of triggering an NCAA investigation.`;
+                          let warningMsg = `Booster involvement has a ${adjustedChance}% annual chance of triggering an NCAA investigation.`;
                           if (existingDeals > 0) {
-                            warningMsg += `\n\n⚠️ You already have ${existingDeals} deal(s) on the books - NCAA scrutiny is INCREASED.`;
+                            warningMsg += `\n\nYou already have ${existingDeals} deal(s) on the books - NCAA scrutiny is INCREASED.`;
                           }
-                          warningMsg += '\n\nAre you sure you want to proceed?';
 
-                          const confirmed = confirm(warningMsg);
-                          if (!confirmed) return;
+                          showConfirm(
+                            warningMsg,
+                            () => {
+                              const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'boosterInvolvement' } };
+                              setAtRiskDecisions(newDecisions);
 
-                          const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'boosterInvolvement' } };
-                          setAtRiskDecisions(newDecisions);
-
-                          if (currentAtRiskIndex < atRiskRecruits.length - 1) {
-                            setCurrentAtRiskIndex(currentAtRiskIndex + 1);
-                          } else {
-                            setShowAtRiskModal(false);
-                            finalizeESP(newDecisions);
-                          }
+                              if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                                setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                              } else {
+                                setShowAtRiskModal(false);
+                                finalizeESP(newDecisions);
+                              }
+                            },
+                            '⚠️ WARNING',
+                            { confirmText: 'Proceed', cancelText: 'Cancel' }
+                          );
                         }}
                         className="w-full bg-orange-800 border-2 border-orange-600 p-3 text-left hover:bg-orange-700 transition-all"
                         style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
@@ -15189,24 +17509,28 @@ const App = () => {
                     return (
                       <button
                         onClick={() => {
-                          let warningMsg = `🚨 WARNING 🚨\n\nCalling the bagman has a ${adjustedChance}% annual chance of triggering a MAJOR NCAA violation.`;
+                          let warningMsg = `Calling the bagman has a ${adjustedChance}% annual chance of triggering a MAJOR NCAA violation.`;
                           if (existingDeals > 0) {
-                            warningMsg += `\n\n⚠️ You already have ${existingDeals} deal(s) on the books - NCAA scrutiny is INCREASED.`;
+                            warningMsg += `\n\nYou already have ${existingDeals} deal(s) on the books - NCAA scrutiny is INCREASED.`;
                           }
-                          warningMsg += '\n\nIF CAUGHT, this results in:\n• 3-year postseason ban\n• 20 scholarship reductions\n• 3-year recruiting penalty\n• Show-cause penalty\n\nThe odds are low, but the consequences are catastrophic.\n\nAre you sure?';
+                          warningMsg += '\n\nIF CAUGHT, this results in:\n• 3-year postseason ban\n• 20 scholarship reductions\n• 3-year recruiting penalty\n• Show-cause penalty\n\nThe odds are low, but the consequences are catastrophic.';
 
-                          const confirmed = confirm(warningMsg);
-                          if (!confirmed) return;
+                          showConfirm(
+                            warningMsg,
+                            () => {
+                              const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'bagman' } };
+                              setAtRiskDecisions(newDecisions);
 
-                          const newDecisions = { ...atRiskDecisions, [currentRecruit.id]: { intervention: 'bagman' } };
-                          setAtRiskDecisions(newDecisions);
-
-                          if (currentAtRiskIndex < atRiskRecruits.length - 1) {
-                            setCurrentAtRiskIndex(currentAtRiskIndex + 1);
-                          } else {
-                            setShowAtRiskModal(false);
-                            finalizeESP(newDecisions);
-                          }
+                              if (currentAtRiskIndex < atRiskRecruits.length - 1) {
+                                setCurrentAtRiskIndex(currentAtRiskIndex + 1);
+                              } else {
+                                setShowAtRiskModal(false);
+                                finalizeESP(newDecisions);
+                              }
+                            },
+                            '🚨 WARNING 🚨',
+                            { confirmText: 'Proceed', cancelText: 'Cancel' }
+                          );
                         }}
                         className="w-full bg-red-900 border-2 border-red-500 p-3 text-left hover:bg-red-800 transition-all"
                         style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
@@ -16258,6 +18582,53 @@ const App = () => {
                           confLosses: prev.confLosses + (!currentGameSimulation.userWins && currentGameSimulation.game.isConference ? 1 : 0)
                         }));
 
+                        // Update conference standings for both teams
+                        setConferenceStandings(prev => {
+                          const updatedStandings = updatePlayerGameStandings(
+                            prev,
+                            selectedSchool?.id,
+                            currentGameSimulation.game.opponentId,
+                            currentGameSimulation.userWins,
+                            currentGameSimulation.userScore,
+                            currentGameSimulation.oppScore,
+                            currentGameSimulation.game.isConference
+                          );
+
+                          // Simulate all other AI games for this week
+                          const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+                          const finalStandings = simulateAIWeeklyGames(
+                            currentGameWeek,
+                            updatedStandings,
+                            allSchools,
+                            selectedSchool?.id,
+                            aiRosters
+                          );
+
+                          console.log(`📊 Week ${currentGameWeek} standings updated`);
+
+                          // Recalculate national rankings with updated standings
+                          const newRankings = calculateNationalRankings(
+                            finalStandings,
+                            allSchools,
+                            aiRosters,
+                            roster,
+                            selectedSchool?.id,
+                            nationalRankings
+                          );
+                          // Note: We'll update rankings in a separate call after this returns
+                          // Store for use outside the functional update
+                          window._tempRankings = newRankings;
+
+                          return finalStandings;
+                        });
+
+                        // Update rankings (using temp storage from functional update)
+                        if (window._tempRankings) {
+                          setNationalRankings(window._tempRankings);
+                          console.log('📊 National rankings updated - #1:', window._tempRankings[0]?.schoolName);
+                          delete window._tempRankings;
+                        }
+
                         // Update coach record and success
                         setCoachRecord(prev => ({
                           wins: prev.wins + (currentGameSimulation.userWins ? 1 : 0),
@@ -16305,6 +18676,180 @@ const App = () => {
                         // Cut in half for Regular Season
                         weeklyRecruitingPoints = Math.floor(weeklyRecruitingPoints / 2);
                         setRecruitingPoints(weeklyRecruitingPoints);
+
+                        // Handle Conference Championship game completion
+                        if (playoffState.phase === 'conf_championships' && playoffState.playerConfChampGame) {
+                          const conf = playoffState.playerConfChampGame.conference;
+                          const playerSchoolData = conferenceStandings[selectedSchool?.id];
+
+                          if (currentGameSimulation.userWins) {
+                            // Player won conference championship!
+                            console.log(`🏆 Player won ${conf} Championship!`);
+                            setPlayoffState(prev => ({
+                              ...prev,
+                              conferenceChampions: {
+                                ...prev.conferenceChampions,
+                                [conf]: {
+                                  schoolId: selectedSchool?.id,
+                                  schoolName: selectedSchool?.name,
+                                  school: selectedSchool,
+                                  wins: (playerSchoolData?.wins || seasonRecord.wins) + 1,
+                                  losses: playerSchoolData?.losses || seasonRecord.losses,
+                                  championshipScore: currentGameSimulation.userScore,
+                                  opponentScore: currentGameSimulation.oppScore
+                                }
+                              },
+                              playerConfChampGame: null
+                            }));
+
+                            // Award extra donor points for championship
+                            setDonorPoints(prev => prev + 100);
+
+                            setTimeout(() => {
+                              showAlert(
+                                `🏆 CONFERENCE CHAMPIONS!\n\n` +
+                                `${selectedSchool?.name} has won the ${conf}!\n\n` +
+                                `Final Score: ${currentGameSimulation.userScore} - ${currentGameSimulation.oppScore}\n\n` +
+                                `This guarantees you an automatic bid to the College Football Playoff!`,
+                                '🏆 CHAMPIONS!',
+                                'success'
+                              );
+                            }, 500);
+                          } else {
+                            // Player lost conference championship
+                            console.log(`😔 Player lost ${conf} Championship`);
+                            const opponent = playoffState.playerConfChampGame.isPlayerTeam1
+                              ? playoffState.playerConfChampGame.team2
+                              : playoffState.playerConfChampGame.team1;
+
+                            setPlayoffState(prev => ({
+                              ...prev,
+                              conferenceChampions: {
+                                ...prev.conferenceChampions,
+                                [conf]: {
+                                  ...opponent,
+                                  championshipScore: currentGameSimulation.oppScore,
+                                  opponentScore: currentGameSimulation.userScore
+                                }
+                              },
+                              playerConfChampGame: null
+                            }));
+
+                            setTimeout(() => {
+                              showAlert(
+                                `The ${conf} Championship slips away...\n\n` +
+                                `${opponent.school?.name || 'Opponent'} defeats ${selectedSchool?.name}\n\n` +
+                                `Final Score: ${currentGameSimulation.oppScore} - ${currentGameSimulation.userScore}\n\n` +
+                                `You may still receive an at-large playoff bid based on your ranking.`,
+                                '😔 Championship Loss',
+                                'info'
+                              );
+                            }, 500);
+                          }
+
+                          // Show conf champ modal after message
+                          setTimeout(() => {
+                            setShowConfChampModal(true);
+                          }, 2000);
+                        }
+
+                        // Handle Playoff game completion
+                        if (playoffState.currentPlayoffGame) {
+                          const game = playoffState.currentPlayoffGame;
+                          const gameId = game.gameId;
+                          const opponent = game.highSeed?.schoolId === selectedSchool?.id ? game.lowSeed : game.highSeed;
+
+                          if (currentGameSimulation.userWins) {
+                            // Player won playoff game!
+                            console.log(`🏈 Player won playoff game ${gameId}!`);
+                            const playerTeam = playoffState.playoffTeams?.find(t => t.schoolId === selectedSchool?.id);
+
+                            setPlayoffState(prev => ({
+                              ...prev,
+                              bracketResults: {
+                                ...prev.bracketResults,
+                                [gameId]: {
+                                  winner: playerTeam,
+                                  loser: opponent,
+                                  highSeedScore: game.highSeed?.schoolId === selectedSchool?.id
+                                    ? currentGameSimulation.userScore
+                                    : currentGameSimulation.oppScore,
+                                  lowSeedScore: game.lowSeed?.schoolId === selectedSchool?.id
+                                    ? currentGameSimulation.userScore
+                                    : currentGameSimulation.oppScore
+                                }
+                              },
+                              currentPlayoffGame: null
+                            }));
+
+                            // Update playoff legacy
+                            setPlayoffHistory(prev => updatePlayoffLegacy(
+                              prev,
+                              { ...currentGameSimulation, schoolId: selectedSchool?.id },
+                              game.round || 'first_round',
+                              opponent,
+                              dynastyYear,
+                              playoffState.playoffTeams,
+                              playoffState.bracketResults
+                            ));
+
+                            setDonorPoints(prev => prev + 75); // Playoff win bonus
+
+                            setTimeout(() => {
+                              showAlert(
+                                `🏈 PLAYOFF VICTORY!\n\n` +
+                                `${selectedSchool?.name} advances!\n\n` +
+                                `Final Score: ${currentGameSimulation.userScore} - ${currentGameSimulation.oppScore}`,
+                                '🏈 Moving On!',
+                                'success'
+                              );
+                              setShowPlayoffBracketModal(true);
+                            }, 500);
+                          } else {
+                            // Player eliminated from playoff
+                            console.log(`😔 Player eliminated from playoff`);
+
+                            setPlayoffState(prev => ({
+                              ...prev,
+                              bracketResults: {
+                                ...prev.bracketResults,
+                                [gameId]: {
+                                  winner: opponent,
+                                  loser: playoffState.playoffTeams?.find(t => t.schoolId === selectedSchool?.id),
+                                  highSeedScore: game.highSeed?.schoolId === selectedSchool?.id
+                                    ? currentGameSimulation.userScore
+                                    : currentGameSimulation.oppScore,
+                                  lowSeedScore: game.lowSeed?.schoolId === selectedSchool?.id
+                                    ? currentGameSimulation.userScore
+                                    : currentGameSimulation.oppScore
+                                }
+                              },
+                              currentPlayoffGame: null
+                            }));
+
+                            // Update playoff legacy
+                            setPlayoffHistory(prev => updatePlayoffLegacy(
+                              prev,
+                              { ...currentGameSimulation, schoolId: selectedSchool?.id },
+                              game.round || 'first_round',
+                              opponent,
+                              dynastyYear,
+                              playoffState.playoffTeams,
+                              playoffState.bracketResults
+                            ));
+
+                            setTimeout(() => {
+                              showAlert(
+                                `Your playoff run ends here.\n\n` +
+                                `${opponent?.schoolName || 'Opponent'} defeats ${selectedSchool?.name}\n\n` +
+                                `Final Score: ${currentGameSimulation.oppScore} - ${currentGameSimulation.userScore}\n\n` +
+                                `Season Record: ${seasonRecord.wins + 1}-${seasonRecord.losses + 1}`,
+                                '😔 Season Over',
+                                'info'
+                              );
+                            }, 500);
+                          }
+                        }
 
                         // Close modal
                         setShowGameSimModal(false);
@@ -16386,7 +18931,7 @@ const App = () => {
                   <button
                     onClick={() => {
                       // Leave - game over essentially (or could restart)
-                      alert('You have accepted the NFL job. Your college career is over... for now.');
+                      showAlert('You have accepted the NFL job. Your college career is over... for now.', '🏈 NFL Bound!', 'info');
                       setGameState('titleScreen');
                       setShowCoachingEventModal(null);
                       setCoachingEventData(null);
@@ -16588,7 +19133,7 @@ const App = () => {
 
               {/* NIL Offer Input */}
               <div className="bg-gray-800 border-2 border-gray-600 p-4 mb-4">
-                <div className="text-sm font-bold text-white mb-3">💰 NEW NIL OFFER</div>
+                <label htmlFor="pushNILAmount" className="text-sm font-bold text-white mb-3 block">💰 NEW NIL OFFER</label>
                 <div className="text-xs text-gray-400 mb-2">
                   Enter additional NIL funds to convince {pushingRecruit.name} to sign early
                 </div>
@@ -16660,12 +19205,12 @@ const App = () => {
                     const additionalNIL = parseInt(input.value) || 0;
 
                     if (additionalNIL <= 0) {
-                      alert('You must offer additional NIL funds to push for signature!');
+                      showAlert('You must offer additional NIL funds to push for signature!', 'NIL Required', 'warning');
                       return;
                     }
 
                     if (budgetRemaining < additionalNIL) {
-                      alert(`Insufficient budget! You only have ${formatCurrency(budgetRemaining)} remaining.`);
+                      showAlert(`You only have ${formatCurrency(budgetRemaining)} remaining.`, 'Insufficient budget!', 'error');
                       return;
                     }
 
@@ -16721,9 +19266,9 @@ const App = () => {
 
                     // Show result
                     if (success) {
-                      alert(`🎉 SUCCESS!\n\n${pushingRecruit.name} has SIGNED their National Letter of Intent!\n\nYour total NIL commitment: ${formatCurrency(newTotal)}`);
+                      showAlert(`${pushingRecruit.name} has SIGNED their National Letter of Intent!\n\nYour total NIL commitment: ${formatCurrency(newTotal)}`, '🎉 SUCCESS!', 'success');
                     } else {
-                      alert(`💔 NOT QUITE ENOUGH\n\n${pushingRecruit.name} appreciated the increased offer (now ${formatCurrency(newTotal)}) but wants to wait until National Signing Day to make a final decision.\n\nYou've used your one push attempt for this recruit.`);
+                      showAlert(`${pushingRecruit.name} appreciated the increased offer (now ${formatCurrency(newTotal)}) but wants to wait until National Signing Day to make a final decision.\n\nYou've used your one push attempt for this recruit.`, '💔 NOT QUITE ENOUGH', 'warning');
                     }
 
                     setShowPushModal(false);
@@ -16751,10 +19296,937 @@ const App = () => {
         </div>
       )}
 
+      {/* Conference Championships Results Modal */}
+      {showConfChampModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-yellow-600 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-yellow-700 to-yellow-600 p-4 border-b-4 border-yellow-800">
+              <h2 className="text-2xl font-bold text-center text-white">
+                🏆 CONFERENCE CHAMPIONSHIP RESULTS
+              </h2>
+              <p className="text-center text-yellow-200 text-sm mt-1">
+                The road to the College Football Playoff is set
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-4">
+              {/* Player's Championship Game (if applicable) */}
+              {playoffState.playerConfChampGame && !playoffState.conferenceChampions[playoffState.playerConfChampGame?.conference] && (
+                <div className="bg-green-900 border-2 border-green-600 p-4 rounded">
+                  <div className="text-lg font-bold text-green-300 text-center mb-2">
+                    🎮 YOUR CHAMPIONSHIP GAME
+                  </div>
+                  <div className="text-center text-white">
+                    <div className="text-xl font-bold">
+                      {playoffState.playerConfChampGame.conference} Championship
+                    </div>
+                    <div className="mt-2 flex items-center justify-center gap-4">
+                      <div className={`p-2 ${playoffState.playerConfChampGame.isPlayerTeam1 ? 'bg-blue-600' : 'bg-gray-700'} rounded`}>
+                        #{playoffState.playerConfChampGame.team1?.school?.name || 'Team 1'}
+                        <div className="text-xs text-gray-300">
+                          ({playoffState.playerConfChampGame.team1?.confWins}-{playoffState.playerConfChampGame.team1?.confLosses} conf)
+                        </div>
+                      </div>
+                      <div className="text-yellow-400 font-bold">VS</div>
+                      <div className={`p-2 ${!playoffState.playerConfChampGame.isPlayerTeam1 ? 'bg-blue-600' : 'bg-gray-700'} rounded`}>
+                        #{playoffState.playerConfChampGame.team2?.school?.name || 'Team 2'}
+                        <div className="text-xs text-gray-300">
+                          ({playoffState.playerConfChampGame.team2?.confWins}-{playoffState.playerConfChampGame.team2?.confLosses} conf)
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const opponent = playoffState.playerConfChampGame.isPlayerTeam1
+                          ? playoffState.playerConfChampGame.team2.school
+                          : playoffState.playerConfChampGame.team1.school;
+                        setCurrentOpponent(opponent);
+                        setShowConfChampModal(false);
+                        setShowGamePlanModal(true);
+                      }}
+                      className="mt-4 bg-green-600 border-2 border-green-500 px-6 py-2 font-bold hover:bg-green-500"
+                      style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                    >
+                      🏈 PLAY CHAMPIONSHIP GAME
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Other Championship Results */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {playoffState.confChampResults?.map((result, idx) => (
+                  <div key={idx} className="bg-gray-800 border-2 border-gray-600 p-3 rounded">
+                    <div className="text-yellow-400 font-bold text-sm mb-1">
+                      {result.conference}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-white font-bold">{result.winner?.name}</div>
+                        <div className="text-xs text-gray-400">{result.winnerRecord}</div>
+                      </div>
+                      <div className="text-green-400 font-bold">{result.score}</div>
+                      <div className="text-right">
+                        <div className="text-gray-400">{result.loser?.name}</div>
+                        <div className="text-xs text-gray-500">{result.loserRecord}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Continue Button */}
+              {(!playoffState.playerConfChampGame || playoffState.conferenceChampions[playoffState.playerConfChampGame?.conference]) && (
+                <div className="text-center mt-4">
+                  <button
+                    onClick={() => {
+                      setShowConfChampModal(false);
+                      // Proceed to Selection Sunday
+                      setTimeout(() => {
+                        console.log('📺 Proceeding to Selection Sunday...');
+                        const allSchools = [...SCHOOLS.blueBloods, ...SCHOOLS.power4, ...SCHOOLS.group5];
+                        const playoffSelection = selectPlayoffField(
+                          nationalRankings,
+                          playoffState.conferenceChampions || {},
+                          allSchools
+                        );
+                        setPlayoffState(prev => ({
+                          ...prev,
+                          phase: 'selection_sunday',
+                          playoffTeams: playoffSelection.teams,
+                          playoffBracket: playoffSelection.bracket
+                        }));
+                        setSelectionRevealIndex(0);
+                        setShowSelectionSundayModal(true);
+                      }, 500);
+                    }}
+                    className="bg-yellow-600 border-4 border-yellow-500 px-8 py-3 text-lg font-bold hover:bg-yellow-500"
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    📺 PROCEED TO SELECTION SUNDAY
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selection Sunday Modal */}
+      {showSelectionSundayModal && playoffState.playoffTeams?.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-blue-600 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-800 to-blue-600 p-4 border-b-4 border-blue-900">
+              <h2 className="text-2xl font-bold text-center text-white">
+                📺 SELECTION SUNDAY
+              </h2>
+              <p className="text-center text-blue-200 text-sm mt-1">
+                The 12-Team College Football Playoff Field
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              {/* Bye Teams (Seeds 1-4) */}
+              <div className="mb-6">
+                <div className="text-yellow-400 font-bold text-lg mb-3 text-center">
+                  🏆 FIRST-ROUND BYE (Seeds 1-4)
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {playoffState.playoffBracket?.byeTeams?.map((team, idx) => {
+                    const show = idx < selectionRevealIndex || selectionRevealIndex >= 12;
+                    return (
+                      <div
+                        key={team.schoolId}
+                        className={`p-3 rounded border-2 text-center transition-all duration-500 ${
+                          show
+                            ? team.schoolId === selectedSchool?.id
+                              ? 'bg-green-800 border-green-500'
+                              : 'bg-gray-800 border-gray-600'
+                            : 'bg-gray-900 border-gray-800'
+                        }`}
+                      >
+                        {show ? (
+                          <>
+                            <div className="text-yellow-400 font-bold text-2xl">#{team.seed}</div>
+                            <div className={`font-bold ${team.schoolId === selectedSchool?.id ? 'text-green-300' : 'text-white'}`}>
+                              {team.schoolName}
+                            </div>
+                            <div className="text-xs text-gray-400">{team.wins}-{team.losses}</div>
+                            <div className="text-xs text-blue-400">{team.selectionReason}</div>
+                          </>
+                        ) : (
+                          <div className="text-gray-600 text-4xl">?</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* First Round Matchups (Seeds 5-12) */}
+              <div className="mb-6">
+                <div className="text-blue-400 font-bold text-lg mb-3 text-center">
+                  🏈 FIRST ROUND MATCHUPS
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {playoffState.playoffBracket?.firstRoundGames?.map((game, idx) => {
+                    const showHigh = (idx * 2 + 4) < selectionRevealIndex || selectionRevealIndex >= 12;
+                    const showLow = (idx * 2 + 5) < selectionRevealIndex || selectionRevealIndex >= 12;
+                    return (
+                      <div key={game.gameId} className="bg-gray-800 border-2 border-gray-600 p-3 rounded">
+                        <div className="flex items-center justify-between">
+                          <div className={`flex-1 p-2 rounded text-center ${
+                            showHigh
+                              ? game.highSeed?.schoolId === selectedSchool?.id
+                                ? 'bg-green-700'
+                                : 'bg-gray-700'
+                              : 'bg-gray-900'
+                          }`}>
+                            {showHigh ? (
+                              <>
+                                <div className="text-yellow-400 font-bold">#{game.highSeed?.seed}</div>
+                                <div className="font-bold text-white text-sm">{game.highSeed?.schoolName}</div>
+                                <div className="text-xs text-gray-400">{game.highSeed?.wins}-{game.highSeed?.losses}</div>
+                              </>
+                            ) : (
+                              <div className="text-gray-600 text-2xl">?</div>
+                            )}
+                          </div>
+                          <div className="px-2 text-yellow-400 font-bold">VS</div>
+                          <div className={`flex-1 p-2 rounded text-center ${
+                            showLow
+                              ? game.lowSeed?.schoolId === selectedSchool?.id
+                                ? 'bg-green-700'
+                                : 'bg-gray-700'
+                              : 'bg-gray-900'
+                          }`}>
+                            {showLow ? (
+                              <>
+                                <div className="text-yellow-400 font-bold">#{game.lowSeed?.seed}</div>
+                                <div className="font-bold text-white text-sm">{game.lowSeed?.schoolName}</div>
+                                <div className="text-xs text-gray-400">{game.lowSeed?.wins}-{game.lowSeed?.losses}</div>
+                              </>
+                            ) : (
+                              <div className="text-gray-600 text-2xl">?</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Player Status */}
+              {(() => {
+                const playerTeam = playoffState.playoffTeams?.find(t => t.schoolId === selectedSchool?.id);
+                if (playerTeam) {
+                  return (
+                    <div className="bg-green-900 border-2 border-green-600 p-4 rounded text-center mb-4">
+                      <div className="text-2xl font-bold text-green-300">
+                        🎉 YOU MADE THE PLAYOFF!
+                      </div>
+                      <div className="text-white mt-2">
+                        <span className="text-yellow-400 font-bold">#{playerTeam.seed} Seed</span>
+                        {' - '}
+                        {playerTeam.hasBye ? (
+                          <span className="text-blue-400">First-Round BYE</span>
+                        ) : (
+                          <span>First Round Matchup</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-300 mt-1">{playerTeam.selectionReason}</div>
+                    </div>
+                  );
+                } else {
+                  // Check if player has a bowl game
+                  if (bowlAssignment) {
+                    return (
+                      <div className="bg-yellow-900 border-2 border-yellow-600 p-4 rounded text-center mb-4">
+                        <div className="text-xl font-bold text-yellow-300">
+                          🏈 BOWL BOUND!
+                        </div>
+                        <div className="text-white mt-2">
+                          You didn't make the playoff, but you're headed to a bowl game!
+                        </div>
+                        <div className="text-lg text-yellow-400 font-bold mt-2">
+                          {bowlAssignment.name}
+                        </div>
+                        <div className="text-sm text-gray-300">
+                          Presented by {bowlAssignment.sponsor}
+                        </div>
+                        <div className="text-sm text-gray-400 mt-1">
+                          {bowlAssignment.tier} Bowl • Record: {seasonRecord.wins}-{seasonRecord.losses}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-red-900 border-2 border-red-600 p-4 rounded text-center mb-4">
+                      <div className="text-xl font-bold text-red-300">
+                        😔 SEASON COMPLETE
+                      </div>
+                      <div className="text-white mt-2">
+                        Your team did not make the 12-team playoff field{seasonRecord.wins < 6 ? ' and is not bowl eligible' : ''}.
+                      </div>
+                      <div className="text-sm text-gray-300 mt-1">
+                        Record: {seasonRecord.wins}-{seasonRecord.losses} ({seasonRecord.confWins}-{seasonRecord.confLosses} conf)
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
+
+              {/* Reveal/Continue Button */}
+              <div className="text-center">
+                {selectionRevealIndex < 12 ? (
+                  <button
+                    onClick={() => setSelectionRevealIndex(prev => Math.min(prev + 3, 12))}
+                    className="bg-blue-600 border-4 border-blue-500 px-8 py-3 text-lg font-bold hover:bg-blue-500"
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    📺 REVEAL MORE ({12 - selectionRevealIndex} remaining)
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowSelectionSundayModal(false);
+                      // Check if player made the playoff
+                      const playerTeam = playoffState.playoffTeams?.find(t => t.schoolId === selectedSchool?.id);
+                      if (playerTeam) {
+                        setShowPlayoffBracketModal(true);
+                      } else if (bowlAssignment) {
+                        // Player has a bowl game - show bowl modal
+                        setShowBowlModal(true);
+                      } else {
+                        // Season is over for player - advance to next event
+                        showAlert(
+                          'Your season has ended. The playoff will continue without you.\n\n' +
+                          'You can watch the playoff unfold or proceed to the off-season.',
+                          '🏈 Season Complete',
+                          'info'
+                        );
+                      }
+                    }}
+                    className="bg-green-600 border-4 border-green-500 px-8 py-3 text-lg font-bold hover:bg-green-500"
+                    style={{ boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' }}
+                  >
+                    {playoffState.playoffTeams?.find(t => t.schoolId === selectedSchool?.id)
+                      ? '🏈 VIEW BRACKET & CONTINUE'
+                      : bowlAssignment
+                        ? '🏈 VIEW BOWL INVITATION'
+                        : '➡️ CONTINUE TO OFF-SEASON'
+                    }
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Playoff Bracket Modal */}
+      {showPlayoffBracketModal && playoffState.playoffBracket && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-2">
+          <div className="bg-gray-900 border-4 border-yellow-600 max-w-6xl w-full max-h-[95vh] overflow-y-auto"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-yellow-700 to-yellow-600 p-3 border-b-4 border-yellow-800 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">
+                🏆 COLLEGE FOOTBALL PLAYOFF BRACKET
+              </h2>
+              <button
+                onClick={() => setShowPlayoffBracketModal(false)}
+                className="bg-gray-800 border-2 border-gray-600 px-3 py-1 hover:bg-gray-700"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Bracket View */}
+            <div className="p-4">
+              {/* First Round */}
+              <div className="mb-6">
+                <div className="text-blue-400 font-bold text-lg mb-2">FIRST ROUND</div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  {playoffState.playoffBracket?.firstRoundGames?.map(game => {
+                    const result = playoffState.bracketResults?.[game.gameId];
+                    const playerInGame = game.highSeed?.schoolId === selectedSchool?.id ||
+                                        game.lowSeed?.schoolId === selectedSchool?.id;
+                    return (
+                      <div key={game.gameId}
+                           className={`p-2 rounded border-2 ${
+                             playerInGame ? 'border-green-500 bg-green-900/30' : 'border-gray-600 bg-gray-800'
+                           }`}>
+                        <div className={`p-1 mb-1 rounded text-sm ${
+                          result?.winner?.schoolId === game.highSeed?.schoolId
+                            ? 'bg-green-700'
+                            : result ? 'bg-gray-700' : 'bg-gray-700'
+                        }`}>
+                          <span className="text-yellow-400">#{game.highSeed?.seed}</span>{' '}
+                          <span className="font-bold">{game.highSeed?.schoolName}</span>
+                          {result && <span className="float-right">{result.highSeedScore}</span>}
+                        </div>
+                        <div className={`p-1 rounded text-sm ${
+                          result?.winner?.schoolId === game.lowSeed?.schoolId
+                            ? 'bg-green-700'
+                            : result ? 'bg-gray-700' : 'bg-gray-700'
+                        }`}>
+                          <span className="text-yellow-400">#{game.lowSeed?.seed}</span>{' '}
+                          <span className="font-bold">{game.lowSeed?.schoolName}</span>
+                          {result && <span className="float-right">{result.lowSeedScore}</span>}
+                        </div>
+                        {!result && playerInGame && (
+                          <button
+                            onClick={() => {
+                              const opponent = game.highSeed?.schoolId === selectedSchool?.id
+                                ? game.lowSeed?.school || SCHOOLS.blueBloods.find(s => s.id === game.lowSeed?.schoolId)
+                                : game.highSeed?.school || SCHOOLS.blueBloods.find(s => s.id === game.highSeed?.schoolId);
+                              setCurrentOpponent(opponent);
+                              setPlayoffState(prev => ({
+                                ...prev,
+                                currentPlayoffGame: { ...game, round: 'first_round' }
+                              }));
+                              setShowPlayoffBracketModal(false);
+                              setShowGamePlanModal(true);
+                            }}
+                            className="w-full mt-2 bg-green-600 border border-green-500 p-1 text-sm font-bold hover:bg-green-500"
+                          >
+                            🏈 PLAY GAME
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bye Teams */}
+              <div className="mb-6">
+                <div className="text-yellow-400 font-bold text-lg mb-2">FIRST-ROUND BYES</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {playoffState.playoffBracket?.byeTeams?.map(team => (
+                    <div key={team.schoolId}
+                         className={`p-2 rounded border-2 text-center ${
+                           team.schoolId === selectedSchool?.id
+                             ? 'border-green-500 bg-green-900/30'
+                             : 'border-gray-600 bg-gray-800'
+                         }`}>
+                      <div className="text-yellow-400 font-bold">#{team.seed}</div>
+                      <div className="font-bold text-white text-sm">{team.schoolName}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quarterfinals */}
+              <div className="mb-6">
+                <div className="text-purple-400 font-bold text-lg mb-2">QUARTERFINALS (Bowl Games)</div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  {playoffState.playoffBracket?.quarterfinalMatchups?.map(qf => {
+                    const firstRoundResult = playoffState.bracketResults?.[qf.firstRoundGame];
+                    const qfResult = playoffState.bracketResults?.[qf.gameId];
+                    const byeTeam = qf.byeTeam;
+                    const opponent = firstRoundResult?.winner;
+
+                    const playerInGame = byeTeam?.schoolId === selectedSchool?.id ||
+                                        opponent?.schoolId === selectedSchool?.id;
+
+                    return (
+                      <div key={qf.gameId}
+                           className={`p-2 rounded border-2 ${
+                             playerInGame ? 'border-green-500 bg-green-900/30' : 'border-gray-600 bg-gray-800'
+                           }`}>
+                        <div className="text-xs text-purple-300 mb-1">{qf.bowl}</div>
+                        <div className={`p-1 mb-1 rounded text-sm ${
+                          qfResult?.winner?.schoolId === byeTeam?.schoolId ? 'bg-green-700' : 'bg-gray-700'
+                        }`}>
+                          <span className="text-yellow-400">#{byeTeam?.seed}</span>{' '}
+                          <span className="font-bold">{byeTeam?.schoolName}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 text-center">vs</div>
+                        <div className={`p-1 rounded text-sm ${
+                          opponent
+                            ? qfResult?.winner?.schoolId === opponent?.schoolId ? 'bg-green-700' : 'bg-gray-700'
+                            : 'bg-gray-800'
+                        }`}>
+                          {opponent ? (
+                            <>
+                              <span className="text-yellow-400">#{opponent?.seed}</span>{' '}
+                              <span className="font-bold">{opponent?.schoolName}</span>
+                            </>
+                          ) : (
+                            <span className="text-gray-500">Winner of {qf.firstRoundGame}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="text-center">
+                <button
+                  onClick={() => setShowPlayoffBracketModal(false)}
+                  className="bg-gray-700 border-2 border-gray-600 px-6 py-2 font-bold hover:bg-gray-600"
+                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                >
+                  Close Bracket
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Halftime Adjustment Modal */}
+      {showHalftimeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-orange-600 max-w-2xl w-full"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-700 to-orange-600 p-4 border-b-4 border-orange-800">
+              <h2 className="text-2xl font-bold text-center text-white">
+                HALFTIME ADJUSTMENTS
+              </h2>
+              <p className="text-center text-orange-200 text-sm mt-1">
+                Make strategic adjustments for the second half
+              </p>
+            </div>
+
+            {/* Current Game Status */}
+            <div className="p-4 bg-gray-800 border-b-2 border-gray-700">
+              <div className="flex items-center justify-center gap-8">
+                <div className="text-center">
+                  <div className="text-white font-bold">{selectedSchool?.name}</div>
+                  <div className="text-3xl font-bold text-green-400">{currentGameResult?.userScore || 0}</div>
+                </div>
+                <div className="text-gray-500 text-xl">-</div>
+                <div className="text-center">
+                  <div className="text-gray-400 font-bold">{currentOpponent?.name}</div>
+                  <div className="text-3xl font-bold text-red-400">{currentGameResult?.oppScore || 0}</div>
+                </div>
+              </div>
+              {/* Momentum Bar */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span>Opponent Momentum</span>
+                  <span>Your Momentum</span>
+                </div>
+                <div className="h-4 bg-gray-700 rounded-full overflow-hidden relative">
+                  <div
+                    className="h-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${gameMomentum}%`,
+                      background: gameMomentum >= 50
+                        ? `linear-gradient(90deg, #374151 0%, #22c55e ${((gameMomentum - 50) / 50) * 100}%)`
+                        : `linear-gradient(90deg, #ef4444 ${(1 - gameMomentum / 50) * 100}%, #374151 100%)`
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-bold text-white drop-shadow">
+                      {gameMomentum > 50 ? `+${gameMomentum - 50}` : gameMomentum < 50 ? `${gameMomentum - 50}` : '0'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Adjustment Options */}
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(HALFTIME_ADJUSTMENTS).map(([key, adjustment]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setHalftimeAdjustment(key);
+                    setShowHalftimeModal(false);
+                  }}
+                  className={`p-4 border-2 rounded text-left transition-all hover:scale-[1.02] cursor-pointer ${
+                    key === 'stayTheCourse' ? 'border-gray-500 bg-gray-800 hover:bg-gray-700' :
+                    key === 'airItOut' ? 'border-blue-500 bg-blue-900 hover:bg-blue-800' :
+                    key === 'groundAndPound' ? 'border-green-500 bg-green-900 hover:bg-green-800' :
+                    'border-yellow-500 bg-yellow-900 hover:bg-yellow-800'
+                  }`}
+                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                >
+                  <div className="font-bold text-white text-lg mb-1">
+                    {key === 'stayTheCourse' && '📋 '}
+                    {key === 'airItOut' && '🎯 '}
+                    {key === 'groundAndPound' && '💪 '}
+                    {key === 'trickPlays' && '🎲 '}
+                    {adjustment.name}
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {adjustment.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Injury Decision Modal */}
+      {showInjuryModal && currentInjury && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-red-600 max-w-lg w-full"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-700 to-red-600 p-4 border-b-4 border-red-800">
+              <h2 className="text-xl font-bold text-center text-white">
+                INJURY REPORT
+              </h2>
+            </div>
+
+            {/* Injury Details */}
+            <div className="p-4 space-y-4">
+              <div className="bg-red-900 border-2 border-red-700 p-4 rounded">
+                <div className="text-lg font-bold text-white mb-2">
+                  {currentInjury.player?.name} ({currentInjury.player?.position})
+                </div>
+                <div className="text-red-300 font-bold">
+                  {currentInjury.type}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-gray-400">Severity:</div>
+                  <div className={`font-bold ${
+                    currentInjury.severity === 'minor' ? 'text-yellow-400' :
+                    currentInjury.severity === 'moderate' ? 'text-orange-400' :
+                    currentInjury.severity === 'serious' ? 'text-red-400' :
+                    'text-red-600'
+                  }`}>
+                    {currentInjury.severity.charAt(0).toUpperCase() + currentInjury.severity.slice(1)}
+                  </div>
+                  <div className="text-gray-400">Aggravation Risk:</div>
+                  <div className="text-red-400 font-bold">
+                    {Math.round(currentInjury.aggravationRisk * 100)}%
+                  </div>
+                  <div className="text-gray-400">If Aggravated:</div>
+                  <div className="text-white">
+                    Miss {currentInjury.potentialMissedGames} game(s)
+                  </div>
+                </div>
+              </div>
+
+              {/* Decision Buttons */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => {
+                    const result = processInjuryDecision(currentInjury, true);
+                    setGameInjuries(prev => [...prev, result]);
+                    setShowInjuryModal(false);
+                    setCurrentInjury(null);
+                    if (result.aggravated) {
+                      showAlert(`${result.player.name}'s injury has AGGRAVATED. They will miss ${result.finalMissedGames} game(s).`, 'error');
+                    }
+                  }}
+                  className="bg-red-700 border-2 border-red-600 p-4 font-bold hover:bg-red-600 cursor-pointer"
+                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                >
+                  <div className="text-white">KEEP IN</div>
+                  <div className="text-xs text-red-300 mt-1">
+                    Risk aggravation
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    const result = processInjuryDecision(currentInjury, false);
+                    setGameInjuries(prev => [...prev, result]);
+                    setShowInjuryModal(false);
+                    setCurrentInjury(null);
+                    showAlert(`${result.player.name} has been pulled from the game. They avoid further injury.`, 'info');
+                  }}
+                  className="bg-green-700 border-2 border-green-600 p-4 font-bold hover:bg-green-600 cursor-pointer"
+                  style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+                >
+                  <div className="text-white">PULL PLAYER</div>
+                  <div className="text-xs text-green-300 mt-1">
+                    Safe choice
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Critical Decision Modal (4th Down, Two-Minute Drill, Timeout) */}
+      {showDecisionModal && currentDecision && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-purple-600 max-w-2xl w-full"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className={`p-4 border-b-4 ${
+              currentDecision.type === 'fourthDown' ? 'bg-gradient-to-r from-purple-700 to-purple-600 border-purple-800' :
+              currentDecision.type === 'twoMinute' ? 'bg-gradient-to-r from-red-700 to-red-600 border-red-800' :
+              'bg-gradient-to-r from-blue-700 to-blue-600 border-blue-800'
+            }`}>
+              <h2 className="text-xl font-bold text-center text-white">
+                {currentDecision.type === 'fourthDown' && '🎯 4TH DOWN DECISION'}
+                {currentDecision.type === 'twoMinute' && '⏱️ TWO-MINUTE DRILL'}
+                {currentDecision.type === 'timeout' && '🛑 TIMEOUT DECISION'}
+              </h2>
+              {currentDecision.situation && (
+                <p className="text-center text-gray-200 text-sm mt-1">
+                  {currentDecision.situation}
+                </p>
+              )}
+            </div>
+
+            {/* Timer Bar (for two-minute drill) */}
+            {currentDecision.type === 'twoMinute' && decisionTimer && (
+              <div className="px-4 pt-3">
+                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-red-500 transition-all duration-100"
+                    style={{ width: `${(decisionTimer / 10) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 text-center mt-1">
+                  Make your decision quickly!
+                </p>
+              </div>
+            )}
+
+            {/* Game Context */}
+            <div className="p-4 bg-gray-800 border-b border-gray-700">
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="text-gray-400">Score: </span>
+                  <span className="text-white font-bold">{currentDecision.userScore} - {currentDecision.oppScore}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Quarter: </span>
+                  <span className="text-white font-bold">{currentDecision.quarter}Q</span>
+                </div>
+                {currentDecision.yardsToGo && (
+                  <div>
+                    <span className="text-gray-400">To Go: </span>
+                    <span className="text-white font-bold">{currentDecision.yardsToGo} yards</span>
+                  </div>
+                )}
+                {currentDecision.fieldPosition && (
+                  <div>
+                    <span className="text-gray-400">Field: </span>
+                    <span className="text-white font-bold">{currentDecision.fieldPosition}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Decision Options */}
+            <div className="p-4">
+              {currentDecision.type === 'fourthDown' && (
+                <div className="space-y-3">
+                  {/* Go For It Options */}
+                  <div className="border-2 border-purple-600 rounded p-3">
+                    <div className="text-purple-400 font-bold mb-2">GO FOR IT</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.entries(FOURTH_DOWN_OPTIONS.goForIt).map(([key, opt]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setCurrentDecision(prev => ({ ...prev, choice: { type: 'goForIt', option: key } }));
+                            setShowDecisionModal(false);
+                          }}
+                          className="bg-purple-900 border border-purple-700 p-2 rounded text-sm hover:bg-purple-800 cursor-pointer"
+                        >
+                          <div className="text-white font-bold">{opt.name}</div>
+                          <div className="text-xs text-purple-300">{opt.conversion}% success</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Punt Options */}
+                  <div className="border-2 border-blue-600 rounded p-3">
+                    <div className="text-blue-400 font-bold mb-2">PUNT</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.entries(FOURTH_DOWN_OPTIONS.punt).map(([key, opt]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setCurrentDecision(prev => ({ ...prev, choice: { type: 'punt', option: key } }));
+                            setShowDecisionModal(false);
+                          }}
+                          className="bg-blue-900 border border-blue-700 p-2 rounded text-sm hover:bg-blue-800 cursor-pointer"
+                        >
+                          <div className="text-white font-bold">{opt.name}</div>
+                          <div className="text-xs text-blue-300">{opt.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Field Goal Options (if in range) */}
+                  {currentDecision.fgRange && (
+                    <div className="border-2 border-yellow-600 rounded p-3">
+                      <div className="text-yellow-400 font-bold mb-2">FIELD GOAL ({currentDecision.fgDistance} yards)</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(FOURTH_DOWN_OPTIONS.fieldGoal).map(([key, opt]) => (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              setCurrentDecision(prev => ({ ...prev, choice: { type: 'fieldGoal', option: key } }));
+                              setShowDecisionModal(false);
+                            }}
+                            className="bg-yellow-900 border border-yellow-700 p-2 rounded text-sm hover:bg-yellow-800 cursor-pointer"
+                          >
+                            <div className="text-white font-bold">{opt.name}</div>
+                            <div className="text-xs text-yellow-300">{opt.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {currentDecision.type === 'twoMinute' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      setCurrentDecision(prev => ({ ...prev, choice: 'aggressive' }));
+                      setShowDecisionModal(false);
+                    }}
+                    className="bg-red-900 border-2 border-red-600 p-4 rounded hover:bg-red-800 cursor-pointer"
+                  >
+                    <div className="text-white font-bold text-lg">🎯 AGGRESSIVE</div>
+                    <div className="text-sm text-red-300 mt-1">Deep shots, sideline throws</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentDecision(prev => ({ ...prev, choice: 'balanced' }));
+                      setShowDecisionModal(false);
+                    }}
+                    className="bg-blue-900 border-2 border-blue-600 p-4 rounded hover:bg-blue-800 cursor-pointer"
+                  >
+                    <div className="text-white font-bold text-lg">⚖️ BALANCED</div>
+                    <div className="text-sm text-blue-300 mt-1">Mix of plays</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentDecision(prev => ({ ...prev, choice: 'conservative' }));
+                      setShowDecisionModal(false);
+                    }}
+                    className="bg-green-900 border-2 border-green-600 p-4 rounded hover:bg-green-800 cursor-pointer"
+                  >
+                    <div className="text-white font-bold text-lg">🛡️ CONSERVATIVE</div>
+                    <div className="text-sm text-green-300 mt-1">Clock management, safe plays</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentDecision(prev => ({ ...prev, choice: 'spike' }));
+                      setShowDecisionModal(false);
+                    }}
+                    className="bg-gray-700 border-2 border-gray-500 p-4 rounded hover:bg-gray-600 cursor-pointer"
+                  >
+                    <div className="text-white font-bold text-lg">⬇️ SPIKE IT</div>
+                    <div className="text-sm text-gray-300 mt-1">Stop the clock</div>
+                  </button>
+                </div>
+              )}
+
+              {currentDecision.type === 'timeout' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      setCurrentDecision(prev => ({ ...prev, choice: 'callTimeout' }));
+                      setShowDecisionModal(false);
+                    }}
+                    className="bg-red-900 border-2 border-red-600 p-4 rounded hover:bg-red-800 cursor-pointer"
+                  >
+                    <div className="text-white font-bold text-lg">🛑 CALL TIMEOUT</div>
+                    <div className="text-sm text-red-300 mt-1">{currentDecision.reason}</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentDecision(prev => ({ ...prev, choice: 'noTimeout' }));
+                      setShowDecisionModal(false);
+                    }}
+                    className="bg-gray-700 border-2 border-gray-500 p-4 rounded hover:bg-gray-600 cursor-pointer"
+                  >
+                    <div className="text-white font-bold text-lg">▶️ LET IT PLAY</div>
+                    <div className="text-sm text-gray-300 mt-1">Save timeout for later</div>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bowl Assignment Modal */}
+      {showBowlModal && bowlAssignment && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border-4 border-green-600 max-w-lg w-full"
+               style={{ boxShadow: '8px 8px 0px rgba(0,0,0,0.5)' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-700 to-green-600 p-4 border-b-4 border-green-800">
+              <h2 className="text-xl font-bold text-center text-white">
+                BOWL GAME INVITATION
+              </h2>
+            </div>
+
+            {/* Bowl Details */}
+            <div className="p-4 space-y-4 text-center">
+              <div className="text-4xl">🏈</div>
+              <div className="text-2xl font-bold text-white">
+                {bowlAssignment.name}
+              </div>
+              <div className="text-sm text-gray-400">
+                Presented by {bowlAssignment.sponsor}
+              </div>
+              <div className={`inline-block px-3 py-1 rounded font-bold text-sm ${
+                bowlAssignment.tier === 'NY6' ? 'bg-yellow-600 text-yellow-100' :
+                bowlAssignment.tier === 'Mid-Tier' ? 'bg-blue-600 text-blue-100' :
+                'bg-gray-600 text-gray-100'
+              }`}>
+                {bowlAssignment.tier} Bowl
+              </div>
+              <div className="text-gray-300 mt-4">
+                With a {bowlAssignment.wins}-win season, {selectedSchool?.name} has earned an invitation!
+              </div>
+
+              <button
+                onClick={() => setShowBowlModal(false)}
+                className="mt-4 bg-green-600 border-2 border-green-500 px-8 py-3 font-bold hover:bg-green-500 cursor-pointer"
+                style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}
+              >
+                ACCEPT INVITATION
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Options Modal */}
       <OptionsModal />
+      <AlertModal />
+      <ConfirmModal />
     </div>
   );
 };
 
-export default App;
+// Wrap App with ErrorBoundary for crash protection
+const AppWithErrorBoundary = () => (
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
+
+export default AppWithErrorBoundary;
